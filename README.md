@@ -214,3 +214,11 @@ Joakim Bohlin, Michael Matthies, Jonah Procyk, Erik Poppleton, Aatmik Mallya, Ha
 
 ## Acknowledgements
 We gratefully acknowledge support from NSF grant no 1931487, ONR grant no N000142012094 and MSCA grant no 765703. We thank to all the users for submitting their feedback, bug reports and feature requests, as well as all members of Sulc, Yan, Doye, Turberfield, and Louis groups who participate in testing of the tool.
+
+
+
+## Important APIs
+
+#### box
+ - Shows the box dimension.
+ - .set(x,y,z) set the new dimension of the box
