@@ -1,6 +1,5 @@
-function forcesToString() {
-    let [newElementIds, , ] = getNewIds();
-    return forces.map(f=>f.toString(newElementIds)).join('\n\n');
+function forcesToString(newElementIDs) {
+    return forces.map(f=>f.toString(newElementIDs)).join('\n\n');
 }
 
 abstract class Force {   
@@ -46,6 +45,11 @@ class MutualTrap extends PairwiseForce {
         for (var param in parsedjson) {
             if (['particle', 'ref_particle'].includes(param)) {
                 this[param] = elements.get(parsedjson[param]);
+                if (this[param] === undefined) {
+                    const err = `Particle ${parsedjson[param]} in parsed force file does not exist.`;
+                    notify(err, "alert");
+                    throw(err);
+                }
             } else {
                 this[param] = parsedjson[param];
             }
