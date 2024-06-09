@@ -63,6 +63,8 @@ class OXServeSocket extends WebSocket {
     abort = true;
     constructor(url) {
         super(url);
+        // make a fake reader to recieve the trajectory
+        let oxServeTrajReader = new TrajectoryReader(new File([], 'oxServe'), systems[systems.length - 1]);
         this.onmessage = (response) => {
             if (!this.abort) { //ignore all incomming messages when we stop the simulation
                 let message = JSON.parse(response.data);
@@ -70,7 +72,8 @@ class OXServeSocket extends WebSocket {
                     console.log(message["console_log"]);
                 }
                 if ("dat_file" in message) {
-                    updateConfFromFile(message["dat_file"]);
+                    let lines = message["dat_file"].split(/[\n]+/g);
+                    oxServeTrajReader.parseConf(lines);
                     if (forceHandler)
                         forceHandler.redraw();
                 }
@@ -102,6 +105,7 @@ class OXServeSocket extends WebSocket {
         let conf = {};
         const useNew = false; //oxServe is running an ancient copy of oxDNA
         const [newElementIDs, newStrandIds, counts, gsSubtypes] = getNewIds(useNew);
+        systems[systems.length - 1].lines2ele = new Map(Array.from(newElementIDs, e => [e[1], e[0]])); // ugly hack to make oxServe work
         {
             let { file_name, file } = makeTopFile(name, newElementIDs, newStrandIds, gsSubtypes, counts, useNew);
             conf["top_file"] = file;
