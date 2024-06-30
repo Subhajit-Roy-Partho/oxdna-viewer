@@ -47,11 +47,11 @@ canvas.addEventListener('mousedown', event => {
             // can take a while to finish.
             let nucleotide = elements.get(id);
             let sys = nucleotide.getSystem();
+            let selecting = selectedBases.has(nucleotide) ? false : true;
             // Select multiple elements my holding down ctrl/command
             if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !selectedBases.has(nucleotide)) {
                 clearSelection();
             }
-            let strandCount = sys.strands.length;
             switch (selectionMode) {
                 case "System":
                     sys.strands.forEach(strand => {
@@ -75,7 +75,6 @@ canvas.addEventListener('mousedown', event => {
                     updateView(sys);
                     break;
                 case "Monomer":
-                    nucleotide.toggle();
                     if (event.shiftKey) {
                         if (view.selectPairs()) {
                             if (!nucleotide.isPaired()) {
@@ -90,7 +89,7 @@ canvas.addEventListener('mousedown', event => {
                                 fancySelectIntermediate(nucleotide);
                             }
                             else {
-                                selectIntermediate();
+                                selectIntermediate(nucleotide, selecting);
                             }
                         }
                     }
@@ -101,6 +100,9 @@ canvas.addEventListener('mousedown', event => {
                         else {
                             selectPaired(nucleotide);
                         }
+                    }
+                    else {
+                        nucleotide.toggle();
                     }
                     updateView(sys);
                     break;
@@ -266,26 +268,63 @@ function fancySelectIntermediate(e) {
         updateView(e.getSystem());
     });
 }
-function selectIntermediate() {
-    let n = elements.getNextId();
-    let iMin = 0;
-    let iMax = n;
-    while (iMin <= n) {
-        if (elements.has(iMin) && selectedBases.has(elements.get(iMin))) {
-            break;
+function selectIntermediate(n, selecting) {
+    function selectIdRange(selecting) {
+        let n = elements.getNextId();
+        let iMin = 0;
+        let iMax = n;
+        // Find the edges of selectedBases
+        while (iMin <= n) {
+            if (elements.has(iMin) && selectedBases.has(elements.get(iMin))) {
+                break;
+            }
+            iMin++;
         }
-        iMin++;
+        while (iMax > 0) {
+            if (elements.has(iMax) && selectedBases.has(elements.get(iMax))) {
+                break;
+            }
+            iMax--;
+        }
+        // And select everything in between (this isn't necessarily what we want, but it's how it's been for a long time.)
+        for (let i = iMin; i < iMax; i++) {
+            if (elements.has(i) && !selectedBases.has(elements.get(i))) {
+                selecting ? elements.get(i).select() : elements.get(i).deselect();
+            }
+        }
     }
-    while (iMax > 0) {
-        if (elements.has(iMax) && selectedBases.has(elements.get(iMax))) {
-            break;
+    function selectStrandRange(n, selecting) {
+        let s5 = n.strand.end5;
+        let s3 = n.strand.end3;
+        //find the substrand affected
+        while (s5 != s3) {
+            if (s5 == last || s5 == n) {
+                break;
+            }
+            s5 = s5.n3;
         }
-        iMax--;
+        while (s3 != s5) {
+            if (s3 == last || s3 == n) {
+                break;
+            }
+            s3 = s3.n5;
+        }
+        //Select or deselect it
+        let substr = n.strand.getSubstrand(s5, s3);
+        substr.forEach(n => selecting ? n.select() : n.deselect());
     }
-    for (let i = iMin; i < iMax; i++) {
-        if (elements.has(i) && !selectedBases.has(elements.get(i))) {
-            elements.get(i).toggle();
-        }
+    let last = selecting ? selectedBases.last : selectedBases.last;
+    if (last == undefined) {
+        notify("Last selected base undefined! Select something new to use range select.", 'alert');
+        return;
+    }
+    if (last.strand == n.strand && !n.isPatchyParticle()) {
+        selectStrandRange(n, selecting);
+    }
+    else {
+        notify("Selections not on same strand! Selecting id range instead", "warning");
+        n.toggle();
+        selectIdRange(selecting);
     }
 }
 function makeTextArea(bases, id) {
