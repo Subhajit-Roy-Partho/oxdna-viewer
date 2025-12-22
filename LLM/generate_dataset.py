@@ -289,6 +289,30 @@ TEMPLATES = [
         "instruction": "Zoom the camera to {zoom}x",
         "code_template": "camera.zoom = {zoom}; camera.updateProjectionMatrix(); render();",
         "params": ["zoom"]
+    },
+    {
+        "intent": "color_strands_by_length",
+        "instruction": "Color strands longer than {length} {colormap}",
+        "code_template": "var color = new THREE.Color('{colormap}'); systems[0].strands.forEach(s => {{ if(s.getLength() > {length}) {{ s.getMonomers().forEach(e => {{ s.system.fillVec('nsColors', 3, e.sid, [color.r, color.g, color.b]); }}); }} }}); systems[0].callUpdates(['instanceColor']); render();",
+        "params": ["length", "colormap"]
+    },
+    {
+        "intent": "hide_short_strands",
+        "instruction": "Hide strands shorter than {length}",
+        "code_template": "systems[0].strands.forEach(s => {{ if(s.getLength() < {length}) {{ s.getMonomers().forEach(e => {{ s.system.fillVec('visibility', 3, e.sid, [0,0,0]); }}); }} }}); systems[0].callUpdates(['instanceVisibility']); render();",
+        "params": ["length"]
+    },
+    {
+        "intent": "select_first_last_strand",
+        "instruction": "Select the first and last strand",
+        "code_template": "if(systems[0].strands.length > 0) {{ api.selectElements(systems[0].strands[0].getMonomers().concat(systems[0].strands[systems[0].strands.length-1].getMonomers())); }}",
+        "params": []
+    },
+    {
+        "intent": "translate_system",
+        "instruction": "Translate system {id} by {x}, {y}, {z}",
+        "code_template": "var sys = systems[{id}]; if(sys) {{ sys.strands.forEach(s => s.getMonomers().forEach(e => e.translatePosition(new THREE.Vector3({x},{y},{z})))); sys.callUpdates(['instanceOffset']); render(); }}",
+        "params": ["id", "x", "y", "z"]
     }
 ]
 
@@ -335,7 +359,8 @@ def generate_dataset(num_entries=10000, filename="LLM/alpaca_dataset.jsonl"):
             else:
                 params["sequence"], _ = generate_random_sequence()
         elif "length" in template["params"]:
-             pass
+             params["length"] = random.randint(5, 50)
+
 
         if "colormap" in template["params"]:
             params["colormap"] = random.choice(COLORMAPS)

@@ -54,7 +54,11 @@ def select_verification_commands(input_file="LLM/alpaca_dataset.jsonl", output_f
         "Add a point light": "add_point_light",
         "Add a cube": "add_cube",
         "Rotate the camera": "rotate_camera",
-        "Zoom the camera": "zoom_camera" 
+        "Zoom the camera": "zoom_camera",
+        "Color strands longer than": "color_strands_by_length",
+        "Hide strands shorter than": "hide_short_strands",
+        "Select the first and last": "select_first_last_strand",
+        "Translate system": "translate_system" 
     }
 
     with open(input_file, 'r') as f:
