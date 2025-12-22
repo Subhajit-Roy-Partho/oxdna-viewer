@@ -1,28 +1,48 @@
 [
   {
-    "instruction": "Remove the colorbar from the scene.",
+    "instruction": "Generate a 11 nucleotide duplex with sequence 'UAGCTAGATUT'.",
     "input": "",
-    "output": "api.removeColorbar();"
+    "output": "edit.createStrand('UAGCTAGATUT', true);"
   },
   {
-    "instruction": "Show the colorbar in the scene.",
+    "instruction": "Nick the strand at element 1939.",
     "input": "",
-    "output": "api.showColorbar();"
+    "output": "edit.nick(api.getElements([1939])[0]);"
   },
   {
-    "instruction": "Update 3' markers with diameter 0.41, length 2.1, and spacing 0.59.",
+    "instruction": "Switch the camera mode between Perspective and Orthographic.",
     "input": "",
-    "output": "api.update3primeMarkers(0.41, 2.1, 0.59);"
+    "output": "api.switchCamera();"
   },
   {
-    "instruction": "Skip (delete and ligate) elements [1, 5, 16].",
+    "instruction": "Create an RNA duplex with sequence TGCGGCCTG",
     "input": "",
-    "output": "edit.skip(api.getElements([1, 5, 16]));"
+    "output": "edit.createStrand('TGCGGCCTG', true, true)"
   },
   {
-    "instruction": "Count the number of strands of each length in the system.",
+    "instruction": "Trace the strand from 5' to 3' starting at element 786.",
     "input": "",
-    "output": "api.countStrandLength(systems[0]);"
+    "output": "api.trace53(api.getElements([786])[0]);"
+  },
+  {
+    "instruction": "Create an RNA strand with sequence TAAUAA",
+    "input": "",
+    "output": "edit.createStrand('TAAUAA', false, true)"
+  },
+  {
+    "instruction": "Connect 5' ends of strand 1196 and strand 465 with a duplex",
+    "input": "",
+    "output": "edit.interconnectDuplex5p(api.getElements([1196])[0].strand, api.getElements([465])[0].strand)"
+  },
+  {
+    "instruction": "Set the background color to 0x5D4626",
+    "input": "",
+    "output": "scene.background = new THREE.Color(0x5D4626); render();"
+  },
+  {
+    "instruction": "Insert sequence 'CGGUGUTUCACUUCUCCT' at element 926.",
+    "input": "",
+    "output": "edit.insert(api.getElements([926])[0], 'CGGUGUTUCACUUCUCCT');"
   },
   {
     "instruction": "Show everything in the scene.",
@@ -30,64 +50,69 @@
     "output": "api.showEverything();"
   },
   {
-    "instruction": "Split the strand at element 15.",
+    "instruction": "Change the colormap to Blues.",
     "input": "",
-    "output": "api.selectElementIDs([15]); edit.splitStrand(api.getElements([15])[0]);"
+    "output": "api.changeColormap('Blues');"
   },
   {
-    "instruction": "Extend duplex at element 3 with sequence 'GUUCGAUTCU'.",
+    "instruction": "Move specific elements to the position of element 696.",
     "input": "",
-    "output": "edit.extendDuplex(api.getElements([3])[0], 'GUUCGAUTCU');"
+    "output": "edit.move_to(api.getElements([696])[0], api.getElements([1020, 473, 716]));"
   },
   {
-    "instruction": "Trace the strand from 3' to 5' starting at element 7.",
+    "instruction": "Ligate element 748 and 1493.",
     "input": "",
-    "output": "api.trace35(api.getElements([7])[0]);"
+    "output": "edit.ligate(api.getElements([748])[0], api.getElements([1493])[0]);"
   },
   {
-    "instruction": "Highlight the 5' ends of all strands in the system.",
+    "instruction": "Rotate the camera by -97.3 degrees around the X axis and 90.4 degrees around the Y axis",
     "input": "",
-    "output": "api.highlight5ps(systems[0]);"
+    "output": "camera.rotateX(-97.3 * Math.PI / 180); camera.rotateY(90.4 * Math.PI / 180); camera.updateProjectionMatrix(); render();"
   },
   {
-    "instruction": "Move specific elements to the position of element 6.",
+    "instruction": "Add an ambient light with color 0x7EA766 and intensity 1.6",
     "input": "",
-    "output": "edit.move_to(api.getElements([6])[0], api.getElements([15, 3, 7]));"
+    "output": "var l = new THREE.AmbientLight(0x7EA766, 1.6); scene.add(l); render();"
   },
   {
-    "instruction": "Trace the strand from 5' to 3' starting at element 2.",
+    "instruction": "Color every even nucleotide red (0xff0000) and odd nucleotide green (0x00ff00).",
     "input": "",
-    "output": "api.trace53(api.getElements([2])[0]);"
+    "output": "var red = 0xff0000; var green = 0x00ff00; var sys = systems[0]; sys.getMonomers().forEach(e => { var color = (e.id % 2 === 0) ? red : green; var c = new THREE.Color(color); sys.fillVec('nsColors', 3, e.sid, [c.r, c.g, c.b]); }); sys.callUpdates(['instanceColor']); render();"
   },
   {
-    "instruction": "Delete the element with ID 14.",
+    "instruction": "Select element with ID 985.",
     "input": "",
-    "output": "edit.deleteElements(api.getElements([14]));"
+    "output": "api.selectElementIDs([985]);"
   },
   {
-    "instruction": "Toggle nucleotide base colors.",
+    "instruction": "Show mean orientation for elements [605, 1610, 262]",
     "input": "",
-    "output": "api.toggleBaseColors();"
+    "output": "new api.observable.MeanOrientation(api.getElements([605, 1610, 262]))"
   },
   {
-    "instruction": "Insert sequence 'CCGU' at element 7.",
+    "instruction": "Add a cube of size 2.47 at 12.8, 3.9, -7.5 with color 0x9EE2F5",
     "input": "",
-    "output": "edit.insert(api.getElements([7])[0], 'CCGU');"
+    "output": "var g = new THREE.BoxGeometry(2.47, 2.47, 2.47); var m = new THREE.MeshLambertMaterial({color: 0x9EE2F5}); var mesh = new THREE.Mesh(g, m); mesh.position.set(12.8, 3.9, -7.5); scene.add(mesh); render();"
   },
   {
-    "instruction": "Highlight the 3' ends of all strands in the system.",
+    "instruction": "Delete the element with ID 1112.",
     "input": "",
-    "output": "api.highlight3ps(systems[0]);"
+    "output": "edit.deleteElements(api.getElements([1112]));"
   },
   {
-    "instruction": "Select element with ID 12.",
+    "instruction": "Toggle visibility of elements with IDs [705, 1507, 694]",
     "input": "",
-    "output": "api.selectElementIDs([12]);"
+    "output": "api.toggleElements(api.getElements([705, 1507, 694]))"
   },
   {
-    "instruction": "Change the colormap to hsv.",
+    "instruction": "Update 3' markers with diameter 2.7, length 6.89, and spacing 0.81.",
     "input": "",
-    "output": "api.changeColormap('hsv');"
+    "output": "api.update3primeMarkers(2.7, 6.89, 0.81);"
+  },
+  {
+    "instruction": "Set the sequence of elements [377, 457, 860] to 'CCC'.",
+    "input": "",
+    "output": "edit.setSequence(new Set(api.getElements([377, 457, 860])), 'CCC');"
   },
   {
     "instruction": "Toggle visibility of all elements.",
@@ -95,38 +120,98 @@
     "output": "api.toggleAll(systems[0]);"
   },
   {
-    "instruction": "Toggle the visibility of the strand containing element 19.",
+    "instruction": "Toggle nucleotide base colors.",
     "input": "",
-    "output": "api.toggleStrand(api.getElements([19])[0].strand);"
+    "output": "api.toggleBaseColors();"
   },
   {
-    "instruction": "Set the sequence of elements [14, 17, 4] to 'UTG'.",
+    "instruction": "Color the 5' end of every strand blue (0x0000ff).",
     "input": "",
-    "output": "edit.setSequence(new Set(api.getElements([14, 17, 4])), 'UTG');"
+    "output": "var color = new THREE.Color(0x0000ff); systems[0].strands.forEach(s => { var e = s.end5; s.system.fillVec('nsColors', 3, e.sid, [color.r, color.g, color.b]); }); systems[0].callUpdates(['instanceColor']); render();"
   },
   {
-    "instruction": "Find and center view on element 10.",
+    "instruction": "Skip (delete and ligate) elements [1838, 162, 1188].",
     "input": "",
-    "output": "api.findElement(api.getElements([10])[0]);"
+    "output": "edit.skip(api.getElements([1838, 162, 1188]));"
   },
   {
-    "instruction": "Extend the strand at element 8 with sequence 'GCUATGTGT'.",
+    "instruction": "Extend duplex at element 1231 with sequence 'CUACTAAGTGUUATAA'.",
     "input": "",
-    "output": "edit.extendStrand(api.getElements([8])[0], 'GCUATGTGT');"
+    "output": "edit.extendDuplex(api.getElements([1231])[0], 'CUACTAAGTGUUATAA');"
   },
   {
-    "instruction": "Nick the strand at element 15.",
+    "instruction": "Split the strand at element 621.",
     "input": "",
-    "output": "edit.nick(api.getElements([15])[0]);"
+    "output": "api.selectElementIDs([621]); edit.splitStrand(api.getElements([621])[0]);"
   },
   {
-    "instruction": "Ligate element 5 and 4.",
+    "instruction": "Toggle the visibility of the strand containing element 1153.",
     "input": "",
-    "output": "edit.ligate(api.getElements([5])[0], api.getElements([4])[0]);"
+    "output": "api.toggleStrand(api.getElements([1153])[0].strand);"
   },
   {
-    "instruction": "Switch the camera mode between Perspective and Orthographic.",
+    "instruction": "Connect 3' ends of strand 743 and strand 634 with a duplex",
     "input": "",
-    "output": "api.switchCamera();"
+    "output": "edit.interconnectDuplex3p(api.getElements([743])[0].strand, api.getElements([634])[0].strand)"
+  },
+  {
+    "instruction": "Find and center view on element 1765.",
+    "input": "",
+    "output": "api.findElement(api.getElements([1765])[0]);"
+  },
+  {
+    "instruction": "Show center of mass for elements [564, 1563, 1901]",
+    "input": "",
+    "output": "new api.observable.CMS(api.getElements([564, 1563, 1901]), 1, 0xFF0000)"
+  },
+  {
+    "instruction": "Count the number of strands of each length in the system.",
+    "input": "",
+    "output": "api.countStrandLength(systems[0]);"
+  },
+  {
+    "instruction": "Add a point light at 14.7, -10.8, 74.2 with color 0xFC1D6F and intensity 0.8",
+    "input": "",
+    "output": "var l = new THREE.PointLight(0xFC1D6F, 0.8); l.position.set(14.7, -10.8, 74.2); scene.add(l); render();"
+  },
+  {
+    "instruction": "Zoom the camera to 0.8x",
+    "input": "",
+    "output": "camera.zoom = 0.8; camera.updateProjectionMatrix(); render();"
+  },
+  {
+    "instruction": "Return the IDs of all 3' end nucleotides.",
+    "input": "",
+    "output": "systems[0].strands.map(s => s.end3.id);"
+  },
+  {
+    "instruction": "Highlight the 3' ends of all strands in the system.",
+    "input": "",
+    "output": "api.highlight3ps(systems[0]);"
+  },
+  {
+    "instruction": "Highlight the 5' ends of all strands in the system.",
+    "input": "",
+    "output": "api.highlight5ps(systems[0]);"
+  },
+  {
+    "instruction": "Join strand 329 and strand 18 (ligate 3' of 329 to 5' of 18).",
+    "input": "",
+    "output": "var s1 = systems[0].strands.find(s => s.id == 329); var s2 = systems[0].strands.find(s => s.id == 18); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"
+  },
+  {
+    "instruction": "Trace the strand from 3' to 5' starting at element 1295.",
+    "input": "",
+    "output": "api.trace35(api.getElements([1295])[0]);"
+  },
+  {
+    "instruction": "Set the color map bounds from 1.76 to 7.38",
+    "input": "",
+    "output": "api.setColorBounds(1.76, 7.38)"
+  },
+  {
+    "instruction": "Extend the strand at element 150 with sequence 'TAUCUTAUA'.",
+    "input": "",
+    "output": "edit.extendStrand(api.getElements([150])[0], 'TAUCUTAUA');"
   }
 ]

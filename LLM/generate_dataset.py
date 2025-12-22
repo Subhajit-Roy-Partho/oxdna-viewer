@@ -165,33 +165,151 @@ TEMPLATES = [
         "params": ["id"]
     },
     {
-        "intent": "remove_colorbar",
-        "instruction": "Remove the colorbar from the scene.",
-        "code_template": "api.removeColorbar();",
+        "intent": "extend_all_3_prime",
+        "instruction": "Add '{sequence}' to the end of all strands (at the 3' end).",
+        "code_template": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, '{sequence}'));",
+        "params": ["sequence"]
+    },
+    {
+        "intent": "get_all_3_prime_ids",
+        "instruction": "Return the IDs of all 3' end nucleotides.",
+        "code_template": "systems[0].strands.map(s => s.end3.id);",
         "params": []
     },
     {
-        "intent": "show_colorbar",
-        "instruction": "Show the colorbar in the scene.",
-        "code_template": "api.showColorbar();",
+        "intent": "ligate_strands_by_id",
+        "instruction": "Join strand {id1} and strand {id2} (ligate 3' of {id1} to 5' of {id2}).",
+        "code_template": "var s1 = systems[0].strands.find(s => s.id == {id1}); var s2 = systems[0].strands.find(s => s.id == {id2}); if(s1 && s2) edit.ligate(s1.end3, s2.end5);",
+        "params": ["id1", "id2"]
+    },
+    {
+        "intent": "create_duplex",
+        "instruction": "Generate a {length} nucleotide duplex with sequence '{sequence}'.",
+        "code_template": "edit.createStrand('{sequence}', true);",
+        "params": ["length", "sequence"]
+    },
+    {
+        "intent": "create_single_strand",
+        "instruction": "Generate a {length} nucleotide single strand with sequence '{sequence}'.",
+        "code_template": "edit.createStrand('{sequence}', false);",
+        "params": ["length", "sequence"]
+    },
+    {
+        "intent": "color_nucleotides_pattern",
+        "instruction": "Color every even nucleotide red (0xff0000) and odd nucleotide green (0x00ff00).",
+        "code_template": "var red = 0xff0000; var green = 0x00ff00; var sys = systems[0]; sys.getMonomers().forEach(e => {{ var color = (e.id % 2 === 0) ? red : green; var c = new THREE.Color(color); sys.fillVec('nsColors', 3, e.sid, [c.r, c.g, c.b]); }}); sys.callUpdates(['instanceColor']); render();",
         "params": []
+    },
+    {
+        "intent": "color_5_prime_ends_custom",
+        "instruction": "Color the 5' end of every strand blue (0x0000ff).",
+        "code_template": "var color = new THREE.Color(0x0000ff); systems[0].strands.forEach(s => {{ var e = s.end5; s.system.fillVec('nsColors', 3, e.sid, [color.r, color.g, color.b]); }}); systems[0].callUpdates(['instanceColor']); render();",
+        "params": []
+    },
+    {
+        "intent": "set_color_bounds",
+        "instruction": "Set the color map bounds from {min_val} to {max_val}",
+        "code_template": "api.setColorBounds({min_val}, {max_val})",
+        "params": ["min_val", "max_val"]
+    },
+    {
+        "intent": "toggle_elements",
+        "instruction": "Toggle visibility of elements with IDs {ids}",
+        "code_template": "api.toggleElements(api.getElements({ids}))",
+        "params": ["ids"]
+    },
+    {
+        "intent": "create_rna_strand",
+        "instruction": "Create an RNA strand with sequence {sequence}",
+        "code_template": "edit.createStrand('{sequence}', false, true)",
+        "params": ["sequence"]
+    },
+    {
+        "intent": "create_rna_duplex",
+        "instruction": "Create an RNA duplex with sequence {sequence}",
+        "code_template": "edit.createStrand('{sequence}', true, true)",
+        "params": ["sequence"]
+    },
+    {
+        "intent": "connect_duplex_3p",
+        "instruction": "Connect 3' ends of strand {id1} and strand {id2} with a duplex",
+        "code_template": "edit.interconnectDuplex3p(api.getElements([{id1}])[0].strand, api.getElements([{id2}])[0].strand)",
+        "params": ["id1", "id2"]
+    },
+    {
+        "intent": "connect_duplex_5p",
+        "instruction": "Connect 5' ends of strand {id1} and strand {id2} with a duplex",
+        "code_template": "edit.interconnectDuplex5p(api.getElements([{id1}])[0].strand, api.getElements([{id2}])[0].strand)",
+        "params": ["id1", "id2"]
+    },
+    {
+        "intent": "show_cms",
+        "instruction": "Show center of mass for elements {ids}",
+        "code_template": "new api.observable.CMS(api.getElements({ids}), 1, 0xFF0000)",
+        "params": ["ids"]
+    },
+    {
+        "intent": "show_mean_orientation",
+        "instruction": "Show mean orientation for elements {ids}",
+        "code_template": "new api.observable.MeanOrientation(api.getElements({ids}))",
+        "params": ["ids"]
+    },
+    {
+        "intent": "change_background_color",
+        "instruction": "Set the background color to {color_hex}",
+        "code_template": "scene.background = new THREE.Color({color_hex}); render();",
+        "params": ["color_hex"]
+    },
+    {
+        "intent": "add_ambient_light",
+        "instruction": "Add an ambient light with color {color_hex} and intensity {intensity}",
+        "code_template": "var l = new THREE.AmbientLight({color_hex}, {intensity}); scene.add(l); render();",
+        "params": ["color_hex", "intensity"]
+    },
+    {
+        "intent": "add_point_light",
+        "instruction": "Add a point light at {x}, {y}, {z} with color {color_hex} and intensity {intensity}",
+        "code_template": "var l = new THREE.PointLight({color_hex}, {intensity}); l.position.set({x}, {y}, {z}); scene.add(l); render();",
+        "params": ["x", "y", "z", "color_hex", "intensity"]
+    },
+    {
+        "intent": "add_cube",
+        "instruction": "Add a cube of size {d} at {x}, {y}, {z} with color {color_hex}",
+        "code_template": "var g = new THREE.BoxGeometry({d}, {d}, {d}); var m = new THREE.MeshLambertMaterial({{color: {color_hex}}}); var mesh = new THREE.Mesh(g, m); mesh.position.set({x}, {y}, {z}); scene.add(mesh); render();",
+        "params": ["d", "x", "y", "z", "color_hex"]
+    },
+    {
+        "intent": "rotate_camera",
+        "instruction": "Rotate the camera by {x} degrees around the X axis and {y} degrees around the Y axis",
+        "code_template": "camera.rotateX({x} * Math.PI / 180); camera.rotateY({y} * Math.PI / 180); camera.updateProjectionMatrix(); render();",
+        "params": ["x", "y"]
+    },
+    {
+        "intent": "zoom_camera",
+        "instruction": "Zoom the camera to {zoom}x",
+        "code_template": "camera.zoom = {zoom}; camera.updateProjectionMatrix(); render();",
+        "params": ["zoom"]
     }
 ]
 
-def generate_random_id(max_id=20):
+def generate_random_id(max_id=2000):
     return random.randint(0, max_id)
 
-def generate_random_ids(n=3, max_id=20):
-    return [random.randint(0, max_id) for _ in range(n)] # json.dumps will handle the list
+def generate_random_ids(n=3, max_id=2000):
+    return [random.randint(0, max_id) for _ in range(n)]
 
-def generate_random_sequence(length_range=(3, 10)):
+def generate_random_sequence(length_range=(3, 20)):
     length = random.randint(*length_range)
-    return "".join(random.choices(BASES, k=length))
+    return "".join(random.choices(BASES, k=length)), length
 
-def generate_dataset(num_entries=5000, filename="LLM/alpaca_dataset.jsonl"):
+def generate_dataset(num_entries=10000, filename="LLM/alpaca_dataset.jsonl"):
     data = []
+    seen = set()
+    attempts = 0
+    max_attempts = num_entries * 5
     
-    for _ in range(num_entries):
+    while len(data) < num_entries and attempts < max_attempts:
+        attempts += 1
         template = random.choice(TEMPLATES)
         
         params = {}
@@ -209,16 +327,42 @@ def generate_dataset(num_entries=5000, filename="LLM/alpaca_dataset.jsonl"):
                  params["sequence_matching_ids"] = "".join(random.choices(BASES, k=len(_ids)))
                  
         if "sequence" in template["params"]:
-            params["sequence"] = generate_random_sequence()
-            
+            length_param = "length" in template["params"]
+            if length_param:
+                seq, length = generate_random_sequence((5, 30))
+                params["sequence"] = seq
+                params["length"] = length
+            else:
+                params["sequence"], _ = generate_random_sequence()
+        elif "length" in template["params"]:
+             pass
+
         if "colormap" in template["params"]:
             params["colormap"] = random.choice(COLORMAPS)
             
         if "d" in template["params"]:
-            params["d"] = round(random.uniform(0.1, 2.0), 2)
-            params["l"] = round(random.uniform(0.5, 5.0), 2)
-            params["s"] = round(random.uniform(0.1, 2.0), 2)
+            params["d"] = round(random.uniform(0.1, 5.0), 2)
+            params["l"] = round(random.uniform(0.5, 10.0), 2)
+            params["s"] = round(random.uniform(0.1, 5.0), 2)
+        
+        if "min_val" in template["params"]:
+            params["min_val"] = round(random.uniform(0.0, 5.0), 2)
+            params["max_val"] = round(random.uniform(5.5, 10.0), 2)
             
+        if "color_hex" in template["params"]:
+            params["color_hex"] = "0x" + "".join(random.choices("0123456789ABCDEF", k=6))
+            
+        if "intensity" in template["params"]:
+            params["intensity"] = round(random.uniform(0.5, 2.0), 1)
+            
+        if "x" in template["params"]:
+             params["x"] = round(random.uniform(-100, 100), 1)
+             params["y"] = round(random.uniform(-100, 100), 1)
+             params["z"] = round(random.uniform(-100, 100), 1)
+             
+        if "zoom" in template["params"]:
+             params["zoom"] = round(random.uniform(0.5, 3.0), 1)
+
         instruction = template["instruction"].format(**params)
         code = template["code_template"].format(**params)
         
@@ -227,13 +371,19 @@ def generate_dataset(num_entries=5000, filename="LLM/alpaca_dataset.jsonl"):
             "input": "",
             "output": code
         }
-        data.append(entry)
+        
+        # Serialize for deduplication
+        entry_str = json.dumps(entry, sort_keys=True)
+        
+        if entry_str not in seen:
+            seen.add(entry_str)
+            data.append(entry)
         
     with open(filename, 'w') as f:
         for entry in data:
             f.write(json.dumps(entry) + "\n")
             
-    print(f"Generated {num_entries} entries in {filename}")
+    print(f"Generated {len(data)} unique entries in {filename} (Attempts: {attempts})")
 
 if __name__ == "__main__":
     generate_dataset()

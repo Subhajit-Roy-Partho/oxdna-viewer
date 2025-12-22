@@ -32,7 +32,29 @@ def select_verification_commands(input_file="LLM/alpaca_dataset.jsonl", output_f
         "Show everything": "show_everything",
         "Find and center view": "find_element",
         "Remove the colorbar": "remove_colorbar",
-        "Show the colorbar": "show_colorbar"
+        "Show the colorbar": "show_colorbar",
+        "Add '{sequence}' to the end": "extend_all_3_prime",
+        "Return the IDs of all 3'": "get_all_3_prime_ids",
+        "Join strand": "ligate_strands_by_id",
+        "Generate a": "create_duplex", # Matches both "Generate a {length} nucleotide duplex" and "single strand" if careful, but order matters
+        "nucleotide duplex": "create_duplex",
+        "nucleotide single strand": "create_single_strand",
+        "Color every even": "color_nucleotides_pattern",
+        "Color the 5' end of every": "color_5_prime_ends_custom",
+        "Set the color map bounds": "set_color_bounds",
+        "Toggle visibility of elements": "toggle_elements",
+        "Create an RNA strand": "create_rna_strand",
+        "Create an RNA duplex": "create_rna_duplex",
+        "Connect 3' ends": "connect_duplex_3p",
+        "Connect 5' ends": "connect_duplex_5p",
+        "Show center of mass": "show_cms",
+        "Show mean orientation": "show_mean_orientation",
+        "Set the background color": "change_background_color",
+        "Add an ambient light": "add_ambient_light",
+        "Add a point light": "add_point_light",
+        "Add a cube": "add_cube",
+        "Rotate the camera": "rotate_camera",
+        "Zoom the camera": "zoom_camera" 
     }
 
     with open(input_file, 'r') as f:
