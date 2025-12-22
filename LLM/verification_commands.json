@@ -1,0 +1,132 @@
+[
+  {
+    "instruction": "Remove the colorbar from the scene.",
+    "input": "",
+    "output": "api.removeColorbar();"
+  },
+  {
+    "instruction": "Show the colorbar in the scene.",
+    "input": "",
+    "output": "api.showColorbar();"
+  },
+  {
+    "instruction": "Update 3' markers with diameter 0.41, length 2.1, and spacing 0.59.",
+    "input": "",
+    "output": "api.update3primeMarkers(0.41, 2.1, 0.59);"
+  },
+  {
+    "instruction": "Skip (delete and ligate) elements [1, 5, 16].",
+    "input": "",
+    "output": "edit.skip(api.getElements([1, 5, 16]));"
+  },
+  {
+    "instruction": "Count the number of strands of each length in the system.",
+    "input": "",
+    "output": "api.countStrandLength(systems[0]);"
+  },
+  {
+    "instruction": "Show everything in the scene.",
+    "input": "",
+    "output": "api.showEverything();"
+  },
+  {
+    "instruction": "Split the strand at element 15.",
+    "input": "",
+    "output": "api.selectElementIDs([15]); edit.splitStrand(api.getElements([15])[0]);"
+  },
+  {
+    "instruction": "Extend duplex at element 3 with sequence 'GUUCGAUTCU'.",
+    "input": "",
+    "output": "edit.extendDuplex(api.getElements([3])[0], 'GUUCGAUTCU');"
+  },
+  {
+    "instruction": "Trace the strand from 3' to 5' starting at element 7.",
+    "input": "",
+    "output": "api.trace35(api.getElements([7])[0]);"
+  },
+  {
+    "instruction": "Highlight the 5' ends of all strands in the system.",
+    "input": "",
+    "output": "api.highlight5ps(systems[0]);"
+  },
+  {
+    "instruction": "Move specific elements to the position of element 6.",
+    "input": "",
+    "output": "edit.move_to(api.getElements([6])[0], api.getElements([15, 3, 7]));"
+  },
+  {
+    "instruction": "Trace the strand from 5' to 3' starting at element 2.",
+    "input": "",
+    "output": "api.trace53(api.getElements([2])[0]);"
+  },
+  {
+    "instruction": "Delete the element with ID 14.",
+    "input": "",
+    "output": "edit.deleteElements(api.getElements([14]));"
+  },
+  {
+    "instruction": "Toggle nucleotide base colors.",
+    "input": "",
+    "output": "api.toggleBaseColors();"
+  },
+  {
+    "instruction": "Insert sequence 'CCGU' at element 7.",
+    "input": "",
+    "output": "edit.insert(api.getElements([7])[0], 'CCGU');"
+  },
+  {
+    "instruction": "Highlight the 3' ends of all strands in the system.",
+    "input": "",
+    "output": "api.highlight3ps(systems[0]);"
+  },
+  {
+    "instruction": "Select element with ID 12.",
+    "input": "",
+    "output": "api.selectElementIDs([12]);"
+  },
+  {
+    "instruction": "Change the colormap to hsv.",
+    "input": "",
+    "output": "api.changeColormap('hsv');"
+  },
+  {
+    "instruction": "Toggle visibility of all elements.",
+    "input": "",
+    "output": "api.toggleAll(systems[0]);"
+  },
+  {
+    "instruction": "Toggle the visibility of the strand containing element 19.",
+    "input": "",
+    "output": "api.toggleStrand(api.getElements([19])[0].strand);"
+  },
+  {
+    "instruction": "Set the sequence of elements [14, 17, 4] to 'UTG'.",
+    "input": "",
+    "output": "edit.setSequence(new Set(api.getElements([14, 17, 4])), 'UTG');"
+  },
+  {
+    "instruction": "Find and center view on element 10.",
+    "input": "",
+    "output": "api.findElement(api.getElements([10])[0]);"
+  },
+  {
+    "instruction": "Extend the strand at element 8 with sequence 'GCUATGTGT'.",
+    "input": "",
+    "output": "edit.extendStrand(api.getElements([8])[0], 'GCUATGTGT');"
+  },
+  {
+    "instruction": "Nick the strand at element 15.",
+    "input": "",
+    "output": "edit.nick(api.getElements([15])[0]);"
+  },
+  {
+    "instruction": "Ligate element 5 and 4.",
+    "input": "",
+    "output": "edit.ligate(api.getElements([5])[0], api.getElements([4])[0]);"
+  },
+  {
+    "instruction": "Switch the camera mode between Perspective and Orthographic.",
+    "input": "",
+    "output": "api.switchCamera();"
+  }
+]
