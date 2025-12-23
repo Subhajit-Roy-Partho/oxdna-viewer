@@ -274,9 +274,33 @@ TEMPLATES = [
     },
     {
         "intent": "add_cube",
-        "instruction": "Add a cube of size {d} at {x}, {y}, {z} with color {color_hex}",
-        "code_template": "var g = new THREE.BoxGeometry({d}, {d}, {d}); var m = new THREE.MeshLambertMaterial({{color: {color_hex}}}); var mesh = new THREE.Mesh(g, m); mesh.position.set({x}, {y}, {z}); scene.add(mesh); render();",
-        "params": ["d", "x", "y", "z", "color_hex"]
+        "instruction": "Add a cube named {name} of size {d} at {x}, {y}, {z} with color {color_hex}",
+        "code_template": "var g = new THREE.BoxGeometry({d}, {d}, {d}); var m = new THREE.MeshLambertMaterial({{color: {color_hex}}}); var mesh = new THREE.Mesh(g, m); mesh.name = '{name}'; mesh.position.set({x}, {y}, {z}); scene.add(mesh); render();",
+        "params": ["d", "x", "y", "z", "color_hex", "name"]
+    },
+    {
+        "intent": "add_sphere",
+        "instruction": "Add a sphere named {name} of radius {d} at {x}, {y}, {z} with color {color_hex}",
+        "code_template": "var g = new THREE.SphereGeometry({d}, 32, 16); var m = new THREE.MeshLambertMaterial({{color: {color_hex}}}); var mesh = new THREE.Mesh(g, m); mesh.name = '{name}'; mesh.position.set({x}, {y}, {z}); scene.add(mesh); render();",
+        "params": ["d", "x", "y", "z", "color_hex", "name"]
+    },
+    {
+        "intent": "add_circle",
+        "instruction": "Add a circle named {name} of radius {d} at {x}, {y}, {z} with color {color_hex}",
+        "code_template": "var g = new THREE.CircleGeometry({d}, 32); var m = new THREE.MeshBasicMaterial({{color: {color_hex}, side: THREE.DoubleSide}}); var mesh = new THREE.Mesh(g, m); mesh.name = '{name}'; mesh.position.set({x}, {y}, {z}); scene.add(mesh); render();",
+        "params": ["d", "x", "y", "z", "color_hex", "name"]
+    },
+    {
+        "intent": "add_square",
+        "instruction": "Add a square named {name} of size {d} at {x}, {y}, {z} with color {color_hex}",
+        "code_template": "var g = new THREE.PlaneGeometry({d}, {d}); var m = new THREE.MeshBasicMaterial({{color: {color_hex}, side: THREE.DoubleSide}}); var mesh = new THREE.Mesh(g, m); mesh.name = '{name}'; mesh.position.set({x}, {y}, {z}); scene.add(mesh); render();",
+        "params": ["d", "x", "y", "z", "color_hex", "name"]
+    },
+    {
+        "intent": "translate_named_object",
+        "instruction": "Translate the object named {name} to {x}, {y}, {z}",
+        "code_template": "var obj = scene.getObjectByName('{name}'); if(obj) {{ obj.position.set({x}, {y}, {z}); render(); }}",
+        "params": ["name", "x", "y", "z"]
     },
     {
         "intent": "rotate_camera",
@@ -387,6 +411,9 @@ def generate_dataset(num_entries=10000, filename="LLM/alpaca_dataset.jsonl"):
              
         if "zoom" in template["params"]:
              params["zoom"] = round(random.uniform(0.5, 3.0), 1)
+             
+        if "name" in template["params"]:
+            params["name"] = f"object_{random.randint(100, 999)}"
 
         instruction = template["instruction"].format(**params)
         code = template["code_template"].format(**params)

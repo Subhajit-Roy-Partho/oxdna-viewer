@@ -1,128 +1,18 @@
 [
   {
-    "instruction": "Create an RNA duplex with sequence AUUGGUT",
-    "input": "",
-    "output": "edit.createStrand('AUUGGUT', true, true)"
-  },
-  {
-    "instruction": "Zoom the camera to 0.7x",
-    "input": "",
-    "output": "camera.zoom = 0.7; camera.updateProjectionMatrix(); render();"
-  },
-  {
-    "instruction": "Color the 5' end of every strand blue (0x0000ff).",
-    "input": "",
-    "output": "var color = new THREE.Color(0x0000ff); systems[0].strands.forEach(s => { var e = s.end5; s.system.fillVec('nsColors', 3, e.sid, [color.r, color.g, color.b]); }); systems[0].callUpdates(['instanceColor']); render();"
-  },
-  {
-    "instruction": "Highlight the 3' ends of all strands in the system.",
-    "input": "",
-    "output": "api.highlight3ps(systems[0]);"
-  },
-  {
     "instruction": "Highlight the 5' ends of all strands in the system.",
     "input": "",
     "output": "api.highlight5ps(systems[0]);"
   },
   {
-    "instruction": "Add an ambient light with color 0xFC0104 and intensity 0.7",
+    "instruction": "Connect 5' ends of strand 418 and strand 32 with a duplex",
     "input": "",
-    "output": "var l = new THREE.AmbientLight(0xFC0104, 0.7); scene.add(l); render();"
+    "output": "edit.interconnectDuplex5p(api.getElements([418])[0].strand, api.getElements([32])[0].strand)"
   },
   {
-    "instruction": "Toggle nucleotide base colors.",
+    "instruction": "Trace the strand from 3' to 5' starting at element 1249.",
     "input": "",
-    "output": "api.toggleBaseColors();"
-  },
-  {
-    "instruction": "Select element with ID 589.",
-    "input": "",
-    "output": "api.selectElementIDs([589]);"
-  },
-  {
-    "instruction": "Toggle the visibility of the strand containing element 626.",
-    "input": "",
-    "output": "api.toggleStrand(api.getElements([626])[0].strand);"
-  },
-  {
-    "instruction": "Create an RNA strand with sequence AUCGC",
-    "input": "",
-    "output": "edit.createStrand('AUCGC', false, true)"
-  },
-  {
-    "instruction": "Select the first and last strand",
-    "input": "",
-    "output": "if(systems[0].strands.length > 0) { api.selectElements(systems[0].strands[0].getMonomers().concat(systems[0].strands[systems[0].strands.length-1].getMonomers())); }"
-  },
-  {
-    "instruction": "Skip (delete and ligate) elements [1918, 932, 1440].",
-    "input": "",
-    "output": "edit.skip(api.getElements([1918, 932, 1440]));"
-  },
-  {
-    "instruction": "Color strands longer than 5 viridis",
-    "input": "",
-    "output": "var color = new THREE.Color('viridis'); systems[0].strands.forEach(s => { if(s.getLength() > 5) { s.getMonomers().forEach(e => { s.system.fillVec('nsColors', 3, e.sid, [color.r, color.g, color.b]); }); } }); systems[0].callUpdates(['instanceColor']); render();"
-  },
-  {
-    "instruction": "Toggle visibility of all elements.",
-    "input": "",
-    "output": "api.toggleAll(systems[0]);"
-  },
-  {
-    "instruction": "Split the strand at element 1485.",
-    "input": "",
-    "output": "api.selectElementIDs([1485]); edit.splitStrand(api.getElements([1485])[0]);"
-  },
-  {
-    "instruction": "Delete the element with ID 1857.",
-    "input": "",
-    "output": "edit.deleteElements(api.getElements([1857]));"
-  },
-  {
-    "instruction": "Color every even nucleotide red (0xff0000) and odd nucleotide green (0x00ff00).",
-    "input": "",
-    "output": "var red = 0xff0000; var green = 0x00ff00; var sys = systems[0]; sys.getMonomers().forEach(e => { var color = (e.id % 2 === 0) ? red : green; var c = new THREE.Color(color); sys.fillVec('nsColors', 3, e.sid, [c.r, c.g, c.b]); }); sys.callUpdates(['instanceColor']); render();"
-  },
-  {
-    "instruction": "Insert sequence 'UTU' at element 792.",
-    "input": "",
-    "output": "edit.insert(api.getElements([792])[0], 'UTU');"
-  },
-  {
-    "instruction": "Count the number of strands of each length in the system.",
-    "input": "",
-    "output": "api.countStrandLength(systems[0]);"
-  },
-  {
-    "instruction": "Set the background color to 0x6385ED",
-    "input": "",
-    "output": "scene.background = new THREE.Color(0x6385ED); render();"
-  },
-  {
-    "instruction": "Set the sequence of elements [1937, 1134, 1217] to 'CCU'.",
-    "input": "",
-    "output": "edit.setSequence(new Set(api.getElements([1937, 1134, 1217])), 'CCU');"
-  },
-  {
-    "instruction": "Add a point light at -48.4, -79.0, -82.9 with color 0x044FFC and intensity 0.7",
-    "input": "",
-    "output": "var l = new THREE.PointLight(0x044FFC, 0.7); l.position.set(-48.4, -79.0, -82.9); scene.add(l); render();"
-  },
-  {
-    "instruction": "Return the IDs of all 3' end nucleotides.",
-    "input": "",
-    "output": "systems[0].strands.map(s => s.end3.id);"
-  },
-  {
-    "instruction": "Nick the strand at element 804.",
-    "input": "",
-    "output": "edit.nick(api.getElements([804])[0]);"
-  },
-  {
-    "instruction": "Generate a 28 nucleotide duplex with sequence 'TAUGTUUTUACTTCTCGTACCAUGGCCC'.",
-    "input": "",
-    "output": "edit.createStrand('TAUGTUUTUACTTCTCGTACCAUGGCCC', true);"
+    "output": "api.trace35(api.getElements([1249])[0]);"
   },
   {
     "instruction": "Switch the camera mode between Perspective and Orthographic.",
@@ -130,49 +20,134 @@
     "output": "api.switchCamera();"
   },
   {
-    "instruction": "Show mean orientation for elements [866, 382, 654]",
+    "instruction": "Nick the strand at element 1408.",
     "input": "",
-    "output": "new api.observable.MeanOrientation(api.getElements([866, 382, 654]))"
+    "output": "edit.nick(api.getElements([1408])[0]);"
   },
   {
-    "instruction": "Extend the strand at element 1785 with sequence 'TCTCAT'.",
+    "instruction": "Add a square named object_740 of size 3.5 at -36.9, -60.2, -39.2 with color 0x2EEE02",
     "input": "",
-    "output": "edit.extendStrand(api.getElements([1785])[0], 'TCTCAT');"
+    "output": "var g = new THREE.PlaneGeometry(3.5, 3.5); var m = new THREE.MeshBasicMaterial({color: 0x2EEE02, side: THREE.DoubleSide}); var mesh = new THREE.Mesh(g, m); mesh.name = 'object_740'; mesh.position.set(-36.9, -60.2, -39.2); scene.add(mesh); render();"
   },
   {
-    "instruction": "Hide strands shorter than 22",
+    "instruction": "Join strand 1841 and strand 582 (ligate 3' of 1841 to 5' of 582).",
     "input": "",
-    "output": "systems[0].strands.forEach(s => { if(s.getLength() < 22) { s.getMonomers().forEach(e => { s.system.fillVec('visibility', 3, e.sid, [0,0,0]); }); } }); systems[0].callUpdates(['instanceVisibility']); render();"
+    "output": "var s1 = systems[0].strands.find(s => s.id == 1841); var s2 = systems[0].strands.find(s => s.id == 582); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"
   },
   {
-    "instruction": "Add a cube of size 0.21 at 39.1, -69.3, -34.2 with color 0x013419",
+    "instruction": "Connect 3' ends of strand 126 and strand 521 with a duplex",
     "input": "",
-    "output": "var g = new THREE.BoxGeometry(0.21, 0.21, 0.21); var m = new THREE.MeshLambertMaterial({color: 0x013419}); var mesh = new THREE.Mesh(g, m); mesh.position.set(39.1, -69.3, -34.2); scene.add(mesh); render();"
+    "output": "edit.interconnectDuplex3p(api.getElements([126])[0].strand, api.getElements([521])[0].strand)"
   },
   {
-    "instruction": "Find and center view on element 437.",
+    "instruction": "Add a circle named object_464 of radius 1.58 at -13.6, 32.9, 52.3 with color 0x4FB285",
     "input": "",
-    "output": "api.findElement(api.getElements([437])[0]);"
+    "output": "var g = new THREE.CircleGeometry(1.58, 32); var m = new THREE.MeshBasicMaterial({color: 0x4FB285, side: THREE.DoubleSide}); var mesh = new THREE.Mesh(g, m); mesh.name = 'object_464'; mesh.position.set(-13.6, 32.9, 52.3); scene.add(mesh); render();"
   },
   {
-    "instruction": "Join strand 1194 and strand 697 (ligate 3' of 1194 to 5' of 697).",
+    "instruction": "Create an RNA strand with sequence AUCGUAAGACUCCAT",
     "input": "",
-    "output": "var s1 = systems[0].strands.find(s => s.id == 1194); var s2 = systems[0].strands.find(s => s.id == 697); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"
+    "output": "edit.createStrand('AUCGUAAGACUCCAT', false, true)"
   },
   {
-    "instruction": "Rotate the camera by -20.8 degrees around the X axis and -51.5 degrees around the Y axis",
+    "instruction": "Create an RNA duplex with sequence AATT",
     "input": "",
-    "output": "camera.rotateX(-20.8 * Math.PI / 180); camera.rotateY(-51.5 * Math.PI / 180); camera.updateProjectionMatrix(); render();"
+    "output": "edit.createStrand('AATT', true, true)"
   },
   {
-    "instruction": "Trace the strand from 3' to 5' starting at element 583.",
+    "instruction": "Translate system 790 by -25.0, -92.1, 48.8",
     "input": "",
-    "output": "api.trace35(api.getElements([583])[0]);"
+    "output": "var sys = systems[790]; if(sys) { sys.strands.forEach(s => s.getMonomers().forEach(e => e.translatePosition(new THREE.Vector3(-25.0,-92.1,48.8)))); sys.callUpdates(['instanceOffset']); render(); }"
   },
   {
-    "instruction": "Trace the strand from 5' to 3' starting at element 234.",
+    "instruction": "Toggle nucleotide base colors.",
     "input": "",
-    "output": "api.trace53(api.getElements([234])[0]);"
+    "output": "api.toggleBaseColors();"
+  },
+  {
+    "instruction": "Update 3' markers with diameter 1.38, length 6.21, and spacing 1.77.",
+    "input": "",
+    "output": "api.update3primeMarkers(1.38, 6.21, 1.77);"
+  },
+  {
+    "instruction": "Trace the strand from 5' to 3' starting at element 1414.",
+    "input": "",
+    "output": "api.trace53(api.getElements([1414])[0]);"
+  },
+  {
+    "instruction": "Select the first and last strand",
+    "input": "",
+    "output": "if(systems[0].strands.length > 0) { api.selectElements(systems[0].strands[0].getMonomers().concat(systems[0].strands[systems[0].strands.length-1].getMonomers())); }"
+  },
+  {
+    "instruction": "Hide strands shorter than 13",
+    "input": "",
+    "output": "systems[0].strands.forEach(s => { if(s.getLength() < 13) { s.getMonomers().forEach(e => { s.system.fillVec('visibility', 3, e.sid, [0,0,0]); }); } }); systems[0].callUpdates(['instanceVisibility']); render();"
+  },
+  {
+    "instruction": "Add a cube named object_605 of size 1.6 at -69.0, 97.1, -22.3 with color 0x7B2436",
+    "input": "",
+    "output": "var g = new THREE.BoxGeometry(1.6, 1.6, 1.6); var m = new THREE.MeshLambertMaterial({color: 0x7B2436}); var mesh = new THREE.Mesh(g, m); mesh.name = 'object_605'; mesh.position.set(-69.0, 97.1, -22.3); scene.add(mesh); render();"
+  },
+  {
+    "instruction": "Add a point light at 12.3, 8.7, -69.7 with color 0x47FFBA and intensity 1.7",
+    "input": "",
+    "output": "var l = new THREE.PointLight(0x47FFBA, 1.7); l.position.set(12.3, 8.7, -69.7); scene.add(l); render();"
+  },
+  {
+    "instruction": "Split the strand at element 338.",
+    "input": "",
+    "output": "api.selectElementIDs([338]); edit.splitStrand(api.getElements([338])[0]);"
+  },
+  {
+    "instruction": "Skip (delete and ligate) elements [1095, 47, 547].",
+    "input": "",
+    "output": "edit.skip(api.getElements([1095, 47, 547]));"
+  },
+  {
+    "instruction": "Count the number of strands of each length in the system.",
+    "input": "",
+    "output": "api.countStrandLength(systems[0]);"
+  },
+  {
+    "instruction": "Highlight the 3' ends of all strands in the system.",
+    "input": "",
+    "output": "api.highlight3ps(systems[0]);"
+  },
+  {
+    "instruction": "Set the color map bounds from 3.57 to 7.28",
+    "input": "",
+    "output": "api.setColorBounds(3.57, 7.28)"
+  },
+  {
+    "instruction": "Insert sequence 'TTCAAATCAUAUACAGACA' at element 250.",
+    "input": "",
+    "output": "edit.insert(api.getElements([250])[0], 'TTCAAATCAUAUACAGACA');"
+  },
+  {
+    "instruction": "Extend the strand at element 1185 with sequence 'AGCTCUTUGGAUGTCTG'.",
+    "input": "",
+    "output": "edit.extendStrand(api.getElements([1185])[0], 'AGCTCUTUGGAUGTCTG');"
+  },
+  {
+    "instruction": "Set the sequence of elements [1582, 1343, 359] to 'CTA'.",
+    "input": "",
+    "output": "edit.setSequence(new Set(api.getElements([1582, 1343, 359])), 'CTA');"
+  },
+  {
+    "instruction": "Add a sphere named object_652 of radius 4.79 at -57.0, 82.5, 96.5 with color 0x3D85BB",
+    "input": "",
+    "output": "var g = new THREE.SphereGeometry(4.79, 32, 16); var m = new THREE.MeshLambertMaterial({color: 0x3D85BB}); var mesh = new THREE.Mesh(g, m); mesh.name = 'object_652'; mesh.position.set(-57.0, 82.5, 96.5); scene.add(mesh); render();"
+  },
+  {
+    "instruction": "Zoom the camera to 2.2x",
+    "input": "",
+    "output": "camera.zoom = 2.2; camera.updateProjectionMatrix(); render();"
+  },
+  {
+    "instruction": "Toggle the visibility of the strand containing element 595.",
+    "input": "",
+    "output": "api.toggleStrand(api.getElements([595])[0].strand);"
   },
   {
     "instruction": "Show everything in the scene.",
@@ -180,58 +155,103 @@
     "output": "api.showEverything();"
   },
   {
-    "instruction": "Toggle visibility of elements with IDs [1019, 977, 1830]",
+    "instruction": "Color strands longer than 12 YlGn",
     "input": "",
-    "output": "api.toggleElements(api.getElements([1019, 977, 1830]))"
+    "output": "var color = new THREE.Color('YlGn'); systems[0].strands.forEach(s => { if(s.getLength() > 12) { s.getMonomers().forEach(e => { s.system.fillVec('nsColors', 3, e.sid, [color.r, color.g, color.b]); }); } }); systems[0].callUpdates(['instanceColor']); render();"
   },
   {
-    "instruction": "Connect 3' ends of strand 533 and strand 1380 with a duplex",
+    "instruction": "Toggle visibility of all elements.",
     "input": "",
-    "output": "edit.interconnectDuplex3p(api.getElements([533])[0].strand, api.getElements([1380])[0].strand)"
+    "output": "api.toggleAll(systems[0]);"
   },
   {
-    "instruction": "Set the color map bounds from 2.95 to 6.04",
+    "instruction": "Find and center view on element 1190.",
     "input": "",
-    "output": "api.setColorBounds(2.95, 6.04)"
+    "output": "api.findElement(api.getElements([1190])[0]);"
   },
   {
-    "instruction": "Translate system 743 by 29.2, 30.4, 10.8",
+    "instruction": "Select element with ID 1991.",
     "input": "",
-    "output": "var sys = systems[743]; if(sys) { sys.strands.forEach(s => s.getMonomers().forEach(e => e.translatePosition(new THREE.Vector3(29.2,30.4,10.8)))); sys.callUpdates(['instanceOffset']); render(); }"
+    "output": "api.selectElementIDs([1991]);"
   },
   {
-    "instruction": "Move specific elements to the position of element 1732.",
+    "instruction": "Move specific elements to the position of element 1711.",
     "input": "",
-    "output": "edit.move_to(api.getElements([1732])[0], api.getElements([216, 1404, 338]));"
+    "output": "edit.move_to(api.getElements([1711])[0], api.getElements([882, 725, 909]));"
   },
   {
-    "instruction": "Update 3' markers with diameter 4.74, length 1.27, and spacing 2.08.",
+    "instruction": "Delete the element with ID 358.",
     "input": "",
-    "output": "api.update3primeMarkers(4.74, 1.27, 2.08);"
+    "output": "edit.deleteElements(api.getElements([358]));"
   },
   {
-    "instruction": "Connect 5' ends of strand 1565 and strand 1960 with a duplex",
+    "instruction": "Set the background color to 0x021231",
     "input": "",
-    "output": "edit.interconnectDuplex5p(api.getElements([1565])[0].strand, api.getElements([1960])[0].strand)"
+    "output": "scene.background = new THREE.Color(0x021231); render();"
   },
   {
-    "instruction": "Show center of mass for elements [1670, 1456, 373]",
+    "instruction": "Ligate element 554 and 1156.",
     "input": "",
-    "output": "new api.observable.CMS(api.getElements([1670, 1456, 373]), 1, 0xFF0000)"
+    "output": "edit.ligate(api.getElements([554])[0], api.getElements([1156])[0]);"
   },
   {
-    "instruction": "Extend duplex at element 1281 with sequence 'AGAUCAATAUATUTGG'.",
+    "instruction": "Extend duplex at element 170 with sequence 'TUAATTUAUACUGAC'.",
     "input": "",
-    "output": "edit.extendDuplex(api.getElements([1281])[0], 'AGAUCAATAUATUTGG');"
+    "output": "edit.extendDuplex(api.getElements([170])[0], 'TUAATTUAUACUGAC');"
   },
   {
-    "instruction": "Change the colormap to copper.",
+    "instruction": "Show center of mass for elements [1674, 1209, 731]",
     "input": "",
-    "output": "api.changeColormap('copper');"
+    "output": "new api.observable.CMS(api.getElements([1674, 1209, 731]), 1, 0xFF0000)"
   },
   {
-    "instruction": "Ligate element 1511 and 1328.",
+    "instruction": "Generate a 16 nucleotide single strand with sequence 'TUUUGUCUTAAGAGCT'.",
     "input": "",
-    "output": "edit.ligate(api.getElements([1511])[0], api.getElements([1328])[0]);"
+    "output": "edit.createStrand('TUUUGUCUTAAGAGCT', false);"
+  },
+  {
+    "instruction": "Return the IDs of all 3' end nucleotides.",
+    "input": "",
+    "output": "systems[0].strands.map(s => s.end3.id);"
+  },
+  {
+    "instruction": "Rotate the camera by 41.5 degrees around the X axis and -33.8 degrees around the Y axis",
+    "input": "",
+    "output": "camera.rotateX(41.5 * Math.PI / 180); camera.rotateY(-33.8 * Math.PI / 180); camera.updateProjectionMatrix(); render();"
+  },
+  {
+    "instruction": "Toggle visibility of elements with IDs [120, 911, 1811]",
+    "input": "",
+    "output": "api.toggleElements(api.getElements([120, 911, 1811]))"
+  },
+  {
+    "instruction": "Color the 5' end of every strand blue (0x0000ff).",
+    "input": "",
+    "output": "var color = new THREE.Color(0x0000ff); systems[0].strands.forEach(s => { var e = s.end5; s.system.fillVec('nsColors', 3, e.sid, [color.r, color.g, color.b]); }); systems[0].callUpdates(['instanceColor']); render();"
+  },
+  {
+    "instruction": "Change the colormap to RdGy.",
+    "input": "",
+    "output": "api.changeColormap('RdGy');"
+  },
+  {
+    "instruction": "Add an ambient light with color 0x3997D3 and intensity 1.2",
+    "input": "",
+    "output": "var l = new THREE.AmbientLight(0x3997D3, 1.2); scene.add(l); render();"
+  },
+  {
+    "instruction": "Color every even nucleotide red (0xff0000) and odd nucleotide green (0x00ff00).",
+    "input": "",
+    "output": "var red = 0xff0000; var green = 0x00ff00; var sys = systems[0]; sys.getMonomers().forEach(e => { var color = (e.id % 2 === 0) ? red : green; var c = new THREE.Color(color); sys.fillVec('nsColors', 3, e.sid, [c.r, c.g, c.b]); }); sys.callUpdates(['instanceColor']); render();"
+  },
+  {
+    "instruction": "Show mean orientation for elements [1849, 919, 1025]",
+    "input": "",
+    "output": "new api.observable.MeanOrientation(api.getElements([1849, 919, 1025]))"
+  },
+  {
+    "instruction": "Translate the object named object_547 to 53.5, 95.3, -42.7",
+    "input": "",
+    "output": "var obj = scene.getObjectByName('object_547'); if(obj) { obj.position.set(53.5, 95.3, -42.7); render(); }"
   }
 ]
