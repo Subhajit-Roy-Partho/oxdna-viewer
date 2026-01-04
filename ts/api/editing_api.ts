@@ -69,6 +69,11 @@ module edit{
         return newStrand;
     }
 
+    /**
+     * Displace a list of elements towards the position of a target element.
+     * @param e The target element to move towards
+     * @param to_displace The list of elements to displace
+     */
     export function move_to(e:BasicElement, to_displace: BasicElement[]){
         //displace a list of elements tovards the position of e
         let origin= to_displace[0].getPos();
@@ -81,6 +86,12 @@ module edit{
         render();
     }
 
+    /**
+     * Insert a sequence of bases into a strand at a specific element.
+     * @param e The element after which to insert
+     * @param sequence The sequence string to insert
+     * @returns The newly added elements
+     */
     export function insert(e :BasicElement, sequence: string): BasicElement[] {
         let edits = [];
 
@@ -129,6 +140,10 @@ module edit{
         return added;
     }
 
+    /**
+     * Deletes the elements and ligates their neighbors.
+     * @param elems The elements to skip/delete
+     */
     export function skip(elems: BasicElement[]) {
         let edits = [];
         elems.forEach(e=>{
@@ -149,11 +164,20 @@ module edit{
         editHistory.add(new RevertableMultiEdit(edits));
     }
 
+    /**
+     * Nicks the strand at the specified element.
+     * @param element The element to nick at
+     */
     export function nick(element: BasicElement){
         splitStrand(element);
         render(); 
     }
 
+    /**
+     * Ligates two elements together.
+     * @param a The first element
+     * @param b The second element
+     */
     export function ligate(a :BasicElement, b: BasicElement) {
         let end5: BasicElement,
             end3: BasicElement;
@@ -759,6 +783,11 @@ module edit{
     }
 
 
+    /**
+     * Gets the sequence string from a set of elements.
+     * @param elems The set of elements
+     * @returns The sequence string
+     */
     export function getSequence(elems: Set<BasicElement>) : string {
         // Sort elements in 5' to 3' order
         let strands = new Set<Strand>();
@@ -771,6 +800,12 @@ module edit{
         return orderedElems.map(e=>{return e.type}).join('');
     };
 
+    /**
+     * Sets the sequence for a set of elements.
+     * @param elems The set of elements to modify
+     * @param sequence The new sequence string
+     * @param setComplementaryBases (optional) Whether to update complementary bases
+     */
     export function setSequence(elems: Set<BasicElement>, sequence: string, setComplementaryBases?: boolean) {
         setComplementaryBases = setComplementaryBases || false;
         if (elems.size != sequence.length) {

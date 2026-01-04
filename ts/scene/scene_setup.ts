@@ -9,11 +9,17 @@
 //);
 
 // scene update call definition
+/**
+ * Renders the main scene.
+ */
 function render() {
     pointlight.position.copy(camera.position);
     renderer.render(scene, camera);
     //renderer.render(pickingScene, camera);
 }
+/**
+ * Renders the colorbar scene.
+ */
 function renderColorbar() {
     colorbarRenderer.render(colorbarScene, colorbarCamera);
 }
@@ -54,12 +60,18 @@ function onWindowResize() {
 let camera: THREE.Camera
 let aspect: number = window.innerWidth / window.innerHeight;
 
+/**
+ * Creates a perspective camera.
+ */
 function createPerspectiveCamera(fov: number, near: number, far:number, pos:number[]) {
     const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
     camera.position.set(pos[0], pos[1], pos[2]);
     return camera
 }
 
+/**
+ * Creates an orthographic camera.
+ */
 function createOrthographicCamera(left:number, right:number, top:number, bottom:number, near:number, far:number, pos:number[]){
     const camera = new THREE.OrthographicCamera(left, right, top, bottom, near, far);
     camera.position.set(pos[0], pos[1], pos[2]);
@@ -130,6 +142,10 @@ scene.add(arrowHelper); //add z-axis to scene
 // Declare bounding box object
 let boxObj: THREE.LineSegments;
 
+/**
+ * Toggles the visibility of the bounding box.
+ * @param chkBox The checkbox element
+ */
 function toggleBox(chkBox: HTMLInputElement) {
     if (chkBox.checked) {
         // Redraw from scratch, in case it has changed size
@@ -220,8 +236,8 @@ function drawBox(size: THREE.Vector3, position: THREE.Vector3): THREE.LineSegmen
     points.push(f(b,a,b)); points.push(f(b,a,a));
     points.push(f(b,b,b)); points.push(f(b,b,a));
 
-    var geometry = new THREE.BufferGeometry().setFromPoints(points);
-    var boxObj = new THREE.LineSegments(geometry, material);
+    let geometry = new THREE.BufferGeometry().setFromPoints(points);
+    let boxObj = new THREE.LineSegments(geometry, material);
     scene.add(boxObj);
     return boxObj;
 }

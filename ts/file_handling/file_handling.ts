@@ -5,12 +5,18 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // An object which connects a file to the function which can parse its contents
+// An object which connects a file to the function which can parse its contents
 class File2reader {
     file: File;
     type: string;
     reader: Function;
 
-    constructor(file, type, reader) {
+    /**
+     * @param file The file object to read
+     * @param type The type of file (e.g., 'topology', 'trajectory')
+     * @param reader The function to parse the file
+     */
+    constructor(file: File, type: string, reader: Function) {
         this.file = file;
         this.type = type;
         this.reader = reader;
@@ -20,37 +26,50 @@ class File2reader {
 // Generic file reader which wraps its onload function in a promise
 // This can be used with async await to force serial execution
 class oxFileReader extends FileReader {
-    promise:Promise<unknown>
+    promise: Promise<unknown>;
 
-    constructor(parser:Function) {
+    /**
+     * @param parser The function to call with the file content
+     */
+    constructor(parser: Function) {
         super();
-        this.promise = new Promise (function (resolve, reject) {
+        this.promise = new Promise((resolve, reject) => {
             this.onload = () => {
-                let f = this.result as string
-                let result = parser(f, ...parser['args'])
-                resolve(result) // This passes the result of the parser up through parseFilesWith
-            }
-        }.bind(this))
+                let f = this.result as string;
+                let result = parser(f, ...parser['args']);
+                resolve(result); // This passes the result of the parser up through parseFilesWith
+            };
+            this.onerror = reject;
+        });
     }
 }
 
-// Generic function to connect a text file to a reader to the correct parser
-function parseFileWith(file: File, parser: Function, args:unknown[]=[]): Promise<unknown> {
-    parser['args'] = args
+/**
+ * Generic function to connect a text file to a reader to the correct parser
+ * @param file The file to read
+ * @param parser The function to parse the file content
+ * @param args Additional arguments for the parser
+ * @returns A promise that resolves with the parser result
+ */
+function parseFileWith(file: File, parser: Function, args: unknown[] = []): Promise<unknown> {
+    parser['args'] = args;
     let reader = new oxFileReader(parser);
     reader.readAsText(file);
-    let result = reader.promise
-    return result
+    let result = reader.promise;
+    return result;
 }
 
-// organizes files into files that create a new system, auxiliary files, and script files.
-// Then fires the reads sequentially
+/**
+ * Organizes files into files that create a new system, auxiliary files, and script files.
+ * Then fires the reads sequentially.
+ * @param files Array of File objects to handle
+ */
 async function handleFiles(files: File[]) {
     renderer.domElement.style.cursor = "wait";
-    const systemFiles:File2reader[] = [];
-    const systemHelpers:Object = {}; // These can be named whatever.
-    const auxFiles:File2reader[] = [];
-    const scriptFiles:File2reader[] = [];
+    const systemFiles: File2reader[] = [];
+    const systemHelpers: { [key: string]: File | File[] } = {}; // These can be named whatever.
+    const auxFiles: File2reader[] = [];
+    const scriptFiles: File2reader[] = [];
 
     // Nasty "switch" statement.  
     // The file will be assigned to the first reader it matches.
@@ -71,7 +90,13 @@ async function handleFiles(files: File[]) {
         // Patchy files are special and are needed at system creation time
         else if (fileName.includes("particles") || fileName.includes("loro") || fileName.includes("matrix")) { systemHelpers["particles"] = files[i]; } 
         else if (fileName.includes("patches")) { systemHelpers["patches"] = files[i]; } 
-        else if (ext === "patchspec" || fileName.match(/p_my\w+\.dat/g)) { (systemHelpers["loroPatchFiles"] == undefined) ? systemHelpers["loroPatchFiles"] = [files[i]]: systemHelpers["loroPatchFiles"].push(files[i])}
+        else if (ext === "patchspec" || fileName.match(/p_my\w+\.dat/g)) { 
+            if (systemHelpers["loroPatchFiles"] == undefined) {
+                 systemHelpers["loroPatchFiles"] = [files[i]];
+            } else {
+                (systemHelpers["loroPatchFiles"] as File[]).push(files[i]);
+            }
+        }
 
         // These file types modify an existing system
         else if (ext == 'dat' || ext == 'conf' || ext == 'oxdna') { auxFiles.push(new File2reader(files[i], 'trajectory', readTraj)); }
@@ -90,21 +115,27 @@ async function handleFiles(files: File[]) {
         else if (ext=="js"){ scriptFiles.push(new File2reader(files[i], 'script', readScriptFile)); }
     }
 
-    // Create a system from a file and resolve with a reference to the system
-    function getOrMakeSystem() {
-        return new Promise<System> (function (resolve, reject) {
+    /**
+     * Create a system from a file and resolve with a reference to the system
+     */
+    function getOrMakeSystem(): Promise<System> {
+        return new Promise<System>(function (resolve, reject) {
             if (systemFiles.length == 0) { resolve(systems[systems.length-1]) } // If we're not making a new system
             else if (systemFiles.length == 1) {
                 const sysPromise = systemFiles[0].reader(systemFiles[0].file, systemHelpers);
-                sysPromise.then((system) => resolve(system))
+                sysPromise.then((system: System) => resolve(system)).catch(reject);
             } // If we're reading a file to make a system
             else {throw new Error("Systems must be defined by a single file (there can be helper files)!")}
         });
     }
 
-    function readAuxiliaryFiles(system) {
-        let readList:Promise<unknown>[] = auxFiles.map((auxFile) => 
+    /**
+     * Read auxiliary files associated with the system
+     */
+    function readAuxiliaryFiles(system: System) {
+        let readList: Promise<unknown>[] = auxFiles.map((auxFile) => 
             new Promise(function (resolve, reject) {
+                // @ts-ignore
                 const result = auxFile.reader(auxFile.file, system);
                 resolve(result);
             })
@@ -112,20 +143,30 @@ async function handleFiles(files: File[]) {
         return Promise.all(readList);
     }
 
-    // Wheeeeeeeee
+    /**
+     * Execute script files
+     */
     function executeScript() {
-        let readList:Promise<unknown>[] = scriptFiles.map((scriptFile) =>
+        let readList: Promise<unknown>[] = scriptFiles.map((scriptFile) =>
             new Promise(function (resolve, reject) {
-                readScriptFile(scriptFile.file)
+                // @ts-ignore
+                readScriptFile(scriptFile.file);
+                resolve(null);
             })
         )
         return Promise.all(readList)
     }
 
-    getOrMakeSystem().then((sys) => readAuxiliaryFiles(sys)).then(() => executeScript())
+    getOrMakeSystem()
+        .then((sys) => readAuxiliaryFiles(sys))
+        .then(() => executeScript())
+        .catch(console.error);
 }
 
-// Create Three geometries and meshes that get drawn in the scene.
+/**
+ * Create Three geometries and meshes that get drawn in the scene.
+ * @param system The system to add to the scene
+ */
 async function addSystemToScene(system: System) {
     // If you make any modifications to the drawing matricies here, they will take effect before anything draws
     // however, if you want to change once stuff is already drawn, you need to add "<attribute>.needsUpdate" before the render() call.

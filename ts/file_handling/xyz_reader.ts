@@ -1,4 +1,9 @@
-function parseXYZString(s: string) {
+/**
+ * Parses an XYZ string and creates a system from it.
+ * @param s The XYZ string content
+ * @returns The created System
+ */
+function parseXYZString(s: string): System {
     let sys = new System(systems.length, elements.getNextId());
 
     let lines = s.split(/[\n]+/g);
