@@ -949,6 +949,7 @@ function readPdbFile(file) {
     return activate();
 
 }
+
 function readMmcifFile(file) {
     let reader = new FileReader();
     var worker = new Worker('./dist/file_handling/mmcif_worker.js');
