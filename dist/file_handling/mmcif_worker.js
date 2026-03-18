@@ -1,4 +1,4 @@
-importScripts("../../ts/lib/three.js");
+importScripts("../vendor/three-core-compat.js");
 importScripts("../model/basicElement.js");
 importScripts("../model/nucleotide.js");
 importScripts("../model/aminoAcid.js");
