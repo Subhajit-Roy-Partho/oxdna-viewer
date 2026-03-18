@@ -1,8 +1,186 @@
-/**
- * Bits of code to facilitate querying structures from the browser console
- */
+const API_ERROR_RECORD_KEY = '__oxviewApiErrorRecord';
 var api;
 (function (api) {
+    let lastErrorRecord = null;
+    let errorHistory = [];
+    function serializeApiArgument(arg) {
+        if (arg === undefined) {
+            return 'undefined';
+        }
+        if (arg === null) {
+            return 'null';
+        }
+        if (arg instanceof THREE.Vector3 || arg instanceof THREE.Vector4) {
+            return JSON.stringify(arg.toArray());
+        }
+        if (arg instanceof THREE.Color) {
+            return `Color(${arg.getHexString()})`;
+        }
+        if (arg instanceof Set) {
+            return `Set(${arg.size})`;
+        }
+        if (arg instanceof Map) {
+            return `Map(${arg.size})`;
+        }
+        if (Array.isArray(arg)) {
+            return `Array(${arg.length})`;
+        }
+        if (arg instanceof BasicElement) {
+            return `BasicElement(${arg.id})`;
+        }
+        if (arg instanceof Strand) {
+            return `Strand(${arg.id})`;
+        }
+        if (arg instanceof System) {
+            return `System(${arg.id})`;
+        }
+        if (typeof arg === 'object') {
+            try {
+                return JSON.stringify(arg);
+            }
+            catch (error) {
+                return Object.prototype.toString.call(arg);
+            }
+        }
+        return String(arg);
+    }
+    function normalizeApiError(error) {
+        if (error instanceof Error) {
+            return error;
+        }
+        return new Error(String(error));
+    }
+    function getLastError() {
+        if (!lastErrorRecord) {
+            return null;
+        }
+        return Object.assign({}, lastErrorRecord, { args: lastErrorRecord.args.slice() });
+    }
+    api.getLastError = getLastError;
+    function clearLastError() {
+        lastErrorRecord = null;
+        window.lastAPIError = null;
+    }
+    api.clearLastError = clearLastError;
+    function getErrorHistory() {
+        return errorHistory.map(record => Object.assign({}, record, { args: record.args.slice() }));
+    }
+    api.getErrorHistory = getErrorHistory;
+    function clearErrorHistory() {
+        errorHistory = [];
+        clearLastError();
+        window.apiErrorHistory = [];
+    }
+    api.clearErrorHistory = clearErrorHistory;
+    function reportError(namespaceName, methodName, error, args = []) {
+        if (error && typeof error === 'object' && error[API_ERROR_RECORD_KEY]) {
+            return error[API_ERROR_RECORD_KEY];
+        }
+        const normalized = normalizeApiError(error);
+        const record = {
+            namespace: namespaceName,
+            method: methodName,
+            message: normalized.message,
+            stack: normalized.stack,
+            timestamp: new Date().toISOString(),
+            args: args.map(serializeApiArgument)
+        };
+        if (normalized && typeof normalized === 'object') {
+            normalized[API_ERROR_RECORD_KEY] = record;
+        }
+        lastErrorRecord = record;
+        errorHistory.push(record);
+        if (errorHistory.length > 50) {
+            errorHistory.shift();
+        }
+        window.lastAPIError = record;
+        window.apiErrorHistory = errorHistory;
+        const message = `${namespaceName}.${methodName} failed: ${record.message}`;
+        if (typeof notify === 'function') {
+            notify(message, 'alert', true);
+        }
+        console.error(message, normalized, { args });
+        return record;
+    }
+    api.reportError = reportError;
+    function wrapNamespaceErrors(target, namespaceName, skip = []) {
+        const skipped = new Set([
+            'getLastError',
+            'clearLastError',
+            'getErrorHistory',
+            'clearErrorHistory',
+            'reportError',
+            'wrapNamespaceErrors',
+            ...skip
+        ]);
+        Object.keys(target).forEach(key => {
+            if (skipped.has(key)) {
+                return;
+            }
+            const value = target[key];
+            if (typeof value !== 'function') {
+                return;
+            }
+            if (value.__oxviewApiWrapped) {
+                return;
+            }
+            // Uppercase exports in api.observable are classes; leave them untouched.
+            if (key.length > 0 && key[0] === key[0].toUpperCase()) {
+                return;
+            }
+            const wrapped = function () {
+                try {
+                    const result = value.apply(this, arguments);
+                    if (result && typeof result.then === 'function') {
+                        return result.catch(error => {
+                            reportError(namespaceName, key, error, Array.from(arguments));
+                            throw error;
+                        });
+                    }
+                    return result;
+                }
+                catch (error) {
+                    reportError(namespaceName, key, error, Array.from(arguments));
+                    throw error;
+                }
+            };
+            wrapped.__oxviewApiWrapped = true;
+            target[key] = wrapped;
+        });
+    }
+    api.wrapNamespaceErrors = wrapNamespaceErrors;
+    function getInstancePositionIfAvailable(element, parameter) {
+        try {
+            return element.getInstanceParameter3(parameter);
+        }
+        catch (error) {
+            return null;
+        }
+    }
+    function resolveElementPositionTarget(element, target) {
+        switch ((target || 'center').toLowerCase()) {
+            case 'center':
+            case 'position':
+            case 'cm':
+                return element.getPos();
+            case 'backbone':
+            case 'bb':
+                return getInstancePositionIfAvailable(element, 'bbOffsets');
+            case 'base':
+            case 'nucleoside':
+            case 'ns':
+                return getInstancePositionIfAvailable(element, 'nsOffsets');
+            case 'connector':
+            case 'con':
+                return getInstancePositionIfAvailable(element, 'conOffsets');
+            case 'backboneconnector':
+            case 'bbconnector':
+            case 'sp':
+                return getInstancePositionIfAvailable(element, 'bbconOffsets');
+            default:
+                throw new Error(`Unknown position target "${target}". Use center, backbone, base, connector, or backboneConnector.`);
+        }
+    }
     /**
      * Toggles the visibility of a strand.
      * @param strand The strand to toggle
@@ -18,6 +196,17 @@ var api;
         return strand;
     }
     api.toggleStrand = toggleStrand;
+    /**
+     * Selects and highlights the entire strand.
+     * @param strand The strand to mark
+     * @param keepPrevious Whether to keep the previous selection
+     * @returns The strand
+     */
+    function markStrand(strand, keepPrevious = true) {
+        selectElements(strand.getMonomers(), keepPrevious);
+        return strand;
+    }
+    api.markStrand = markStrand;
     // get a dictionary with every strand length : [strand] listed   
     /**
      * Get a dictionary with every strand length : [strand] listed.
@@ -195,6 +384,165 @@ var api;
         return (out);
     }
     api.getElements = getElements;
+    /**
+     * Gets a single element by global ID.
+     * @param target Global element ID
+     * @returns The element or undefined if not found
+     */
+    function getElement(target) {
+        return elements.get(target);
+    }
+    api.getElement = getElement;
+    /**
+     * Gets the sequence for a strand.
+     * @param strand The strand to query
+     * @returns Sequence string
+     */
+    function getSequence(strand) {
+        return strand.getSequence();
+    }
+    api.getSequence = getSequence;
+    /**
+     * Returns a copy of the selected elements.
+     * @returns Selected elements
+     */
+    function getSelectedBases() {
+        return Array.from(selectedBases);
+    }
+    api.getSelectedBases = getSelectedBases;
+    /**
+     * Returns the global IDs of the selected elements.
+     * @returns Selected element IDs
+     */
+    function getSelectedElementIDs() {
+        return getSelectedBases().map(e => e.id);
+    }
+    api.getSelectedElementIDs = getSelectedElementIDs;
+    /**
+     * Gets a position from an element.
+     * @param element Element to inspect
+     * @param target Which position to return: center, backbone, base, connector, backboneConnector
+     * @returns Position vector or null if that position is not meaningful for this element
+     */
+    function getElementPosition(element, target = 'center') {
+        const position = resolveElementPositionTarget(element, target);
+        return position ? position.clone() : null;
+    }
+    api.getElementPosition = getElementPosition;
+    /**
+     * Convenience alias for nucleoside/base position.
+     * @param element Element to inspect
+     * @returns Base position vector or null
+     */
+    function getBasePosition(element) {
+        return getElementPosition(element, 'base');
+    }
+    api.getBasePosition = getBasePosition;
+    /**
+     * Convenience alias for backbone position.
+     * @param element Element to inspect
+     * @returns Backbone position vector or null
+     */
+    function getBackbonePosition(element) {
+        return getElementPosition(element, 'backbone');
+    }
+    api.getBackbonePosition = getBackbonePosition;
+    /**
+     * Gets positions for a list of elements.
+     * @param elems Elements to inspect
+     * @param target Which position to return
+     * @returns Array of positions matching the provided elements
+     */
+    function getElementPositions(elems, target = 'center') {
+        return elems.map(e => getElementPosition(e, target));
+    }
+    api.getElementPositions = getElementPositions;
+    /**
+     * Gets the orientation vectors for an element.
+     * @param element Element to inspect
+     * @returns Orientation vectors
+     */
+    function getElementOrientation(element) {
+        const a1 = element.getA1().clone();
+        const a3 = element.getA3().clone();
+        const a2 = a1.clone().cross(a3);
+        if (a2.lengthSq() > 0) {
+            a2.normalize();
+        }
+        return { a1, a2, a3 };
+    }
+    api.getElementOrientation = getElementOrientation;
+    /**
+     * Gets a serializable info object for an element.
+     * @param element Element to inspect
+     * @returns Information about the element
+     */
+    function getElementInfo(element) {
+        const orientation = getElementOrientation(element);
+        const pairId = element.isPaired() && element.pair ? element.pair.id : null;
+        const positions = {
+            center: getElementPosition(element, 'center')?.toArray() ?? null,
+            backbone: getElementPosition(element, 'backbone')?.toArray() ?? null,
+            base: getElementPosition(element, 'base')?.toArray() ?? null,
+            connector: getElementPosition(element, 'connector')?.toArray() ?? null,
+            backboneConnector: getElementPosition(element, 'backboneConnector')?.toArray() ?? null,
+        };
+        return {
+            id: element.id,
+            sid: element.sid,
+            type: element.type,
+            label: element.label ?? null,
+            systemId: element.getSystem().id,
+            strandId: element.strand ? element.strand.id : null,
+            clusterId: element.clusterId ?? null,
+            selected: selectedBases.has(element),
+            paired: element.isPaired(),
+            pairId,
+            n3Id: element.n3 ? element.n3.id : null,
+            n5Id: element.n5 ? element.n5.id : null,
+            positions,
+            orientation: {
+                a1: orientation.a1.toArray(),
+                a2: orientation.a2.toArray(),
+                a3: orientation.a3.toArray(),
+            }
+        };
+    }
+    api.getElementInfo = getElementInfo;
+    /**
+     * Gets the center of mass of a list of elements.
+     * @param elems Elements to average. Defaults to the current selection.
+     * @param target Which position to average
+     * @returns Center of mass vector
+     */
+    function getCenterOfMass(elems = getSelectedBases(), target = 'center') {
+        const positions = elems
+            .map(e => getElementPosition(e, target))
+            .filter((p) => !!p);
+        const center = new THREE.Vector3();
+        if (positions.length === 0) {
+            return center;
+        }
+        positions.forEach(p => center.add(p));
+        return center.divideScalar(positions.length);
+    }
+    api.getCenterOfMass = getCenterOfMass;
+    /**
+     * Gets the distance between two elements.
+     * @param a First element
+     * @param b Second element
+     * @param target Which position to compare
+     * @returns Distance or NaN if that position is not available
+     */
+    function getDistance(a, b, target = 'center') {
+        const pa = getElementPosition(a, target);
+        const pb = getElementPosition(b, target);
+        if (!pa || !pb) {
+            return NaN;
+        }
+        return pa.distanceTo(pb);
+    }
+    api.getDistance = getDistance;
     /**
      * Selects elements by their IDs.
      * @param targets Array of element IDs
@@ -398,6 +746,24 @@ var api;
     }
     api.setColorBounds = setColorBounds;
     /**
+     * Shows only sugar-phosphate/backbone connector cylinders.
+     */
+    function spOnly() {
+        elements.forEach((n) => {
+            n.setInstanceParameter('scales', [0, 0, 0]);
+            n.setInstanceParameter('nsScales', [0, 0, 0]);
+            n.setInstanceParameter('conScales', [0, 0, 0]);
+        });
+        for (let i = 0; i < systems.length; i++) {
+            systems[i].callUpdates(['instanceScale']);
+        }
+        for (let i = 0; i < tmpSystems.length; i++) {
+            tmpSystems[i].callUpdates(['instanceScale']);
+        }
+        render();
+    }
+    api.spOnly = spOnly;
+    /**
      * Resets the visualization to show everything with default scaling.
      */
     function showEverything() {
@@ -478,3 +844,4 @@ var api;
     //    instancedBBconnector.
     //}
 })(api || (api = {}));
+api.wrapNamespaceErrors(api, 'api');

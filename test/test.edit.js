@@ -8,6 +8,10 @@ let seq = "ACTGCCTAAGCCTAAG";
 var compl = {A:'T',G:'C',C:'G', T:'A'}
 let complseq = Array.from(seq).map(c=>compl[c]).reverse().join('');
 
+function assertVectorClose(actual, expected, epsilon = 1e-6) {
+  assert.isAtMost(actual.distanceTo(expected), epsilon, `${actual.toArray()} is not close to ${expected.toArray()}`);
+}
+
 describe('Editing', function () {
   describe('Create strand', function () {
     before(function () {
@@ -209,6 +213,12 @@ describe('Runtime compatibility', function () {
     `);
     const sizeAfter = oxview.eval('scene.children.length');
     assert.isAbove(sizeAfter, sizeBefore);
+    oxview.eval(`
+      scene.remove(window.__compatTrack);
+      scene.remove(window.__compatCms);
+      edit.deleteElements(window.__compatElems);
+      clearSelection();
+    `);
   });
 
   it('should keep camera switching callable', function () {
@@ -227,3 +237,121 @@ describe('Runtime compatibility', function () {
   });
 });
 
+describe('Scene API', function () {
+  before(function () {
+    oxview.edit.createStrand(seq);
+    oxview.eval('clearSelection()');
+  });
+
+  after(function () {
+    oxview.eval('clearSelection()');
+    let elems = Array.from(oxview.getElements().values());
+    oxview.edit.deleteElements(elems);
+  });
+
+  it('should expose the documented and new scene helpers', function () {
+    [
+      'markStrand',
+      'getSequence',
+      'spOnly',
+      'getElement',
+      'getElementPosition',
+      'getBasePosition',
+      'getBackbonePosition',
+      'getElementPositions',
+      'getElementOrientation',
+      'getElementInfo',
+      'getSelectedBases',
+      'getSelectedElementIDs',
+      'getCenterOfMass',
+      'getDistance'
+    ].forEach(name => assert.isFunction(oxview.api[name], `${name} is missing`));
+    ['getLastError', 'clearLastError', 'getErrorHistory', 'clearErrorHistory'].forEach(name => {
+      assert.isFunction(oxview.api[name], `api.${name} is missing`);
+      assert.isFunction(oxview.edit[name], `edit.${name} is missing`);
+      assert.isFunction(oxview.api.observable[name], `api.observable.${name} is missing`);
+    });
+  });
+
+  it('should return strand sequences and length groupings correctly', function () {
+    const strand = oxview.getSystems()[0].strands[0];
+    assert.equal(oxview.api.getSequence(strand), seq);
+    const lengths = oxview.api.countStrandLength();
+    assert.equal(lengths[seq.length].length, 1);
+    assert.equal(lengths[seq.length][0], strand);
+  });
+
+  it('should mark an entire strand and report the selected ids', function () {
+    const strand = oxview.getSystems()[0].strands[0];
+    oxview.eval('clearSelection()');
+    oxview.api.markStrand(strand, false);
+    const selected = oxview.api.getSelectedBases();
+    const selectedIds = oxview.api.getSelectedElementIDs();
+    assert.equal(selected.length, seq.length);
+    assert.equal(selectedIds.length, seq.length);
+    assert.sameMembers(selectedIds, strand.getMonomers().map(e => e.id));
+  });
+
+  it('should report element positions consistently', function () {
+    const elem = oxview.getElements().get(0);
+    assertVectorClose(oxview.api.getElementPosition(elem, 'center'), elem.getPos());
+    assertVectorClose(oxview.api.getBackbonePosition(elem), elem.getInstanceParameter3('bbOffsets'));
+    assertVectorClose(oxview.api.getBasePosition(elem), elem.getInstanceParameter3('nsOffsets'));
+    const positions = oxview.api.getElementPositions([elem], 'backbone');
+    assert.equal(positions.length, 1);
+    assertVectorClose(positions[0], elem.getInstanceParameter3('bbOffsets'));
+  });
+
+  it('should report orientation, info, center of mass, and distance helpers', function () {
+    const strand = oxview.getSystems()[0].strands[0];
+    const [first, second] = strand.getMonomers();
+    const orientation = oxview.api.getElementOrientation(first);
+    assert.closeTo(orientation.a1.length(), 1, 1e-6);
+    assert.closeTo(orientation.a3.length(), 1, 1e-6);
+
+    const info = oxview.api.getElementInfo(first);
+    assert.equal(info.id, first.id);
+    assert.equal(info.systemId, first.getSystem().id);
+    assert.equal(info.strandId, strand.id);
+    assert.equal(info.positions.center.length, 3);
+    assert.equal(info.orientation.a1.length, 3);
+
+    const manualCom = first.getPos().clone().add(second.getPos()).divideScalar(2);
+    const apiCom = oxview.api.getCenterOfMass([first, second]);
+    assertVectorClose(apiCom, manualCom);
+
+    const manualDist = first.getPos().distanceTo(second.getPos());
+    assert.closeTo(oxview.api.getDistance(first, second), manualDist, 1e-6);
+    assert.equal(oxview.api.getElement(first.id), first);
+  });
+
+  it('should support sugar-phosphate-only mode and restoration', function () {
+    const elem = oxview.getElements().get(0);
+    oxview.api.spOnly();
+    assertVectorClose(elem.getInstanceParameter3('scales'), new oxview.THREE.Vector3(0, 0, 0));
+    assertVectorClose(elem.getInstanceParameter3('nsScales'), new oxview.THREE.Vector3(0, 0, 0));
+    assertVectorClose(elem.getInstanceParameter3('conScales'), new oxview.THREE.Vector3(0, 0, 0));
+
+    oxview.api.showEverything();
+    assertVectorClose(elem.getInstanceParameter3('scales'), new oxview.THREE.Vector3(1, 1, 1));
+  });
+
+  it('should record API errors so they can be inspected later', function () {
+    oxview.api.clearErrorHistory();
+    let caught = false;
+    try {
+      oxview.api.getElementPosition(oxview.getElements().get(0), 'definitely-not-a-position');
+    } catch (error) {
+      caught = true;
+    }
+
+    assert.isTrue(caught, 'Expected API call to throw');
+    const lastError = oxview.api.getLastError();
+    assert.equal(lastError.namespace, 'api');
+    assert.equal(lastError.method, 'getElementPosition');
+    assert.include(lastError.message, 'Unknown position target');
+    assert.isAtLeast(oxview.api.getErrorHistory().length, 1);
+    assert.deepEqual(oxview.edit.getLastError(), lastError);
+    oxview.api.clearErrorHistory();
+  });
+});

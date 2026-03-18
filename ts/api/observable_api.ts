@@ -8,6 +8,22 @@
 // example code calculating different properties from the scene 
 // and displaying the results 
 module api.observable{
+    export function getLastError() {
+        return api.getLastError();
+    }
+
+    export function clearLastError() {
+        return api.clearLastError();
+    }
+
+    export function getErrorHistory() {
+        return api.getErrorHistory();
+    }
+
+    export function clearErrorHistory() {
+        return api.clearErrorHistory();
+    }
+
     export class CMS extends THREE.Mesh{
         // displayes the CMS of a given array of basic elements 
         elements:BasicElement[]; 
@@ -24,6 +40,10 @@ module api.observable{
         calculate(){
             // function can be used for updates in a given trajectory
             let v =  new THREE.Vector3(0,0,0);
+            if (this.elements.length === 0) {
+                this.position.set(0, 0, 0);
+                return;
+            }
             this.elements.forEach(element => {
                 v.add(element.getInstanceParameter3('nsOffsets'));
             });
@@ -64,6 +84,7 @@ module api.observable{
             this.points.push(
                 new THREE.Vector3( pos.x, pos.y, pos.z)
             );
+            this.geometry.dispose();
             this.geometry = new THREE.BufferGeometry().setFromPoints( this.points );
         }
     }
@@ -103,7 +124,7 @@ module api.observable{
     
     export function wrap (fn, fn_wrap : Function)
     {
-        https://dzone.com/articles/javascript-wrap-all-methods 
+        // Inspired by https://dzone.com/articles/javascript-wrap-all-methods
         return function ()
         {   
             let result =  fn.apply(this, arguments);
@@ -115,3 +136,4 @@ module api.observable{
 
 }
 
+api.wrapNamespaceErrors(api.observable, 'api.observable');

@@ -9,6 +9,22 @@ var api;
 (function (api) {
     var observable;
     (function (observable) {
+        function getLastError() {
+            return api.getLastError();
+        }
+        observable.getLastError = getLastError;
+        function clearLastError() {
+            return api.clearLastError();
+        }
+        observable.clearLastError = clearLastError;
+        function getErrorHistory() {
+            return api.getErrorHistory();
+        }
+        observable.getErrorHistory = getErrorHistory;
+        function clearErrorHistory() {
+            return api.clearErrorHistory();
+        }
+        observable.clearErrorHistory = clearErrorHistory;
         class CMS extends THREE.Mesh {
             // displayes the CMS of a given array of basic elements 
             elements;
@@ -23,6 +39,10 @@ var api;
             calculate() {
                 // function can be used for updates in a given trajectory
                 let v = new THREE.Vector3(0, 0, 0);
+                if (this.elements.length === 0) {
+                    this.position.set(0, 0, 0);
+                    return;
+                }
                 this.elements.forEach(element => {
                     v.add(element.getInstanceParameter3('nsOffsets'));
                 });
@@ -59,6 +79,7 @@ var api;
             calculate() {
                 let pos = this.particle.position;
                 this.points.push(new THREE.Vector3(pos.x, pos.y, pos.z));
+                this.geometry.dispose();
                 this.geometry = new THREE.BufferGeometry().setFromPoints(this.points);
             }
         }
@@ -92,8 +113,8 @@ var api;
         }
         observable.MeanOrientation = MeanOrientation;
         function wrap(fn, fn_wrap) {
-            https: //dzone.com/articles/javascript-wrap-all-methods 
-             return function () {
+            // Inspired by https://dzone.com/articles/javascript-wrap-all-methods
+            return function () {
                 let result = fn.apply(this, arguments);
                 fn_wrap();
                 return result;
@@ -102,3 +123,4 @@ var api;
         observable.wrap = wrap;
     })(observable = api.observable || (api.observable = {}));
 })(api || (api = {}));
+api.wrapNamespaceErrors(api.observable, 'api.observable');

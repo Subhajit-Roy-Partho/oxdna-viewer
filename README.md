@@ -73,13 +73,30 @@ The scene API can be accessed by typing `api.<command>(<arguments>)` in the brow
  * `markStrand(<strand object>)`: Highlight the given strand in the selection color.    
  * `countStrandLength(optional(<system object>))`: Returns a dictionary of strand indices with their associated length. If no system is provided, defaults to the first system loaded into the scene.  Very useful for finding the id of the scaffold strand in an origami.  
  * `highlight5ps(optional(<system object>))`: Highlights the 5' ends of every strand in the given system. If no system is provided, defaults to the first system loaded into the scene.  
+ * `highlight3ps(optional(<system object>))`: Highlights the 3' ends of every strand in the given system.  
+ * `update3primeMarkers(<diameter>, <length>, <spacing>)`: Rebuilds the 3' end markers with custom dimensions.  
  * `toggleElements(<array of elements>)`: Toggles visibility of the listed monomers.
  * `toggleAll(optional(<system object>))`: Toggles visibility of the given system. If no system is provided, defaults to the first system loaded into the scene.  
  * `toggleBaseColors()`: Toggles the bases between type-defined colors (A = blue, T/U = red, G = yellow, C = green) and grey.  
  * `trace53(<monomer object>)`: Returns an array of nucleotides beginning with the provided nucleotide and proceeding 5'-3' down the strand. (Remember that oxDNA files are 3'-5'). 
  * `trace35(<monomer object>)`: Same as trace53, but traces up the strand instead.  
+ * `getElement(<element id>)`: Returns a single element by global ID.
  * `getElements(<array of integers>)`: Returns an array of elements with global IDs corresponding to the provided integer list.  
  * `getSequence(<strand object>)`: Returns the sequence of the given strand.
+ * `getSelectedBases()`: Returns the currently selected elements as an array.
+ * `getSelectedElementIDs()`: Returns the global IDs of the current selection.
+ * `getElementPosition(<element>, optional(<target>))`: Returns a `THREE.Vector3` for `center`, `backbone`, `base`, `connector`, or `backboneConnector`.
+ * `getBasePosition(<element>)`: Convenience alias for `getElementPosition(element, "base")`.
+ * `getBackbonePosition(<element>)`: Convenience alias for `getElementPosition(element, "backbone")`.
+ * `getElementPositions(<elements>, optional(<target>))`: Returns positions for a list of elements.
+ * `getElementOrientation(<element>)`: Returns `{a1, a2, a3}` orientation vectors.
+ * `getElementInfo(<element>)`: Returns a serializable summary with IDs, connectivity, positions, and orientation.
+ * `getCenterOfMass(optional(<elements>), optional(<target>))`: Returns the center of mass of a list of elements, defaulting to the current selection.
+ * `getDistance(<element a>, <element b>, optional(<target>))`: Returns the distance between two elements.
+ * `findElement(<element>, optional(<steps>))`: Moves the camera toward the given element.
+ * `getLastError()`: Returns the last API error record.
+ * `getErrorHistory()`: Returns recent API errors.
+ * `clearLastError()` / `clearErrorHistory()`: Clears stored API errors.
  * `removeColorbar()`: Hide the colorbar if an overlay is loaded.  
  * `showColorbar()`: Show the colorbar if an overlay is loaded and the colorbar was previously hidden.  
  * `changeColormap(<map name>)`: Change the color map used for data overlays. All full-sized [Matplotlib colormaps](https://matplotlib.org/3.1.1/gallery/color/colormap_reference.html) are available in addition to the Three.js defaults ('rainbow', 'cooltowarm', 'blackbody', and 'grayscale').  Default is cooltowarm.  
@@ -98,6 +115,7 @@ The edit API can be accessed by typing `edit.<command>(<arguments>)` in the brow
  * `createStrand(<string>)`: Same as extendStrand, except a new strand is created 20 units in front of the camera. Hooked up to the "Create" button in the menu.
  * `interconnectDuplex3p(<Strand1>,<Strand2>,<string>)` : connects 2 strands with a duplex patch using their 3-primes.
  * `interconnectDuplex5p(<Strand1>,<Strand2>,<string>)` : connects 2 strands with a duplex patch using their 5-primes.
+ * `getLastError()`, `getErrorHistory()`, `clearLastError()`, `clearErrorHistory()`: access the shared API error state after a failed edit call.
 
 Note that many of these require system, strand or nucleotide objects. The viewer has a simple object hierarchy where systems contain strands which contain elements. The elements are organised as a double-linked lists within the strands and can be iterated: `strand.forEach` or listed: `strand.getMonomers()`. Arrays in JavaScript are 0-indexed, so to access the 2nd nucleotide of the 6th strand in the 1st system, you would type systems[0].strands[5].getMonomers()[1].  There is also an array of all monomers indexed by global id (shown when an element is selected), so the 1000th monomer can be accessed by elements.get(999). If you hover above an element, you will see its system ID, its strand ID and its element ID respectively.
 
@@ -109,6 +127,7 @@ Following observables are currently availabe:
 * `api.observable.CMS(elements:BasicElement[], size:number, color:number)` this creates a sphere of the
 given `size` and `color` at the center of mass of a group of bases. 
 * `api.observable.Track(particle : THREE.Mesh)` this creates a line track following the provided mesh object during trajectory update. 
+* `api.observable.getLastError()`, `api.observable.getErrorHistory()`, `api.observable.clearLastError()`, `api.observable.clearErrorHistory()`: access the shared API error state after a failed observable call.
 
 #### Combined example: 
 Compute the CMS of a given set of bases and follow its track through the trajectory. 

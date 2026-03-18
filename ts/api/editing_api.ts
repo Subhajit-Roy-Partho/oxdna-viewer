@@ -2,6 +2,21 @@
  * Bits of code that handle structure editing
  */
 module edit{
+    export function getLastError() {
+        return api.getLastError();
+    }
+
+    export function clearLastError() {
+        return api.clearLastError();
+    }
+
+    export function getErrorHistory() {
+        return api.getErrorHistory();
+    }
+
+    export function clearErrorHistory() {
+        return api.clearErrorHistory();
+    }
 /**
      * Split the element's strand at the element provided
      * @param e Element to split at
@@ -1601,3 +1616,5 @@ module edit{
             );
         }
 }
+
+api.wrapNamespaceErrors(edit, 'edit');

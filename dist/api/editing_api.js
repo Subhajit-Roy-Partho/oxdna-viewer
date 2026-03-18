@@ -3,6 +3,22 @@
  */
 var edit;
 (function (edit) {
+    function getLastError() {
+        return api.getLastError();
+    }
+    edit.getLastError = getLastError;
+    function clearLastError() {
+        return api.clearLastError();
+    }
+    edit.clearLastError = clearLastError;
+    function getErrorHistory() {
+        return api.getErrorHistory();
+    }
+    edit.getErrorHistory = getErrorHistory;
+    function clearErrorHistory() {
+        return api.clearErrorHistory();
+    }
+    edit.clearErrorHistory = clearErrorHistory;
     /**
          * Split the element's strand at the element provided
          * @param e Element to split at
@@ -1442,3 +1458,4 @@ var edit;
     }
     edit.interconnectDuplex5p = interconnectDuplex5p;
 })(edit || (edit = {}));
+api.wrapNamespaceErrors(edit, 'edit');

@@ -1,7 +1,212 @@
 /**
  * Bits of code to facilitate querying structures from the browser console
  */
+type ApiErrorRecord = {
+    namespace: string;
+    method: string;
+    message: string;
+    stack?: string;
+    timestamp: string;
+    args: string[];
+};
+
+const API_ERROR_RECORD_KEY = '__oxviewApiErrorRecord';
+
 module api{
+    let lastErrorRecord: ApiErrorRecord = null;
+    let errorHistory: ApiErrorRecord[] = [];
+
+    function serializeApiArgument(arg: any): string {
+        if (arg === undefined) {
+            return 'undefined';
+        }
+        if (arg === null) {
+            return 'null';
+        }
+        if (arg instanceof THREE.Vector3 || arg instanceof THREE.Vector4) {
+            return JSON.stringify(arg.toArray());
+        }
+        if (arg instanceof THREE.Color) {
+            return `Color(${arg.getHexString()})`;
+        }
+        if (arg instanceof Set) {
+            return `Set(${arg.size})`;
+        }
+        if (arg instanceof Map) {
+            return `Map(${arg.size})`;
+        }
+        if (Array.isArray(arg)) {
+            return `Array(${arg.length})`;
+        }
+        if (arg instanceof BasicElement) {
+            return `BasicElement(${arg.id})`;
+        }
+        if (arg instanceof Strand) {
+            return `Strand(${arg.id})`;
+        }
+        if (arg instanceof System) {
+            return `System(${arg.id})`;
+        }
+        if (typeof arg === 'object') {
+            try {
+                return JSON.stringify(arg);
+            } catch (error) {
+                return Object.prototype.toString.call(arg);
+            }
+        }
+        return String(arg);
+    }
+
+    function normalizeApiError(error: any): Error {
+        if (error instanceof Error) {
+            return error;
+        }
+        return new Error(String(error));
+    }
+
+    export function getLastError(): ApiErrorRecord {
+        if (!lastErrorRecord) {
+            return null;
+        }
+        return Object.assign({}, lastErrorRecord, { args: lastErrorRecord.args.slice() });
+    }
+
+    export function clearLastError(): void {
+        lastErrorRecord = null;
+        (window as any).lastAPIError = null;
+    }
+
+    export function getErrorHistory(): ApiErrorRecord[] {
+        return errorHistory.map(record => Object.assign({}, record, { args: record.args.slice() }));
+    }
+
+    export function clearErrorHistory(): void {
+        errorHistory = [];
+        clearLastError();
+        (window as any).apiErrorHistory = [];
+    }
+
+    export function reportError(namespaceName: string, methodName: string, error: any, args: any[] = []): ApiErrorRecord {
+        if (error && typeof error === 'object' && error[API_ERROR_RECORD_KEY]) {
+            return error[API_ERROR_RECORD_KEY];
+        }
+
+        const normalized = normalizeApiError(error);
+        const record: ApiErrorRecord = {
+            namespace: namespaceName,
+            method: methodName,
+            message: normalized.message,
+            stack: normalized.stack,
+            timestamp: new Date().toISOString(),
+            args: args.map(serializeApiArgument)
+        };
+
+        if (normalized && typeof normalized === 'object') {
+            normalized[API_ERROR_RECORD_KEY] = record;
+        }
+
+        lastErrorRecord = record;
+        errorHistory.push(record);
+        if (errorHistory.length > 50) {
+            errorHistory.shift();
+        }
+
+        (window as any).lastAPIError = record;
+        (window as any).apiErrorHistory = errorHistory;
+
+        const message = `${namespaceName}.${methodName} failed: ${record.message}`;
+        if (typeof notify === 'function') {
+            notify(message, 'alert', true);
+        }
+        console.error(message, normalized, { args });
+
+        return record;
+    }
+
+    export function wrapNamespaceErrors(target: any, namespaceName: string, skip: string[] = []) {
+        const skipped = new Set([
+            'getLastError',
+            'clearLastError',
+            'getErrorHistory',
+            'clearErrorHistory',
+            'reportError',
+            'wrapNamespaceErrors',
+            ...skip
+        ]);
+
+        Object.keys(target).forEach(key => {
+            if (skipped.has(key)) {
+                return;
+            }
+
+            const value = target[key];
+            if (typeof value !== 'function') {
+                return;
+            }
+
+            if (value.__oxviewApiWrapped) {
+                return;
+            }
+
+            // Uppercase exports in api.observable are classes; leave them untouched.
+            if (key.length > 0 && key[0] === key[0].toUpperCase()) {
+                return;
+            }
+
+            const wrapped = function () {
+                try {
+                    const result = value.apply(this, arguments);
+                    if (result && typeof result.then === 'function') {
+                        return result.catch(error => {
+                            reportError(namespaceName, key, error, Array.from(arguments));
+                            throw error;
+                        });
+                    }
+                    return result;
+                } catch (error) {
+                    reportError(namespaceName, key, error, Array.from(arguments));
+                    throw error;
+                }
+            };
+
+            wrapped.__oxviewApiWrapped = true;
+            target[key] = wrapped;
+        });
+    }
+
+    function getInstancePositionIfAvailable(element: BasicElement, parameter: string): THREE.Vector3 | null {
+        try {
+            return element.getInstanceParameter3(parameter);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function resolveElementPositionTarget(element: BasicElement, target: string): THREE.Vector3 | null {
+        switch ((target || 'center').toLowerCase()) {
+            case 'center':
+            case 'position':
+            case 'cm':
+                return element.getPos();
+            case 'backbone':
+            case 'bb':
+                return getInstancePositionIfAvailable(element, 'bbOffsets');
+            case 'base':
+            case 'nucleoside':
+            case 'ns':
+                return getInstancePositionIfAvailable(element, 'nsOffsets');
+            case 'connector':
+            case 'con':
+                return getInstancePositionIfAvailable(element, 'conOffsets');
+            case 'backboneconnector':
+            case 'bbconnector':
+            case 'sp':
+                return getInstancePositionIfAvailable(element, 'bbconOffsets');
+            default:
+                throw new Error(`Unknown position target "${target}". Use center, backbone, base, connector, or backboneConnector.`);
+        }
+    }
+
     /**
      * Toggles the visibility of a strand.
      * @param strand The strand to toggle
@@ -17,6 +222,17 @@ module api{
         }
 
         render();
+        return strand;
+    }
+
+    /**
+     * Selects and highlights the entire strand.
+     * @param strand The strand to mark
+     * @param keepPrevious Whether to keep the previous selection
+     * @returns The strand
+     */
+    export function markStrand(strand: Strand, keepPrevious = true): Strand {
+        selectElements(strand.getMonomers(), keepPrevious);
         return strand;
     }
 
@@ -197,6 +413,166 @@ module api{
             }
         });
         return(out);
+    }
+
+    /**
+     * Gets a single element by global ID.
+     * @param target Global element ID
+     * @returns The element or undefined if not found
+     */
+    export function getElement(target: number): BasicElement | undefined {
+        return elements.get(target);
+    }
+
+    /**
+     * Gets the sequence for a strand.
+     * @param strand The strand to query
+     * @returns Sequence string
+     */
+    export function getSequence(strand: Strand): string {
+        return strand.getSequence();
+    }
+
+    /**
+     * Returns a copy of the selected elements.
+     * @returns Selected elements
+     */
+    export function getSelectedBases(): BasicElement[] {
+        return Array.from(selectedBases);
+    }
+
+    /**
+     * Returns the global IDs of the selected elements.
+     * @returns Selected element IDs
+     */
+    export function getSelectedElementIDs(): number[] {
+        return getSelectedBases().map(e => e.id);
+    }
+
+    /**
+     * Gets a position from an element.
+     * @param element Element to inspect
+     * @param target Which position to return: center, backbone, base, connector, backboneConnector
+     * @returns Position vector or null if that position is not meaningful for this element
+     */
+    export function getElementPosition(element: BasicElement, target = 'center'): THREE.Vector3 | null {
+        const position = resolveElementPositionTarget(element, target);
+        return position ? position.clone() : null;
+    }
+
+    /**
+     * Convenience alias for nucleoside/base position.
+     * @param element Element to inspect
+     * @returns Base position vector or null
+     */
+    export function getBasePosition(element: BasicElement): THREE.Vector3 | null {
+        return getElementPosition(element, 'base');
+    }
+
+    /**
+     * Convenience alias for backbone position.
+     * @param element Element to inspect
+     * @returns Backbone position vector or null
+     */
+    export function getBackbonePosition(element: BasicElement): THREE.Vector3 | null {
+        return getElementPosition(element, 'backbone');
+    }
+
+    /**
+     * Gets positions for a list of elements.
+     * @param elems Elements to inspect
+     * @param target Which position to return
+     * @returns Array of positions matching the provided elements
+     */
+    export function getElementPositions(elems: BasicElement[], target = 'center'): (THREE.Vector3 | null)[] {
+        return elems.map(e => getElementPosition(e, target));
+    }
+
+    /**
+     * Gets the orientation vectors for an element.
+     * @param element Element to inspect
+     * @returns Orientation vectors
+     */
+    export function getElementOrientation(element: BasicElement) {
+        const a1 = element.getA1().clone();
+        const a3 = element.getA3().clone();
+        const a2 = a1.clone().cross(a3);
+        if (a2.lengthSq() > 0) {
+            a2.normalize();
+        }
+        return { a1, a2, a3 };
+    }
+
+    /**
+     * Gets a serializable info object for an element.
+     * @param element Element to inspect
+     * @returns Information about the element
+     */
+    export function getElementInfo(element: BasicElement) {
+        const orientation = getElementOrientation(element);
+        const pairId = element.isPaired() && (element as Nucleotide).pair ? (element as Nucleotide).pair.id : null;
+        const positions = {
+            center: getElementPosition(element, 'center')?.toArray() ?? null,
+            backbone: getElementPosition(element, 'backbone')?.toArray() ?? null,
+            base: getElementPosition(element, 'base')?.toArray() ?? null,
+            connector: getElementPosition(element, 'connector')?.toArray() ?? null,
+            backboneConnector: getElementPosition(element, 'backboneConnector')?.toArray() ?? null,
+        };
+
+        return {
+            id: element.id,
+            sid: element.sid,
+            type: element.type,
+            label: element.label ?? null,
+            systemId: element.getSystem().id,
+            strandId: element.strand ? element.strand.id : null,
+            clusterId: element.clusterId ?? null,
+            selected: selectedBases.has(element),
+            paired: element.isPaired(),
+            pairId,
+            n3Id: element.n3 ? element.n3.id : null,
+            n5Id: element.n5 ? element.n5.id : null,
+            positions,
+            orientation: {
+                a1: orientation.a1.toArray(),
+                a2: orientation.a2.toArray(),
+                a3: orientation.a3.toArray(),
+            }
+        };
+    }
+
+    /**
+     * Gets the center of mass of a list of elements.
+     * @param elems Elements to average. Defaults to the current selection.
+     * @param target Which position to average
+     * @returns Center of mass vector
+     */
+    export function getCenterOfMass(elems = getSelectedBases(), target = 'center'): THREE.Vector3 {
+        const positions = elems
+            .map(e => getElementPosition(e, target))
+            .filter((p): p is THREE.Vector3 => !!p);
+        const center = new THREE.Vector3();
+        if (positions.length === 0) {
+            return center;
+        }
+        positions.forEach(p => center.add(p));
+        return center.divideScalar(positions.length);
+    }
+
+    /**
+     * Gets the distance between two elements.
+     * @param a First element
+     * @param b Second element
+     * @param target Which position to compare
+     * @returns Distance or NaN if that position is not available
+     */
+    export function getDistance(a: BasicElement, b: BasicElement, target = 'center'): number {
+        const pa = getElementPosition(a, target);
+        const pb = getElementPosition(b, target);
+        if (!pa || !pb) {
+            return NaN;
+        }
+        return pa.distanceTo(pb);
     }
 
     /**
@@ -404,6 +780,24 @@ module api{
     }
 
     /**
+     * Shows only sugar-phosphate/backbone connector cylinders.
+     */
+    export function spOnly() {
+        elements.forEach((n: BasicElement) => {
+            n.setInstanceParameter('scales', [0, 0, 0]);
+            n.setInstanceParameter('nsScales', [0, 0, 0]);
+            n.setInstanceParameter('conScales', [0, 0, 0]);
+        });
+        for (let i = 0; i < systems.length; i++) {
+            systems[i].callUpdates(['instanceScale']);
+        }
+        for (let i = 0; i < tmpSystems.length; i++) {
+            tmpSystems[i].callUpdates(['instanceScale']);
+        }
+        render();
+    }
+
+    /**
      * Resets the visualization to show everything with default scaling.
      */
     export function showEverything() {
@@ -490,3 +884,5 @@ module api{
     //    instancedBBconnector.
     //}
 }
+
+api.wrapNamespaceErrors(api, 'api');
