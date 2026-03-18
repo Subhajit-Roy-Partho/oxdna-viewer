@@ -452,6 +452,7 @@ module api{
             scene.remove(camera);
             camera = newCam;
             controls.object = camera;
+            transformControls.camera = camera;
             scene.add(camera);
 
             document.getElementById("cameraSwitch").innerHTML = "Perspective";
@@ -477,6 +478,7 @@ module api{
             scene.remove(camera);
             camera = newCam;
             controls.object = camera;
+            transformControls.camera = camera;
             scene.add(camera);
 
             document.getElementById("cameraSwitch").innerHTML = "Orthographic";

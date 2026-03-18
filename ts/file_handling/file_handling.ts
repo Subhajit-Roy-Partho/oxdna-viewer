@@ -246,16 +246,16 @@ async function addSystemToScene(system: System) {
         } else {
             s.patchyGeometries = s.offsets.map(_=>{
                 let g = new THREE.InstancedBufferGeometry();
-                g.copy(new THREE.SphereBufferGeometry(.5,10,10) as unknown as THREE.InstancedBufferGeometry);
+                g.copy(new THREE.SphereGeometry(.5,10,10) as unknown as THREE.InstancedBufferGeometry);
                 return g;
             });
         }
         s.patchyGeometries.forEach((g,i)=>{
-            g.addAttribute('instanceOffset', new THREE.InstancedBufferAttribute(s.offsets[i], 3));
-            g.addAttribute('instanceRotation', new THREE.InstancedBufferAttribute(s.rotations[i], 4));
-            g.addAttribute('instanceScale', new THREE.InstancedBufferAttribute(s.scalings[i], 3));
-            g.addAttribute('instanceColor', new THREE.InstancedBufferAttribute(s.colors[i], 3));
-            g.addAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(s.visibilities[i], 3));
+            g.setAttribute('instanceOffset', new THREE.InstancedBufferAttribute(s.offsets[i], 3));
+            g.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(s.rotations[i], 4));
+            g.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(s.scalings[i], 3));
+            g.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(s.colors[i], 3));
+            g.setAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(s.visibilities[i], 3));
         });
 
         // Those were geometries, the mesh is actually what gets drawn
@@ -263,6 +263,7 @@ async function addSystemToScene(system: System) {
             const mesh = new THREE.Mesh(g, instanceMaterial);
             //you have to turn off culling because instanced materials all exist at (0, 0, 0)
             mesh.frustumCulled = false;
+            applyInstancedDepthMaterials(mesh);
 
             scene.add(mesh);
             return mesh;
@@ -271,9 +272,9 @@ async function addSystemToScene(system: System) {
         // Picking
         s.pickingMeshes = s.patchyGeometries.map((g,i)=>{
             const pickingGeometry = g.clone();
-            pickingGeometry.addAttribute('instanceColor', new THREE.InstancedBufferAttribute(s.labels[i], 3));
-            pickingGeometry.addAttribute('instanceOffset', new THREE.InstancedBufferAttribute(s.offsets[i], 3));
-            pickingGeometry.addAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(s.visibilities[i], 3));
+            pickingGeometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(s.labels[i], 3));
+            pickingGeometry.setAttribute('instanceOffset', new THREE.InstancedBufferAttribute(s.offsets[i], 3));
+            pickingGeometry.setAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(s.visibilities[i], 3));
             const pickingMesh = new THREE.Mesh(pickingGeometry, pickingMaterial);
             pickingMesh.frustumCulled = false;
             return pickingMesh;
@@ -294,46 +295,50 @@ async function addSystemToScene(system: System) {
         system.pickingGeometry = instancedBackbone.clone();
 
         // Feed data arrays to the geometries
-        system.backboneGeometry.addAttribute( 'instanceOffset', new THREE.InstancedBufferAttribute(system.bbOffsets, 3));
-        system.backboneGeometry.addAttribute( 'instanceRotation', new THREE.InstancedBufferAttribute(system.bbRotation, 4));
-        system.backboneGeometry.addAttribute( 'instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
-        system.backboneGeometry.addAttribute( 'instanceScale', new THREE.InstancedBufferAttribute(system.scales, 3 ) );
-        system.backboneGeometry.addAttribute( 'instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3 ) );
+        system.backboneGeometry.setAttribute( 'instanceOffset', new THREE.InstancedBufferAttribute(system.bbOffsets, 3));
+        system.backboneGeometry.setAttribute( 'instanceRotation', new THREE.InstancedBufferAttribute(system.bbRotation, 4));
+        system.backboneGeometry.setAttribute( 'instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
+        system.backboneGeometry.setAttribute( 'instanceScale', new THREE.InstancedBufferAttribute(system.scales, 3 ) );
+        system.backboneGeometry.setAttribute( 'instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3 ) );
 
-        system.nucleosideGeometry.addAttribute( 'instanceOffset', new THREE.InstancedBufferAttribute(system.nsOffsets, 3));
-        system.nucleosideGeometry.addAttribute( 'instanceRotation', new THREE.InstancedBufferAttribute(system.nsRotation, 4));
-        system.nucleosideGeometry.addAttribute( 'instanceColor', new THREE.InstancedBufferAttribute(system.nsColors, 3));
-        system.nucleosideGeometry.addAttribute( 'instanceScale', new THREE.InstancedBufferAttribute(system.nsScales, 3 ) );
-        system.nucleosideGeometry.addAttribute( 'instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3 ) );
+        system.nucleosideGeometry.setAttribute( 'instanceOffset', new THREE.InstancedBufferAttribute(system.nsOffsets, 3));
+        system.nucleosideGeometry.setAttribute( 'instanceRotation', new THREE.InstancedBufferAttribute(system.nsRotation, 4));
+        system.nucleosideGeometry.setAttribute( 'instanceColor', new THREE.InstancedBufferAttribute(system.nsColors, 3));
+        system.nucleosideGeometry.setAttribute( 'instanceScale', new THREE.InstancedBufferAttribute(system.nsScales, 3 ) );
+        system.nucleosideGeometry.setAttribute( 'instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3 ) );
 
-        system.connectorGeometry.addAttribute( 'instanceOffset', new THREE.InstancedBufferAttribute(system.conOffsets, 3));
-        system.connectorGeometry.addAttribute( 'instanceRotation', new THREE.InstancedBufferAttribute(system.conRotation, 4));
-        system.connectorGeometry.addAttribute( 'instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
-        system.connectorGeometry.addAttribute( 'instanceScale', new THREE.InstancedBufferAttribute(system.conScales, 3));
-        system.connectorGeometry.addAttribute( 'instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3 ) );
+        system.connectorGeometry.setAttribute( 'instanceOffset', new THREE.InstancedBufferAttribute(system.conOffsets, 3));
+        system.connectorGeometry.setAttribute( 'instanceRotation', new THREE.InstancedBufferAttribute(system.conRotation, 4));
+        system.connectorGeometry.setAttribute( 'instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
+        system.connectorGeometry.setAttribute( 'instanceScale', new THREE.InstancedBufferAttribute(system.conScales, 3));
+        system.connectorGeometry.setAttribute( 'instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3 ) );
 
-        system.spGeometry.addAttribute( 'instanceOffset', new THREE.InstancedBufferAttribute(system.bbconOffsets, 3));
-        system.spGeometry.addAttribute( 'instanceRotation', new THREE.InstancedBufferAttribute(system.bbconRotation, 4));
-        system.spGeometry.addAttribute( 'instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
-        system.spGeometry.addAttribute( 'instanceScale', new THREE.InstancedBufferAttribute(system.bbconScales, 3));
-        system.spGeometry.addAttribute( 'instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3 ) );
+        system.spGeometry.setAttribute( 'instanceOffset', new THREE.InstancedBufferAttribute(system.bbconOffsets, 3));
+        system.spGeometry.setAttribute( 'instanceRotation', new THREE.InstancedBufferAttribute(system.bbconRotation, 4));
+        system.spGeometry.setAttribute( 'instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
+        system.spGeometry.setAttribute( 'instanceScale', new THREE.InstancedBufferAttribute(system.bbconScales, 3));
+        system.spGeometry.setAttribute( 'instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3 ) );
 
-        system.pickingGeometry.addAttribute( 'instanceColor', new THREE.InstancedBufferAttribute(system.bbLabels, 3));
-        system.pickingGeometry.addAttribute( 'instanceOffset', new THREE.InstancedBufferAttribute(system.bbOffsets, 3));
-        system.pickingGeometry.addAttribute( 'instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3 ) );
+        system.pickingGeometry.setAttribute( 'instanceColor', new THREE.InstancedBufferAttribute(system.bbLabels, 3));
+        system.pickingGeometry.setAttribute( 'instanceOffset', new THREE.InstancedBufferAttribute(system.bbOffsets, 3));
+        system.pickingGeometry.setAttribute( 'instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3 ) );
 
         // Those were geometries, the mesh is actually what gets drawn
         system.backbone = new THREE.Mesh(system.backboneGeometry, instanceMaterial);
         system.backbone.frustumCulled = false; //you have to turn off culling because instanced materials all exist at (0, 0, 0)
+        applyInstancedDepthMaterials(system.backbone);
 
         system.nucleoside = new THREE.Mesh(system.nucleosideGeometry, instanceMaterial);
         system.nucleoside.frustumCulled = false;
+        applyInstancedDepthMaterials(system.nucleoside);
 
         system.connector = new THREE.Mesh(system.connectorGeometry, instanceMaterial);
         system.connector.frustumCulled = false;
+        applyInstancedDepthMaterials(system.connector);
 
         system.bbconnector = new THREE.Mesh(system.spGeometry, instanceMaterial);
         system.bbconnector.frustumCulled = false;
+        applyInstancedDepthMaterials(system.bbconnector);
 
         system.dummyBackbone = new THREE.Mesh(system.pickingGeometry, pickingMaterial);
         system.dummyBackbone.frustumCulled = false;
@@ -354,6 +359,5 @@ async function addSystemToScene(system: System) {
         canvas.focus();
     }
 }
-
 
 

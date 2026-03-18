@@ -2,31 +2,26 @@
 // The initial set up of the instanced objects.
 // Objects can be deformed by parameters sent to the instanceScale parameter of the instance
 var instancedBackbone = new THREE.InstancedBufferGeometry();
-instancedBackbone.copy(new THREE.SphereBufferGeometry(.2, 10, 10)); //don't worry about those type conversion, just trying to keep tsc happy
+instancedBackbone.copy(new THREE.SphereGeometry(.2, 10, 10)); //don't worry about those type conversion, just trying to keep tsc happy
 var instancedNucleoside = new THREE.InstancedBufferGeometry();
-instancedNucleoside.copy(new THREE.SphereBufferGeometry(.3, 10, 10));
+instancedNucleoside.copy(new THREE.SphereGeometry(.3, 10, 10));
 var instancedConnector = new THREE.InstancedBufferGeometry();
-instancedConnector.copy(new THREE.CylinderBufferGeometry(.1, .1, 1, 8));
+instancedConnector.copy(new THREE.CylinderGeometry(.1, .1, 1, 8));
 var instancedBBconnector = new THREE.InstancedBufferGeometry();
-instancedBBconnector.copy(new THREE.CylinderBufferGeometry(.1, .02, 1, 8));
+instancedBBconnector.copy(new THREE.CylinderGeometry(.1, .02, 1, 8));
 var instanceMaterial2 = new THREE.MeshPhysicalMaterial({
-    vertexColors: THREE.VertexColors,
+    vertexColors: true,
     metalness: 0.1,
     roughness: 0.6,
     reflectivity: 1.0,
 });
 var instanceMaterial = new THREE.MeshLambertMaterial({
-    vertexColors: THREE.VertexColors,
+    vertexColors: true,
 });
-// Tell the webGL compiler that meshes using the instanceMaterial should execute the instancing portion of the code.
-instanceMaterial["defines"] = instanceMaterial["defines"] || {};
-instanceMaterial["defines"]['INSTANCED'] = "";
-// Tell the webGL compiler that meshes using the instanceMaterial should execute the instancing portion of the code.
-instanceMaterial2["defines"] = instanceMaterial2["defines"] || {};
-instanceMaterial2["defines"]['INSTANCED'] = "";
+configureInstancedMaterial(instanceMaterial);
+configureInstancedMaterial(instanceMaterial2);
 let instanceMaterial3 = instanceMaterial2.clone();
-instanceMaterial3["defines"] = instanceMaterial3["defines"] || {};
-instanceMaterial3["defines"]['INSTANCED'] = "";
+configureInstancedMaterial(instanceMaterial3);
 function switchMaterial(material) {
     systems.forEach(s => {
         s.backbone.material = material;
@@ -38,49 +33,49 @@ function switchMaterial(material) {
 }
 // Default colors for the backbones
 var backboneColors = [
-    new THREE.Color(0xfdd291),
-    new THREE.Color(0xffb322),
-    new THREE.Color(0x437092),
+    new THREE.Color(0xfdd291), //light yellow
+    new THREE.Color(0xffb322), //goldenrod
+    new THREE.Color(0x437092), //dark blue
     new THREE.Color(0x6ea4cc), //light blue
 ];
 // define nucleoside colors
 var nucleosideColors = [
-    new THREE.Color(0x4747B8),
-    new THREE.Color(0xFFFF33),
+    new THREE.Color(0x4747B8), //A or K; Royal Blue
+    new THREE.Color(0xFFFF33), //G or C; Medium Yellow
     //C or A
-    new THREE.Color(0x8CFF8C),
+    new THREE.Color(0x8CFF8C), //Medium green
     //T/U or T
-    new THREE.Color(0xFF3333),
+    new THREE.Color(0xFF3333), //Red
     //E
-    new THREE.Color(0x660000),
+    new THREE.Color(0x660000), //Dark Brown
     //S
-    new THREE.Color(0xFF7042),
+    new THREE.Color(0xFF7042), //Medium Orange
     //D
-    new THREE.Color(0xA00042),
+    new THREE.Color(0xA00042), //Dark Rose
     //N
-    new THREE.Color(0xFF7C70),
+    new THREE.Color(0xFF7C70), //Light Salmon
     //Q
-    new THREE.Color(0xFF4C4C),
+    new THREE.Color(0xFF4C4C), //Dark Salmon
     //H
-    new THREE.Color(0x7070FF),
+    new THREE.Color(0x7070FF), //Medium Blue
     //G
-    new THREE.Color(0xEBEBEB),
+    new THREE.Color(0xEBEBEB), // light GREY
     //P
-    new THREE.Color(0x525252),
+    new THREE.Color(0x525252), //Dark Grey
     //R
-    new THREE.Color(0x00007C),
+    new THREE.Color(0x00007C), //Dark Blue
     //V
-    new THREE.Color(0x5E005E),
+    new THREE.Color(0x5E005E), //Dark Purple
     //I
-    new THREE.Color(0x004C00),
+    new THREE.Color(0x004C00), //Dark Green
     //L
-    new THREE.Color(0x455E45),
+    new THREE.Color(0x455E45), //Olive Green
     //M
-    new THREE.Color(0xB8A042),
+    new THREE.Color(0xB8A042), //Light Brown
     //F
-    new THREE.Color(0x534C42),
+    new THREE.Color(0x534C42), //Olive Grey
     //Y
-    new THREE.Color(0x8C704C),
+    new THREE.Color(0x8C704C), //Medium Brown
     //W
     new THREE.Color(0x4F4600), //Olive Brown
 ];

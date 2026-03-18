@@ -1,5 +1,5 @@
 importScripts('./pdb_lib.js');
-importScripts("../../ts/lib/three.js")
+importScripts("../vendor/three-core-compat.js")
 importScripts("../model/basicElement.js")
 importScripts("../model/nucleotide.js")
 importScripts("../model/aminoAcid.js")
@@ -1137,5 +1137,4 @@ function addPDBToScene (pdbinfo: pdbinfowrapper, pindx: number, elementIndx: num
     return [strandInit, strandtype, com, [label, bFactors, xdata, "bfactor", "A_sqr"], [xdim, ydim, zdim],
         pdbindices, [pdbinfo.pdbfilename, pdbinfo.pdbsysinfo, pdbinfo.initlist, pdbinfo.disulphideBonds]];
 }
-
 

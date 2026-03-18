@@ -461,7 +461,7 @@ class ForceHandler{
             v2.push(f.eqDists[1].x,f.eqDists[1].y,f.eqDists[1].z );
         });
 
-        forceGeoms.forEach((g, i) => g.addAttribute('position', new THREE.Float32BufferAttribute(v1[i], 3)));
+        forceGeoms.forEach((g, i) => g.setAttribute('position', new THREE.Float32BufferAttribute(v1[i], 3)));
         let materials = this.types.map((t, i) => new THREE.LineBasicMaterial({color: this.forceColors[i]}));
         this.forceLines = <THREE.LineSegments[]>forceGeoms.map((g, i) => new THREE.LineSegments(g, materials[i]));
         this.forceLines.forEach(fl => {
@@ -469,7 +469,7 @@ class ForceHandler{
             this.sceneObjects.push(fl);
         });
         
-        eqDistGeom.addAttribute('position', new THREE.Float32BufferAttribute(v2, 3));
+        eqDistGeom.setAttribute('position', new THREE.Float32BufferAttribute(v2, 3));
         materials[0] = new THREE.LineBasicMaterial({color: 0x0000ff, opacity:.5});
         this.eqDistLines = new THREE.LineSegments(eqDistGeom, materials[0]);
         scene.add(this.eqDistLines);

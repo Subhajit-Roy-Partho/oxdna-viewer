@@ -639,7 +639,7 @@ class View {
             document.body.appendChild(VRButton.createButton(vrRenderer));
 
             // Enamble VR in vrRenderer
-            vrRenderer.vr.enabled = true;
+            vrRenderer.xr.enabled = true;
 
             // Make the camera go around the scene
             // (looks like the model is rotating)
@@ -657,7 +657,7 @@ class View {
             const selectListener = (event) => {
                 systems[systems.length-1].reader.nextConfig();
             };
-            const controller = vrRenderer.vr.getController(0);
+            const controller = vrRenderer.xr.getController(0);
             controller.addEventListener('select', selectListener);
 
             this.vrEnabled = true;

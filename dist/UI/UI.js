@@ -629,7 +629,7 @@ class View {
             // Add vr button to document
             document.body.appendChild(VRButton.createButton(vrRenderer));
             // Enamble VR in vrRenderer
-            vrRenderer.vr.enabled = true;
+            vrRenderer.xr.enabled = true;
             // Make the camera go around the scene
             // (looks like the model is rotating)
             // Perhaps not needed for 6-DoF devices
@@ -645,7 +645,7 @@ class View {
             const selectListener = (event) => {
                 systems[systems.length - 1].reader.nextConfig();
             };
-            const controller = vrRenderer.vr.getController(0);
+            const controller = vrRenderer.xr.getController(0);
             controller.addEventListener('select', selectListener);
             this.vrEnabled = true;
         }
@@ -1006,7 +1006,7 @@ class fluxGraph {
                 //    this.chart.toBase64Image();
                 //}
             },
-            responsiveAnimationDuration: 0,
+            responsiveAnimationDuration: 0, // animation duration after a resize
             responsive: true,
             title: {
                 display: true,

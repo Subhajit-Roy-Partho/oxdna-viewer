@@ -3,6 +3,11 @@
  */
 var api;
 (function (api) {
+    /**
+     * Toggles the visibility of a strand.
+     * @param strand The strand to toggle
+     * @returns The strand
+     */
     function toggleStrand(strand) {
         strand.map((n) => n.toggleVisibility());
         strand.system.callUpdates(['instanceVisibility']);
@@ -14,6 +19,11 @@ var api;
     }
     api.toggleStrand = toggleStrand;
     // get a dictionary with every strand length : [strand] listed   
+    /**
+     * Get a dictionary with every strand length : [strand] listed.
+     * @param system The system to query
+     * @returns Dictionary of strand lengths
+     */
     function countStrandLength(system = systems[0]) {
         let strandLength = {};
         system.strands.map((strand) => {
@@ -28,6 +38,10 @@ var api;
     api.countStrandLength = countStrandLength;
     ;
     //highlight
+    /**
+     * Highlights the 5' ends of strands in the system.
+     * @param system The system to highlight
+     */
     function highlight5ps(system = systems[0]) {
         system.strands.forEach(strand => strand.end5.select());
         updateView(system);
@@ -35,6 +49,10 @@ var api;
     }
     api.highlight5ps = highlight5ps;
     //highlight
+    /**
+     * Highlights the 3' ends of strands in the system.
+     * @param system The system to highlight
+     */
     function highlight3ps(system = systems[0]) {
         system.strands.forEach(strand => strand.end3.select());
         updateView(system);
@@ -56,6 +74,10 @@ var api;
         render();
     }
     api.update3primeMarkers = update3primeMarkers;
+    /**
+     * Toggles the visibility of a list of elements.
+     * @param elems List of elements to toggle
+     */
     function toggleElements(elems) {
         let sys = new Set();
         let tmpSys = new Set();
@@ -71,6 +93,10 @@ var api;
         render();
     }
     api.toggleElements = toggleElements;
+    /**
+     * Toggles the visibility of all elements in the system.
+     * @param system The system to toggle
+     */
     function toggleAll(system = systems[0]) {
         system.strands.forEach(strand => strand.forEach(n => n.toggleVisibility()));
         system.callUpdates(['instanceVisibility']);
@@ -83,6 +109,9 @@ var api;
     }
     api.toggleAll = toggleAll;
     //toggles the nuceloside colors on and off
+    /**
+     * Toggles the nucleoside colors on and off (switching between element color and grey).
+     */
     function toggleBaseColors() {
         elements.forEach((e) => {
             if (e.strand == null)
@@ -117,6 +146,11 @@ var api;
         render();
     }
     api.toggleBaseColors = toggleBaseColors;
+    /**
+     * Traces elements from 5' to 3' starting from the given element.
+     * @param element The starting element
+     * @returns Array of elements
+     */
     function trace53(element) {
         let elems = [];
         let c = element;
@@ -127,6 +161,11 @@ var api;
         return elems;
     }
     api.trace53 = trace53;
+    /**
+     * Traces elements from 3' to 5' starting from the given element.
+     * @param element The starting element
+     * @returns Array of elements
+     */
     function trace35(element) {
         let elems = [];
         let c = element;
@@ -137,6 +176,11 @@ var api;
         return elems;
     }
     api.trace35 = trace35;
+    /**
+     * Gets elements by their IDs.
+     * @param targets Array of element IDs
+     * @returns Array of elements
+     */
     function getElements(targets) {
         let out = [];
         targets.forEach((n) => {
@@ -151,10 +195,21 @@ var api;
         return (out);
     }
     api.getElements = getElements;
+    /**
+     * Selects elements by their IDs.
+     * @param targets Array of element IDs
+     * @param keepPrevious Whether to keep previous selection
+     */
     function selectElementIDs(targets, keepPrevious) {
         selectElements(getElements(targets), keepPrevious);
     }
     api.selectElementIDs = selectElementIDs;
+    /**
+     * Selects elements by their PDB IDs.
+     * @param targetPDBNumber Array of PDB numbers
+     * @param chainids Array of chain IDs
+     * @param keepPrevious Whether to keep previous selection
+     */
     function selectPDBIDs(targetPDBNumber, chainids, keepPrevious) {
         if (!keepPrevious) {
             clearSelection();
@@ -225,6 +280,11 @@ var api;
         }
     }
     api.findElement = findElement;
+    /**
+     * Selects a list of elements.
+     * @param elems List of elements to select
+     * @param keepPrevious Whether to keep previous selection
+     */
     function selectElements(elems, keepPrevious) {
         if (!keepPrevious) {
             clearSelection();
@@ -244,6 +304,9 @@ var api;
     }
     api.selectElements = selectElements;
     //there's probably a less blunt way to do this...
+    /**
+     * Removes the colorbar from the scene.
+     */
     function removeColorbar() {
         let l = colorbarScene.children.length;
         for (let i = 0; i < l; i++) {
@@ -260,6 +323,9 @@ var api;
     }
     api.removeColorbar = removeColorbar;
     //turns out that lut doesn't save the sprites so you have to completley remake it
+    /**
+     * Shows the colorbar in the scene.
+     */
     function showColorbar() {
         colorbarScene.add(lut.legend.mesh);
         let notation, decimal;
@@ -276,6 +342,10 @@ var api;
         renderColorbar();
     }
     api.showColorbar = showColorbar;
+    /**
+     * Changes the colormap used for visualization.
+     * @param name Name of the colormap
+     */
     function changeColormap(name) {
         if (lut != undefined) {
             api.removeColorbar();
@@ -305,6 +375,11 @@ var api;
         }
     }
     api.changeColormap = changeColormap;
+    /**
+     * Sets the bounds for the color mapping.
+     * @param min Minimum value
+     * @param max Maximum value
+     */
     function setColorBounds(min, max) {
         let key = lut.legend.labels.title;
         lut.setMax(max);
@@ -322,6 +397,9 @@ var api;
         updateColoring();
     }
     api.setColorBounds = setColorBounds;
+    /**
+     * Resets the visualization to show everything with default scaling.
+     */
     function showEverything() {
         elements.forEach((n) => {
             n.setInstanceParameter('scales', [1, 1, 1]);
@@ -337,6 +415,9 @@ var api;
         render();
     }
     api.showEverything = showEverything;
+    /**
+     * Switches between Perspective and Orthographic camera modes.
+     */
     function switchCamera() {
         if (camera instanceof THREE.PerspectiveCamera) {
             //get camera parameters
@@ -363,6 +444,7 @@ var api;
             scene.remove(camera);
             camera = newCam;
             controls.object = camera;
+            transformControls.camera = camera;
             scene.add(camera);
             document.getElementById("cameraSwitch").innerHTML = "Perspective";
         }
@@ -385,6 +467,7 @@ var api;
             scene.remove(camera);
             camera = newCam;
             controls.object = camera;
+            transformControls.camera = camera;
             scene.add(camera);
             document.getElementById("cameraSwitch").innerHTML = "Orthographic";
         }

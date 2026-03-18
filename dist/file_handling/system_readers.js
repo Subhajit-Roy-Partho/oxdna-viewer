@@ -562,9 +562,9 @@ function readMGL(file) {
         // Make the geometry (of "direction" length)
         var geometry = new THREE.CylinderGeometry(r_top, r_bottom, direction.length(), 10, 4);
         // shift it so one end rests on the origin
-        geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, direction.length() / 2, 0));
+        geometry.applyMatrix4(new THREE.Matrix4().makeTranslation(0, direction.length() / 2, 0));
         // rotate it the right way for lookAt to work
-        geometry.applyMatrix(new THREE.Matrix4().makeRotationX(THREE.Math.degToRad(90)));
+        geometry.applyMatrix4(new THREE.Matrix4().makeRotationX(THREE.MathUtils.degToRad(90)));
         // Make a mesh with the geometry
         var mesh = new THREE.Mesh(geometry, material);
         // Position it where we want

@@ -115,6 +115,8 @@ function make3dOutput(){ //makes stl or gltf export from the scene
                     var output = JSON.stringify(result);
                     makeTextFile(name+'.gltf', output);
                 }
+        }, function (error) {
+                notify(`Failed to export ${fileFormat.toUpperCase()}: ${error}`, "alert");
         }, options);
     } else {
         notify(`Unknown file format: ${fileFormat}`, "alert");

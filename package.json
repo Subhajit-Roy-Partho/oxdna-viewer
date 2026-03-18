@@ -5,12 +5,15 @@
   "description": "OxDNA viewer and editor.",
   "main": "./index.js",
   "scripts": {
+    "build:three": "node ./scripts/build-three-compat.mjs",
+    "build:app": "tsc",
+    "build": "npm run build:three && npm run build:app",
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "echo \"No linting configured\"",
-    "load": "tsc -w & reload -b"
+    "load": "npm run build:three && tsc -w & reload -b"
   },
   "repository": {
     "type": "git",
@@ -62,7 +65,8 @@
     "electron-squirrel-startup": "^1.0.0",
     "reload": "^3.4.2",
     "rpmbuild": "0.0.23",
-    "typescript": "^4.9.5",
+    "three": "^0.183.2",
+    "typescript": "^5.9.3",
     "update-electron-app": "^2.0.1"
   },
   "devDependencies": {
@@ -71,6 +75,8 @@
     "@electron-forge/maker-rpm": "^6.0.0-beta.59",
     "@electron-forge/maker-squirrel": "^6.0.0-beta.59",
     "@electron-forge/maker-zip": "^6.0.0-beta.59",
-    "electron": "22.0.0"
+    "@types/three": "^0.183.1",
+    "electron": "22.0.0",
+    "esbuild": "^0.27.4"
   }
 }

@@ -249,13 +249,14 @@ class Network {
     ;
     prepVis() {
         this.geometry = instancedConnector.clone();
-        this.geometry.addAttribute('instanceOffset', new THREE.InstancedBufferAttribute(this.offsets, 3));
-        this.geometry.addAttribute('instanceRotation', new THREE.InstancedBufferAttribute(this.rotations, 4));
-        this.geometry.addAttribute('instanceColor', new THREE.InstancedBufferAttribute(this.colors, 3));
-        this.geometry.addAttribute('instanceScale', new THREE.InstancedBufferAttribute(this.scales, 3));
-        this.geometry.addAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(this.visibility, 3));
+        this.geometry.setAttribute('instanceOffset', new THREE.InstancedBufferAttribute(this.offsets, 3));
+        this.geometry.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(this.rotations, 4));
+        this.geometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(this.colors, 3));
+        this.geometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(this.scales, 3));
+        this.geometry.setAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(this.visibility, 3));
         this.network = new THREE.Mesh(this.geometry, instanceMaterial);
         this.network.frustumCulled = false;
+        applyInstancedDepthMaterials(this.network);
     }
     ;
     toggleVis() {

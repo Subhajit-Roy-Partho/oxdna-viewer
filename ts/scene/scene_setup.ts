@@ -50,7 +50,7 @@ function onWindowResize() {
     // updates the visible scene 
     renderer.setSize(window.innerWidth, window.innerHeight);
     // updates the picker texture to match the renderer 
-    pickingTexture.setSize(window.innerWidth, window.innerHeight);
+    syncPickingTextureSize();
     controls.handleResize();
 
     view.updateImageResolutionText();
@@ -59,6 +59,7 @@ function onWindowResize() {
 
 let camera: THREE.Camera
 let aspect: number = window.innerWidth / window.innerHeight;
+let transformControlsHelper: THREE.Object3D;
 
 /**
  * Creates a perspective camera.
@@ -98,6 +99,8 @@ var renderer = new THREE.WebGLRenderer({ //create renderer  //needs to be var to
     antialias: true,
     canvas: canvas
 });
+(THREE as any).ColorManagement && ((THREE as any).ColorManagement.enabled = true);
+(renderer as any).outputColorSpace = (THREE as any).SRGBColorSpace;
 renderer.setClearColor(0x000000, 0);
 renderer.setSize(window.innerWidth, window.innerHeight); //set size of renderer - where actions are recognized
 document.body.appendChild(canvas); //add renderer to document body
@@ -108,6 +111,7 @@ const colorbarRenderer = new THREE.WebGLRenderer({
     canvas: colorbarCanvas,
     alpha: true
 });
+(colorbarRenderer as any).outputColorSpace = (THREE as any).SRGBColorSpace;
 colorbarRenderer.setClearColor(0x000000, 0);
 const colorbarCamera = new THREE.OrthographicCamera(-7, 7, 1.8, -2.5, -1, 1);
 const colorbarScene = new THREE.Scene();
@@ -238,12 +242,13 @@ function drawBox(size: THREE.Vector3, position: THREE.Vector3): THREE.LineSegmen
 
     let geometry = new THREE.BufferGeometry().setFromPoints(points);
     let boxObj = new THREE.LineSegments(geometry, material);
+    boxObj.name = "scene-box";
     scene.add(boxObj);
     return boxObj;
 }
 
 // adding mouse control to the scene 
-const controls = new THREE.TrackballControls(camera, canvas);
+const controls: any = new THREE.TrackballControls(camera, canvas);
 controls.rotateSpeed = 1.5;
 controls.zoomSpeed = 2; //frequently structures are large so turned this up
 controls.panSpeed = 1.5;
@@ -251,15 +256,108 @@ controls.noZoom = false;
 controls.noPan = false;
 controls.staticMoving = true;
 controls.dynamicDampingFactor = 0.2;
-controls.keys = [65, 83, 68];
+controls.keys = ['KeyA', 'KeyS', 'KeyD'];
 
 // following the logic of updating the scene only when the scene changes 
 // controlls induce change so we update the scene when we move it  
 controls.addEventListener('change', render);
 
-const transformControls = new THREE.TransformControls(camera, renderer.domElement);
+const transformControls: any = new THREE.TransformControls(camera, renderer.domElement);
 transformControls.addEventListener('change', render);
-scene.add(transformControls);
+
+const transformProxy = new THREE.Object3D();
+transformProxy.visible = false;
+scene.add(transformProxy);
+
+transformControlsHelper = transformControls.getHelper();
+transformControlsHelper.name = "transform-controls-helper";
+scene.add(transformControlsHelper);
+transformControls.detach();
+
+let transformStartPosition = new THREE.Vector3();
+let transformStartQuaternion = new THREE.Quaternion();
+let currentTransformPosition = new THREE.Vector3();
+let currentTransformQuaternion = new THREE.Quaternion();
+
+transformControls.show = function () {
+    if (selectedBases.size === 0) {
+        return transformControls.hide();
+    }
+
+    currentTransformPosition = new THREE.Vector3();
+    selectedBases.forEach(e => {
+        if (e.isNucleotide()) {
+            currentTransformPosition.add(e.getInstanceParameter3("bbOffsets"));
+        } else {
+            currentTransformPosition.add(e.getPos());
+        }
+    });
+    currentTransformPosition.divideScalar(selectedBases.size);
+    currentTransformQuaternion = new THREE.Quaternion();
+
+    transformProxy.position.copy(currentTransformPosition);
+    transformProxy.quaternion.copy(currentTransformQuaternion);
+    transformProxy.scale.set(1, 1, 1);
+
+    transformControls.attach(transformProxy);
+    transformControls.axis = null;
+    render();
+
+    return transformControls;
+};
+
+transformControls.hide = function () {
+    transformControls.detach();
+    currentTransformPosition = new THREE.Vector3();
+    currentTransformQuaternion = new THREE.Quaternion();
+    render();
+    return transformControls;
+};
+
+transformControls.isHovered = function () {
+    return transformControls.axis != null;
+};
+
+transformControls.addEventListener('mouseDown', function () {
+    transformStartPosition.copy(transformProxy.position);
+    transformStartQuaternion.copy(transformProxy.quaternion);
+    currentTransformPosition.copy(transformProxy.position);
+    currentTransformQuaternion.copy(transformProxy.quaternion);
+});
+
+transformControls.addEventListener('objectChange', function () {
+    if (!transformControls.dragging) {
+        return;
+    }
+
+    const posDiff = transformProxy.position.clone().sub(currentTransformPosition);
+    if (posDiff.lengthSq() > 0) {
+        translateElements(selectedBases, posDiff);
+    }
+
+    const rotationDelta = transformProxy.quaternion.clone().multiply(currentTransformQuaternion.clone().inverse());
+    const hasRotationDelta =
+        Math.abs(rotationDelta.x) > 1e-8 ||
+        Math.abs(rotationDelta.y) > 1e-8 ||
+        Math.abs(rotationDelta.z) > 1e-8 ||
+        Math.abs(rotationDelta.w - 1) > 1e-8;
+    if (hasRotationDelta) {
+        rotateElementsByQuaternion(selectedBases, rotationDelta, currentTransformPosition.clone());
+    }
+
+    currentTransformPosition.copy(transformProxy.position);
+    currentTransformQuaternion.copy(transformProxy.quaternion);
+});
+
+transformControls.addEventListener('mouseUp', function () {
+    if (selectedBases.size === 0) {
+        return;
+    }
+
+    const totalTranslation = currentTransformPosition.clone().sub(transformStartPosition);
+    const totalRotation = currentTransformQuaternion.clone().multiply(transformStartQuaternion.clone().inverse());
+    editHistory.add(new RevertableTransformation(selectedBases, totalTranslation, totalRotation, transformStartPosition.clone()));
+});
 
 transformControls.addEventListener('dragging-changed', function (event) {
     controls.enabled = !event['value'];

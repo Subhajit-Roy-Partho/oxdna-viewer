@@ -181,25 +181,26 @@ oxView relies on WebGL hardware acceleration, if you have turned this feature of
 ## Updates and writing your own extensions or running oxView locally 
 This software is still in active development, so features remain in high flux.  If you would like to make a feature request or to report a bug, please let us know in the Issues tab!  Remember to pull often if you're running the viewer locally to get the newest features.
 
-If you want to extend the code for your own purposes, you will also need to install Typescript, Three.js and Typescript bindings for Three.  Full download instructions:
+If you want to extend the code for your own purposes, the repo now builds modern Three.js compatibility bundles from the npm `three` package alongside the app TypeScript. Full download instructions:
 
 1) `git clone -b master https://github.com/sulcgroup/oxdna-viewer.git`
 2) Download Typescript and Node.js 
    ts and npm ask for different name of node.js: one is node and another is nodejs, you may need to change the name of it accordingly or get an extra copy  
 3) Go to oxdna-viewer folder  
-4) `npm install` will install the rest dependencies.
-5) `tsc`  
-   This is the command to run the typescript compiler.  Output directory and adding new files to the compiler can be found in tsconfig.json  
-   tsc needs to be run every time you make changes to the Typescript.  If you run tsc with the -w flag it will continuously watch for file changes.  
-6) The compiled Javascript will be in the dist/ directory  
-7) use your favorite development webserver to access the page:
+4) `npm install` will install the rest dependencies, including modern `three`, TypeScript and the compatibility-bundle tooling.
+5) `npm run build`
+   This rebuilds both the Three.js compatibility bundles in `dist/vendor/` and the app TypeScript in `dist/`.
+6) If you want the old live-reload workflow, use `npm run load`
+   This rebuilds the compatibility bundles once, then runs `tsc -w` alongside `reload -b`.
+7) The compiled Javascript will be in the `dist/` directory and the generated Three.js compatibility bundles will be in `dist/vendor/`.
+8) use your favorite development webserver to access the page:
 * https://www.npmjs.com/package/reload is a server with live update of the page (detecting compiled code changes)  
   after installation usage is `reload -b` run in the oxView intallation directory. The server will output a the link to 
   the page on the command line. 
 * alternatively if you have python installed on your system you can use (https://docs.python.org/3/library/http.server.html)
   usage is `python -m http.server 8000`, providing access to the page on localhost:8000  
 
-Alternatively if you are just interested in using oxView locally, do step 1 and proceed straight to step 7. 
+Alternatively if you are just interested in using oxView locally, do step 1 and proceed straight to step 8. 
 Or check out the release section 
 
 ## Citation

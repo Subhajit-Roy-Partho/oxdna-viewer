@@ -170,5 +170,60 @@ describe('Editing', function () {
   });
 });
 
+describe('Runtime compatibility', function () {
+  it('should expose modern THREE globals and exporters', function () {
+    assert(oxview.THREE, 'THREE global is missing');
+    assert.equal(oxview.THREE.REVISION, '183');
+    assert.isFunction(oxview.THREE.TrackballControls);
+    assert.isFunction(oxview.THREE.TransformControls);
+    assert.isFunction(oxview.THREE.ConvexGeometry);
+    assert.isFunction(oxview.THREE.Lut);
+    assert.isFunction(oxview.GLTFExporter);
+    assert.isFunction(oxview.STLExporter);
+  });
 
+  it('should preserve plugin eval access to THREE', function () {
+    oxview.eval(`
+      window.__compatPluginColor = undefined;
+      addPlugin('__compat_plugin__', 'window.__compatPluginColor = new THREE.Color(0xff0000).getHex();');
+    `);
+    assert.equal(oxview.__compatPluginColor, 0xff0000);
+  });
+
+  it('should preserve custom trackball helpers and transform control helpers', function () {
+    assert.isTrue(oxview.eval(`
+      typeof controls.setToAxis === 'function' &&
+      typeof controls.stepAroundAxis === 'function' &&
+      typeof transformControls.show === 'function' &&
+      typeof transformControls.hide === 'function' &&
+      typeof transformControls.isHovered === 'function'
+    `));
+  });
+
+  it('should allow observable creation with THREE.Mesh-compatible objects', function () {
+    const sizeBefore = oxview.eval('scene.children.length');
+    oxview.eval(`
+      window.__compatElems = edit.createStrand("AT");
+      window.__compatCms = new api.observable.CMS(window.__compatElems, 0.5, 0xff0000);
+      window.__compatTrack = new api.observable.Track(window.__compatCms);
+    `);
+    const sizeAfter = oxview.eval('scene.children.length');
+    assert.isAbove(sizeAfter, sizeBefore);
+  });
+
+  it('should keep camera switching callable', function () {
+    oxview.api.switchCamera();
+    oxview.api.switchCamera();
+    assert.isOk(true);
+  });
+
+  it('should point worker scripts at the compat bundle', async function () {
+    const [pdbWorker, tacoWorker] = await Promise.all([
+      oxview.fetch('dist/file_handling/pdb_worker.js').then(r => r.text()),
+      oxview.fetch('dist/file_handling/tacoxdna_worker.js').then(r => r.text())
+    ]);
+    assert.include(pdbWorker, '../vendor/three-core-compat.js');
+    assert.include(tacoWorker, '../vendor/three-core-compat.js');
+  });
+});
 

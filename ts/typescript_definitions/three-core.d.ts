@@ -848,6 +848,7 @@ export class BufferGeometry extends EventDispatcher {
     getIndex(): BufferAttribute;
     setIndex( index: BufferAttribute|number[] ): void;
 
+    setAttribute(name: string, attribute: BufferAttribute|InterleavedBufferAttribute): BufferGeometry;
     addAttribute(name: string, attribute: BufferAttribute|InterleavedBufferAttribute): BufferGeometry;
 
     getAttribute(name: string): BufferAttribute|InterleavedBufferAttribute;
@@ -861,6 +862,7 @@ export class BufferGeometry extends EventDispatcher {
     /**
      * Bakes matrix transform directly into vertex coordinates.
      */
+    applyMatrix4(matrix: Matrix4): BufferGeometry;
     applyMatrix(matrix: Matrix4): BufferGeometry;
 
     rotateX(angle: number): BufferGeometry;
@@ -2640,6 +2642,9 @@ export class Material extends EventDispatcher {
      * An object that can be used to store custom data about the Material. It should not hold references to functions as these will not be cloned.
      */
     userData: any;
+    defines: any;
+    onBeforeCompile?: (shader: any, renderer?: any) => void;
+    customProgramCacheKey?: () => string;
 
     /**
      * Return a new material with the same parameters as this material.
@@ -5163,6 +5168,8 @@ export class Mesh extends Object3D {
 
     geometry: Geometry|BufferGeometry;
     material: Material | Material[];
+    customDepthMaterial: Material;
+    customDistanceMaterial: Material;
     drawMode: TrianglesDrawModes;
     morphTargetInfluences?: number[];
     morphTargetDictionary?: { [key: string]: number; };
@@ -5251,6 +5258,10 @@ export class SkinnedMesh extends Mesh {
     pose(): void;
     normalizeSkinWeights(): void;
     updateMatrixWorld(force?: boolean): void;
+}
+
+export class MeshDistanceMaterial extends Material {
+    constructor(parameters?: MaterialParameters);
 }
 
 export class Sprite extends Object3D {

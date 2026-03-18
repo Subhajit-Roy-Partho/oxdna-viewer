@@ -3,10 +3,16 @@
 ///////////////////                Figure out how to read files                ////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // An object which connects a file to the function which can parse its contents
+// An object which connects a file to the function which can parse its contents
 class File2reader {
     file;
     type;
     reader;
+    /**
+     * @param file The file object to read
+     * @param type The type of file (e.g., 'topology', 'trajectory')
+     * @param reader The function to parse the file
+     */
     constructor(file, type, reader) {
         this.file = file;
         this.type = type;
@@ -17,18 +23,28 @@ class File2reader {
 // This can be used with async await to force serial execution
 class oxFileReader extends FileReader {
     promise;
+    /**
+     * @param parser The function to call with the file content
+     */
     constructor(parser) {
         super();
-        this.promise = new Promise(function (resolve, reject) {
+        this.promise = new Promise((resolve, reject) => {
             this.onload = () => {
                 let f = this.result;
                 let result = parser(f, ...parser['args']);
                 resolve(result); // This passes the result of the parser up through parseFilesWith
             };
-        }.bind(this));
+            this.onerror = reject;
+        });
     }
 }
-// Generic function to connect a text file to a reader to the correct parser
+/**
+ * Generic function to connect a text file to a reader to the correct parser
+ * @param file The file to read
+ * @param parser The function to parse the file content
+ * @param args Additional arguments for the parser
+ * @returns A promise that resolves with the parser result
+ */
 function parseFileWith(file, parser, args = []) {
     parser['args'] = args;
     let reader = new oxFileReader(parser);
@@ -36,8 +52,11 @@ function parseFileWith(file, parser, args = []) {
     let result = reader.promise;
     return result;
 }
-// organizes files into files that create a new system, auxiliary files, and script files.
-// Then fires the reads sequentially
+/**
+ * Organizes files into files that create a new system, auxiliary files, and script files.
+ * Then fires the reads sequentially.
+ * @param files Array of File objects to handle
+ */
 async function handleFiles(files) {
     renderer.domElement.style.cursor = "wait";
     const systemFiles = [];
@@ -78,7 +97,12 @@ async function handleFiles(files) {
             systemHelpers["patches"] = files[i];
         }
         else if (ext === "patchspec" || fileName.match(/p_my\w+\.dat/g)) {
-            (systemHelpers["loroPatchFiles"] == undefined) ? systemHelpers["loroPatchFiles"] = [files[i]] : systemHelpers["loroPatchFiles"].push(files[i]);
+            if (systemHelpers["loroPatchFiles"] == undefined) {
+                systemHelpers["loroPatchFiles"] = [files[i]];
+            }
+            else {
+                systemHelpers["loroPatchFiles"].push(files[i]);
+            }
         }
         // These file types modify an existing system
         else if (ext == 'dat' || ext == 'conf' || ext == 'oxdna') {
@@ -119,7 +143,9 @@ async function handleFiles(files) {
             scriptFiles.push(new File2reader(files[i], 'script', readScriptFile));
         }
     }
-    // Create a system from a file and resolve with a reference to the system
+    /**
+     * Create a system from a file and resolve with a reference to the system
+     */
     function getOrMakeSystem() {
         return new Promise(function (resolve, reject) {
             if (systemFiles.length == 0) {
@@ -127,30 +153,44 @@ async function handleFiles(files) {
             } // If we're not making a new system
             else if (systemFiles.length == 1) {
                 const sysPromise = systemFiles[0].reader(systemFiles[0].file, systemHelpers);
-                sysPromise.then((system) => resolve(system));
+                sysPromise.then((system) => resolve(system)).catch(reject);
             } // If we're reading a file to make a system
             else {
                 throw new Error("Systems must be defined by a single file (there can be helper files)!");
             }
         });
     }
+    /**
+     * Read auxiliary files associated with the system
+     */
     function readAuxiliaryFiles(system) {
         let readList = auxFiles.map((auxFile) => new Promise(function (resolve, reject) {
+            // @ts-ignore
             const result = auxFile.reader(auxFile.file, system);
             resolve(result);
         }));
         return Promise.all(readList);
     }
-    // Wheeeeeeeee
+    /**
+     * Execute script files
+     */
     function executeScript() {
         let readList = scriptFiles.map((scriptFile) => new Promise(function (resolve, reject) {
+            // @ts-ignore
             readScriptFile(scriptFile.file);
+            resolve(null);
         }));
         return Promise.all(readList);
     }
-    getOrMakeSystem().then((sys) => readAuxiliaryFiles(sys)).then(() => executeScript());
+    getOrMakeSystem()
+        .then((sys) => readAuxiliaryFiles(sys))
+        .then(() => executeScript())
+        .catch(console.error);
 }
-// Create Three geometries and meshes that get drawn in the scene.
+/**
+ * Create Three geometries and meshes that get drawn in the scene.
+ * @param system The system to add to the scene
+ */
 async function addSystemToScene(system) {
     // If you make any modifications to the drawing matricies here, they will take effect before anything draws
     // however, if you want to change once stuff is already drawn, you need to add "<attribute>.needsUpdate" before the render() call.
@@ -212,31 +252,32 @@ async function addSystemToScene(system) {
         else {
             s.patchyGeometries = s.offsets.map(_ => {
                 let g = new THREE.InstancedBufferGeometry();
-                g.copy(new THREE.SphereBufferGeometry(.5, 10, 10));
+                g.copy(new THREE.SphereGeometry(.5, 10, 10));
                 return g;
             });
         }
         s.patchyGeometries.forEach((g, i) => {
-            g.addAttribute('instanceOffset', new THREE.InstancedBufferAttribute(s.offsets[i], 3));
-            g.addAttribute('instanceRotation', new THREE.InstancedBufferAttribute(s.rotations[i], 4));
-            g.addAttribute('instanceScale', new THREE.InstancedBufferAttribute(s.scalings[i], 3));
-            g.addAttribute('instanceColor', new THREE.InstancedBufferAttribute(s.colors[i], 3));
-            g.addAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(s.visibilities[i], 3));
+            g.setAttribute('instanceOffset', new THREE.InstancedBufferAttribute(s.offsets[i], 3));
+            g.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(s.rotations[i], 4));
+            g.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(s.scalings[i], 3));
+            g.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(s.colors[i], 3));
+            g.setAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(s.visibilities[i], 3));
         });
         // Those were geometries, the mesh is actually what gets drawn
         s.patchyMeshes = s.patchyGeometries.map(g => {
             const mesh = new THREE.Mesh(g, instanceMaterial);
             //you have to turn off culling because instanced materials all exist at (0, 0, 0)
             mesh.frustumCulled = false;
+            applyInstancedDepthMaterials(mesh);
             scene.add(mesh);
             return mesh;
         });
         // Picking
         s.pickingMeshes = s.patchyGeometries.map((g, i) => {
             const pickingGeometry = g.clone();
-            pickingGeometry.addAttribute('instanceColor', new THREE.InstancedBufferAttribute(s.labels[i], 3));
-            pickingGeometry.addAttribute('instanceOffset', new THREE.InstancedBufferAttribute(s.offsets[i], 3));
-            pickingGeometry.addAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(s.visibilities[i], 3));
+            pickingGeometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(s.labels[i], 3));
+            pickingGeometry.setAttribute('instanceOffset', new THREE.InstancedBufferAttribute(s.offsets[i], 3));
+            pickingGeometry.setAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(s.visibilities[i], 3));
             const pickingMesh = new THREE.Mesh(pickingGeometry, pickingMaterial);
             pickingMesh.frustumCulled = false;
             return pickingMesh;
@@ -254,38 +295,42 @@ async function addSystemToScene(system) {
         system.spGeometry = instancedBBconnector.clone();
         system.pickingGeometry = instancedBackbone.clone();
         // Feed data arrays to the geometries
-        system.backboneGeometry.addAttribute('instanceOffset', new THREE.InstancedBufferAttribute(system.bbOffsets, 3));
-        system.backboneGeometry.addAttribute('instanceRotation', new THREE.InstancedBufferAttribute(system.bbRotation, 4));
-        system.backboneGeometry.addAttribute('instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
-        system.backboneGeometry.addAttribute('instanceScale', new THREE.InstancedBufferAttribute(system.scales, 3));
-        system.backboneGeometry.addAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3));
-        system.nucleosideGeometry.addAttribute('instanceOffset', new THREE.InstancedBufferAttribute(system.nsOffsets, 3));
-        system.nucleosideGeometry.addAttribute('instanceRotation', new THREE.InstancedBufferAttribute(system.nsRotation, 4));
-        system.nucleosideGeometry.addAttribute('instanceColor', new THREE.InstancedBufferAttribute(system.nsColors, 3));
-        system.nucleosideGeometry.addAttribute('instanceScale', new THREE.InstancedBufferAttribute(system.nsScales, 3));
-        system.nucleosideGeometry.addAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3));
-        system.connectorGeometry.addAttribute('instanceOffset', new THREE.InstancedBufferAttribute(system.conOffsets, 3));
-        system.connectorGeometry.addAttribute('instanceRotation', new THREE.InstancedBufferAttribute(system.conRotation, 4));
-        system.connectorGeometry.addAttribute('instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
-        system.connectorGeometry.addAttribute('instanceScale', new THREE.InstancedBufferAttribute(system.conScales, 3));
-        system.connectorGeometry.addAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3));
-        system.spGeometry.addAttribute('instanceOffset', new THREE.InstancedBufferAttribute(system.bbconOffsets, 3));
-        system.spGeometry.addAttribute('instanceRotation', new THREE.InstancedBufferAttribute(system.bbconRotation, 4));
-        system.spGeometry.addAttribute('instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
-        system.spGeometry.addAttribute('instanceScale', new THREE.InstancedBufferAttribute(system.bbconScales, 3));
-        system.spGeometry.addAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3));
-        system.pickingGeometry.addAttribute('instanceColor', new THREE.InstancedBufferAttribute(system.bbLabels, 3));
-        system.pickingGeometry.addAttribute('instanceOffset', new THREE.InstancedBufferAttribute(system.bbOffsets, 3));
-        system.pickingGeometry.addAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3));
+        system.backboneGeometry.setAttribute('instanceOffset', new THREE.InstancedBufferAttribute(system.bbOffsets, 3));
+        system.backboneGeometry.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(system.bbRotation, 4));
+        system.backboneGeometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
+        system.backboneGeometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(system.scales, 3));
+        system.backboneGeometry.setAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3));
+        system.nucleosideGeometry.setAttribute('instanceOffset', new THREE.InstancedBufferAttribute(system.nsOffsets, 3));
+        system.nucleosideGeometry.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(system.nsRotation, 4));
+        system.nucleosideGeometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(system.nsColors, 3));
+        system.nucleosideGeometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(system.nsScales, 3));
+        system.nucleosideGeometry.setAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3));
+        system.connectorGeometry.setAttribute('instanceOffset', new THREE.InstancedBufferAttribute(system.conOffsets, 3));
+        system.connectorGeometry.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(system.conRotation, 4));
+        system.connectorGeometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
+        system.connectorGeometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(system.conScales, 3));
+        system.connectorGeometry.setAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3));
+        system.spGeometry.setAttribute('instanceOffset', new THREE.InstancedBufferAttribute(system.bbconOffsets, 3));
+        system.spGeometry.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(system.bbconRotation, 4));
+        system.spGeometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(system.bbColors, 3));
+        system.spGeometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(system.bbconScales, 3));
+        system.spGeometry.setAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3));
+        system.pickingGeometry.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(system.bbLabels, 3));
+        system.pickingGeometry.setAttribute('instanceOffset', new THREE.InstancedBufferAttribute(system.bbOffsets, 3));
+        system.pickingGeometry.setAttribute('instanceVisibility', new THREE.InstancedBufferAttribute(system.visibility, 3));
         // Those were geometries, the mesh is actually what gets drawn
         system.backbone = new THREE.Mesh(system.backboneGeometry, instanceMaterial);
         system.backbone.frustumCulled = false; //you have to turn off culling because instanced materials all exist at (0, 0, 0)
+        applyInstancedDepthMaterials(system.backbone);
         system.nucleoside = new THREE.Mesh(system.nucleosideGeometry, instanceMaterial);
         system.nucleoside.frustumCulled = false;
+        applyInstancedDepthMaterials(system.nucleoside);
         system.connector = new THREE.Mesh(system.connectorGeometry, instanceMaterial);
         system.connector.frustumCulled = false;
+        applyInstancedDepthMaterials(system.connector);
         system.bbconnector = new THREE.Mesh(system.spGeometry, instanceMaterial);
         system.bbconnector.frustumCulled = false;
+        applyInstancedDepthMaterials(system.bbconnector);
         system.dummyBackbone = new THREE.Mesh(system.pickingGeometry, pickingMaterial);
         system.dummyBackbone.frustumCulled = false;
         // Add everything to the scene (if they are toggled)
