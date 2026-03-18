@@ -13,7 +13,8 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "echo \"No linting configured\"",
-    "load": "npm run build:three && tsc -w & reload -b"
+    "load": "npm run build:three && tsc -w & reload -b",
+    "save-canvas-image": "electron ./script/save-canvas-image.js"
   },
   "repository": {
     "type": "git",
