@@ -8,6 +8,7 @@
     "build:three": "node ./scripts/build-three-compat.mjs",
     "build:app": "tsc",
     "build": "npm run build:three && npm run build:app",
+    "prepare:gh-pages": "node ./scripts/prepare-gh-pages.mjs",
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",

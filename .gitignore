@@ -93,3 +93,6 @@ typings/
 
 # Electron-Forge
 out/
+
+# Generated Pages deployment bundle
+.gh-pages-dist/
