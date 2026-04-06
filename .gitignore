@@ -96,3 +96,6 @@ out/
 
 # Generated Pages deployment bundle
 .gh-pages-dist/
+
+# Mac Double
+._*
