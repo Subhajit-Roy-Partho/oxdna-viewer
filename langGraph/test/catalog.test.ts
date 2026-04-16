@@ -56,3 +56,25 @@ test("tool catalog delegates to the session helper layer", async () => {
   assert.equal(session.calls[1].helperName, "colorElements");
   assert.equal(session.calls[2].helperName, "createHelixBundle");
 });
+
+test("tool catalog exposes real JSON schemas for planning", () => {
+  const session = new MockSession();
+  const catalog = createOxViewTools(session as any);
+  const createStrand = catalog.availableTools.find((tool) => tool.name === "create_strand");
+  const exportBundle = catalog.availableTools.find((tool) => tool.name === "export_oxdna_bundle");
+  const removeForces = catalog.availableTools.find((tool) => tool.name === "remove_forces");
+
+  assert.ok(createStrand);
+  assert.equal(createStrand.risk, "destructive");
+  assert.equal(createStrand.category, "editing");
+  assert.equal((createStrand.jsonSchema.properties as any).sequence.type, "string");
+
+  assert.ok(exportBundle);
+  assert.equal(exportBundle.risk, "read");
+  assert.equal(exportBundle.category, "export");
+  assert.equal((exportBundle.jsonSchema.properties as any).name.type, "string");
+
+  assert.ok(removeForces);
+  assert.equal(removeForces.risk, "destructive");
+  assert.equal(removeForces.category, "force");
+});

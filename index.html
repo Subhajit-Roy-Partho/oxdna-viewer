@@ -1329,6 +1329,11 @@
     <script src="./ts/lib/metro.min.js"></script>
     <div class="main">
         <!--all files to be loaded onload of html file-->
+        <!--
+            This app still relies on global scripts rather than module imports.
+            If you add a new TS source file, update both tsconfig.json and this
+            ordered script list so the generated dist file is actually loaded.
+        -->
         <script src="./ts/lib/chart.min.js"></script>
         <script src="./ts/lib/chartjs-plugin-annotation.min.js"></script>
         <script src="./dist/vendor/three-compat.js"></script>

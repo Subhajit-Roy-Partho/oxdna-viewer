@@ -1,4 +1,4 @@
-import type { RequestClassification, ExecutionMode } from "./tools/schemas.js";
+import type { RequestClassification, ExecutionMode, ToolRisk } from "./tools/schemas.js";
 
 export type GraphStatus =
   | "running"
@@ -20,6 +20,7 @@ export type ToolExecutionRecord = {
   result: unknown;
   success: boolean;
   mutation: boolean;
+  risk: ToolRisk;
   error?: string;
 };
 
@@ -46,6 +47,15 @@ export type SceneSummary = {
   transformMode: string | null;
   cameraType: string | null;
   apiErrors: ApiErrorRecord[];
+  [key: string]: unknown;
+};
+
+export type AvailableToolMetadata = {
+  name: string;
+  description: string;
+  risk: ToolRisk;
+  category: string;
+  jsonSchema: Record<string, unknown>;
 };
 
 export type GraphState = {
@@ -89,7 +99,7 @@ export interface ModelFacadeLike {
     request: string;
     executionMode: ExecutionMode;
     sceneSummary: SceneSummary | null;
-    availableTools: { name: string; description: string }[];
+    availableTools: AvailableToolMetadata[];
     repairAttempts: number;
     previousFailures: string[];
   }): Promise<ModelPlanningResult>;

@@ -148,13 +148,13 @@ test("graph asks for clarification on ambiguous numeric nucleotide targets", asy
   assert.match(result.finalResponse, /element ID 13/i);
 });
 
-test("graph can execute helix bundle creation when the planner selects the typed tool", async () => {
+test("graph can execute helix bundle creation when confirmation is granted", async () => {
   const session = new MockSession();
   const tools = createOxViewTools(session as any);
   const model: ModelFacadeLike = {
     async classifyRequest() {
       return {
-        requestKind: "mutating",
+        requestKind: "destructive",
         requiresConfirmation: false,
         requiresClarification: false,
         explanation: "This is a bundle creation request that can be satisfied with a typed creation tool.",
@@ -190,12 +190,63 @@ test("graph can execute helix bundle creation when the planner selects the typed
   });
 
   const result = await (graph as any).invoke(
-    createInitialState("Create a 20 helix random bundle", "safe-auto"),
+    createInitialState("Create a 20 helix random bundle", "safe-auto", true),
   );
 
   assert.equal(result.status, "completed");
   assert.equal(result.toolResults.length, 1);
   assert.equal(result.toolResults[0].name, "create_helix_bundle");
+});
+
+test("graph requires confirmation when the planned tool is destructive", async () => {
+  const session = new MockSession();
+  const tools = createOxViewTools(session as any);
+  const model: ModelFacadeLike = {
+    async classifyRequest() {
+      return {
+        requestKind: "mutating",
+        requiresConfirmation: false,
+        requiresClarification: false,
+        explanation: "The wording is soft, but the intent is to create new geometry.",
+        clarificationQuestion: null,
+      };
+    },
+    async planWithTools() {
+      return {
+        assistantReasoning: "Create a new duplex with eight bases.",
+        directResponse: null,
+        toolCalls: [
+          {
+            name: "create_strand",
+            args: {
+              sequence: "ACGTACGT",
+              duplex: true,
+              polymerType: "DNA",
+            },
+          },
+        ],
+      };
+    },
+    async generateRawJsPreview() {
+      return "";
+    },
+  };
+
+  const graph = createOxViewGraph({
+    session,
+    model,
+    availableTools: tools.availableTools,
+    toolMap: tools.toolMap as any,
+    executionMode: "safe-auto",
+    maxRepairAttempts: 1,
+  });
+
+  const result = await (graph as any).invoke(
+    createInitialState("Draw an 8 nucleotide duplex", "safe-auto"),
+  );
+
+  assert.equal(result.status, "needs_confirmation");
+  assert.match(result.finalResponse, /create_strand/i);
 });
 
 test("graph fails verification when helix bundle creation does not increase the scene element count", async () => {
@@ -256,9 +307,58 @@ test("graph fails verification when helix bundle creation does not increase the 
   });
 
   const result = await (graph as any).invoke(
-    createInitialState("Create a 20 helix random bundle", "safe-auto"),
+    createInitialState("Create a 20 helix random bundle", "safe-auto", true),
   );
 
   assert.equal(result.status, "failed");
   assert.match(result.finalResponse, /scene only grew by 0/i);
+});
+
+test("graph requires confirmation for destructive force removal", async () => {
+  const session = new MockSession();
+  const tools = createOxViewTools(session as any);
+  const model: ModelFacadeLike = {
+    async classifyRequest() {
+      return {
+        requestKind: "mutating",
+        requiresConfirmation: false,
+        requiresClarification: false,
+        explanation: "The request sounds like cleanup, but it deletes force state.",
+        clarificationQuestion: null,
+      };
+    },
+    async planWithTools() {
+      return {
+        assistantReasoning: "Remove all currently loaded forces.",
+        directResponse: null,
+        toolCalls: [
+          {
+            name: "remove_forces",
+            args: {
+              all: true,
+            },
+          },
+        ],
+      };
+    },
+    async generateRawJsPreview() {
+      return "";
+    },
+  };
+
+  const graph = createOxViewGraph({
+    session,
+    model,
+    availableTools: tools.availableTools,
+    toolMap: tools.toolMap as any,
+    executionMode: "safe-auto",
+    maxRepairAttempts: 1,
+  });
+
+  const result = await (graph as any).invoke(
+    createInitialState("Clear all forces", "safe-auto"),
+  );
+
+  assert.equal(result.status, "needs_confirmation");
+  assert.match(result.finalResponse, /remove_forces/i);
 });

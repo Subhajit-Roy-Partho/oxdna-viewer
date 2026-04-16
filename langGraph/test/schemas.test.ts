@@ -2,8 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   ColorElementsInputSchema,
+  CreateStrandInputSchema,
   ElementFilterSchema,
+  ExportOxdnaBundleInputSchema,
+  ForceRemovalInputSchema,
   RequestClassificationSchema,
+  SaveNamedSelectionInputSchema,
+  SetSelectionModeInputSchema,
 } from "../src/tools/schemas.js";
 
 test("ElementFilterSchema accepts parity and base types", () => {
@@ -39,4 +44,57 @@ test("RequestClassificationSchema validates clarification records", () => {
 
   assert.equal(parsed.requestKind, "ambiguous");
   assert.equal(parsed.requiresClarification, true);
+});
+
+test("CreateStrandInputSchema accepts duplex DNA creation", () => {
+  const parsed = CreateStrandInputSchema.parse({
+    sequence: "ACGTACGT",
+    duplex: true,
+    polymerType: "DNA",
+  });
+
+  assert.equal(parsed.sequence, "ACGTACGT");
+  assert.equal(parsed.duplex, true);
+  assert.equal(parsed.polymerType, "DNA");
+});
+
+test("SetSelectionModeInputSchema validates explicit selection mode changes", () => {
+  const parsed = SetSelectionModeInputSchema.parse({
+    mode: "Strand",
+    selectPairs: true,
+  });
+
+  assert.equal(parsed.mode, "Strand");
+  assert.equal(parsed.selectPairs, true);
+});
+
+test("ForceRemovalInputSchema accepts indexed or targeted removals", () => {
+  const parsed = ForceRemovalInputSchema.parse({
+    indices: [0, 2],
+    removePair: true,
+  });
+
+  assert.deepEqual(parsed.indices, [0, 2]);
+  assert.equal(parsed.removePair, true);
+});
+
+test("SaveNamedSelectionInputSchema accepts named explicit selections", () => {
+  const parsed = SaveNamedSelectionInputSchema.parse({
+    name: "scaffold-core",
+    elementIds: [1, 2, 3],
+  });
+
+  assert.equal(parsed.name, "scaffold-core");
+  assert.deepEqual(parsed.elementIds, [1, 2, 3]);
+});
+
+test("ExportOxdnaBundleInputSchema sets bundle defaults", () => {
+  const parsed = ExportOxdnaBundleInputSchema.parse({
+    name: "design",
+  });
+
+  assert.equal(parsed.name, "design");
+  assert.equal(parsed.topologyFormat, "new");
+  assert.equal(parsed.includeTop, true);
+  assert.equal(parsed.includeForces, true);
 });

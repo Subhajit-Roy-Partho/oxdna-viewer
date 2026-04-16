@@ -5,14 +5,19 @@ import {
   type ExecutionMode,
   type RequestClassification,
 } from "../tools/schemas.js";
-import type { ModelFacadeLike, ModelPlanningResult, SceneSummary } from "../types.js";
+import type {
+  AvailableToolMetadata,
+  ModelFacadeLike,
+  ModelPlanningResult,
+  SceneSummary,
+} from "../types.js";
 
 const CLASSIFICATION_SYSTEM_PROMPT = `You classify oxView assistant requests.
 
 Rules:
 - "read" means the user is only asking for information.
 - "mutating" means the user wants a reversible, non-destructive scene/view/update action.
-- "destructive" means edits like delete, skip, ligate, nick, insert, extend, split, create, set-sequence, or other topology-changing commands.
+- "destructive" means edits like delete, skip, ligate, nick, insert, extend, split, create, draw, build, set-sequence, or other topology-changing commands.
 - "ambiguous" means the target cannot be resolved safely, for example "select nucleotide 13" when it could mean element id 13 or base type 13.
 
 Honor the execution mode:
@@ -34,7 +39,10 @@ Guidelines:
 - If the request is ambiguous, do not guess.
 - Do not issue destructive edit-style actions unless the surrounding graph has already approved execution.
 - For requests like "every odd nucleotide", interpret odd/even over global element ids unless the user explicitly says otherwise.
-- For color changes, prefer the custom/base/backbone modes exposed by the available tools.`;
+- For color changes, prefer the custom/base/backbone modes exposed by the available tools.
+- Prefer one semantic destructive tool over multiple low-level destructive steps when such a tool exists.
+- Respect the provided tool schemas exactly.
+- Use selection/view tools only when they help satisfy the request; explicit-id edit tools are preferred for topology changes.`;
 
 const RAW_JS_PREVIEW_PROMPT = `You are generating a PREVIEW ONLY oxView JavaScript snippet.
 
@@ -66,12 +74,13 @@ function applyClassificationHeuristics(
   }
 
   const destructivePattern =
-    /\b(delete|remove|skip|ligate|nick|insert|extend|split|create|set sequence|change sequence|redo|undo)\b/i;
+    /\b(delete|remove|skip|ligate|nick|insert|extend|split|create|draw|build|make|set sequence|change sequence|redo|undo)\b/i;
   const definitelyReadOnly =
     /\b(get|show|list|count|what|which|where|distance|position|orientation|info|trace|summary)\b/i;
 
   const isDestructive = destructivePattern.test(lowered);
-  const isReadOnly = definitelyReadOnly.test(lowered) && !/\b(select|color|focus|toggle|change|set)\b/i.test(lowered);
+  const isReadOnly =
+    definitelyReadOnly.test(lowered) && !/\b(select|color|focus|toggle|change|set)\b/i.test(lowered);
 
   const requiresConfirmation =
     executionMode === "always-preview"
@@ -175,7 +184,7 @@ export class OpenAIModelFacade implements ModelFacadeLike {
     request: string;
     executionMode: ExecutionMode;
     sceneSummary: SceneSummary | null;
-    availableTools: { name: string; description: string }[];
+    availableTools: AvailableToolMetadata[];
     repairAttempts: number;
     previousFailures: string[];
   }): Promise<ModelPlanningResult> {
@@ -185,7 +194,7 @@ export class OpenAIModelFacade implements ModelFacadeLike {
         function: {
           name: toolMeta.name,
           description: toolMeta.description,
-          parameters: { type: "object", properties: {}, additionalProperties: true },
+          parameters: toolMeta.jsonSchema,
         },
       })),
     );
@@ -199,7 +208,12 @@ export class OpenAIModelFacade implements ModelFacadeLike {
           sceneSummary: input.sceneSummary,
           repairAttempts: input.repairAttempts,
           previousFailures: input.previousFailures,
-          availableTools: input.availableTools,
+          availableTools: input.availableTools.map((toolMeta) => ({
+            name: toolMeta.name,
+            description: toolMeta.description,
+            risk: toolMeta.risk,
+            category: toolMeta.category,
+          })),
         }),
       ),
     ]);

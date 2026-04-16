@@ -1,7 +1,6 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
-import type { OxViewCDPSession } from "../runtime/cdpSession.js";
-import type { OpenAIModelFacade } from "../runtime/modelFacade.js";
 import type {
+  AvailableToolMetadata,
   GraphState,
   ModelFacadeLike,
   PlannedToolCall,
@@ -9,13 +8,20 @@ import type {
   ToolExecutionRecord,
   VerificationResult,
 } from "../types.js";
-import type { ExecutionMode } from "../tools/schemas.js";
+import type { ExecutionMode, ToolRisk } from "../tools/schemas.js";
 
 type GraphRuntime = {
   session: SessionLike;
   model: ModelFacadeLike;
-  availableTools: { name: string; description: string }[];
-  toolMap: Map<string, { mutation: boolean; tool: { invoke(input: unknown): Promise<unknown> } }>;
+  availableTools: AvailableToolMetadata[];
+  toolMap: Map<
+    string,
+    {
+      mutation: boolean;
+      risk: ToolRisk;
+      tool: { invoke(input: unknown): Promise<unknown> };
+    }
+  >;
   executionMode: ExecutionMode;
   maxRepairAttempts: number;
 };
@@ -67,7 +73,7 @@ function summarizeToolResults(toolResults: ToolExecutionRecord[]): string {
   return toolResults
     .map((result) => {
       const prefix = result.success ? "OK" : "FAIL";
-      return `${prefix}: ${result.name} ${JSON.stringify(result.args)}`;
+      return `${prefix}: [${result.risk}] ${result.name} ${JSON.stringify(result.args)}`;
     })
     .join("\n");
 }
@@ -92,6 +98,15 @@ function getResultIds(result: unknown): number[] {
   }
 
   return ids.filter((value): value is number => Number.isInteger(value));
+}
+
+function getPlannedToolRisks(
+  runtime: GraphRuntime,
+  toolCalls: PlannedToolCall[],
+): ToolRisk[] {
+  return toolCalls
+    .map((toolCall) => runtime.toolMap.get(toolCall.name)?.risk)
+    .filter((risk): risk is ToolRisk => Boolean(risk));
 }
 
 async function ingestRequestNode(state: GraphState) {
@@ -160,7 +175,7 @@ async function planToolsNode(state: GraphState, runtime: GraphRuntime) {
   };
 }
 
-async function clarifyOrConfirmNode(state: GraphState) {
+async function clarifyOrConfirmNode(state: GraphState, runtime: GraphRuntime) {
   if (state.classification?.requiresClarification) {
     return {
       status: "needs_clarification" as const,
@@ -170,15 +185,19 @@ async function clarifyOrConfirmNode(state: GraphState) {
     };
   }
 
+  const plannedToolRisks = getPlannedToolRisks(runtime, state.pendingToolCalls);
+  const requiresConfirmationByRisk = plannedToolRisks.includes("destructive");
   const confirmationRequired =
     state.executionMode === "always-preview" ||
     state.classification?.requiresConfirmation ||
+    requiresConfirmationByRisk ||
     Boolean(state.rawJsPreview);
 
   if (confirmationRequired && !state.confirmationGranted) {
     const confirmationPrompt = [
       "This request needs confirmation before execution.",
       state.assistantReasoning ? `Reasoning: ${state.assistantReasoning}` : null,
+      plannedToolRisks.length ? `Planned tool risks: ${plannedToolRisks.join(", ")}` : null,
       `Planned tool calls:\n${formatToolCalls(state.pendingToolCalls)}`,
       state.rawJsPreview ? `Fallback JS preview:\n${state.rawJsPreview}` : null,
     ]
@@ -196,6 +215,20 @@ async function clarifyOrConfirmNode(state: GraphState) {
   };
 }
 
+async function prepareExecutionNode(state: GraphState, runtime: GraphRuntime) {
+  if (state.pendingToolCalls.length === 0) {
+    return {};
+  }
+
+  try {
+    await runtime.session.runHelper("clearApiErrors", {});
+  } catch {
+    // If clearing fails, continue. Verification will still catch fresh API errors.
+  }
+
+  return {};
+}
+
 async function executeToolsNode(state: GraphState, runtime: GraphRuntime) {
   const toolResults: ToolExecutionRecord[] = [];
 
@@ -208,6 +241,7 @@ async function executeToolsNode(state: GraphState, runtime: GraphRuntime) {
         result: null,
         success: false,
         mutation: false,
+        risk: "read",
         error: `Unknown tool ${pendingTool.name}`,
       });
       break;
@@ -222,6 +256,7 @@ async function executeToolsNode(state: GraphState, runtime: GraphRuntime) {
         result,
         success,
         mutation: definition.mutation,
+        risk: definition.risk,
       });
       if (!success) {
         break;
@@ -233,6 +268,7 @@ async function executeToolsNode(state: GraphState, runtime: GraphRuntime) {
         result: null,
         success: false,
         mutation: definition.mutation,
+        risk: definition.risk,
         error: error instanceof Error ? error.message : String(error),
       });
       break;
@@ -250,7 +286,7 @@ async function verifyOutcomeNode(state: GraphState, runtime: GraphRuntime) {
     return {
       verification: {
         status: "skipped",
-        message: "No mutating tools were executed.",
+        message: "No scene-mutating tools were executed.",
         retryable: false,
       } satisfies VerificationResult,
     };
@@ -311,7 +347,7 @@ async function verifyOutcomeNode(state: GraphState, runtime: GraphRuntime) {
   return {
     verification: {
       status: "verified",
-      message: "Mutating tool calls completed successfully and oxView reported no API errors.",
+      message: "Tool calls completed successfully and oxView reported no API errors.",
       retryable: false,
     } satisfies VerificationResult,
   };
@@ -416,7 +452,8 @@ export function createOxViewGraph(runtime: GraphRuntime) {
     .addNode("classify_request", (state) => classifyRequestNode(state, runtime))
     .addNode("load_context", (state) => loadContextNode(state, runtime))
     .addNode("plan_tools", (state) => planToolsNode(state, runtime))
-    .addNode("clarify_or_confirm", (state) => clarifyOrConfirmNode(state))
+    .addNode("clarify_or_confirm", (state) => clarifyOrConfirmNode(state, runtime))
+    .addNode("prepare_execution", (state) => prepareExecutionNode(state, runtime))
     .addNode("execute_tools", (state) => executeToolsNode(state, runtime))
     .addNode("verify_outcome", (state) => verifyOutcomeNode(state, runtime))
     .addNode("repair_or_finalize", (state) => repairOrFinalizeNode(state, runtime))
@@ -431,13 +468,14 @@ export function createOxViewGraph(runtime: GraphRuntime) {
       (state) => {
         if (state.status === "needs_clarification") return "respond";
         if (state.status === "needs_confirmation") return "respond";
-        return "execute_tools";
+        return "prepare_execution";
       },
       {
         respond: "respond",
-        execute_tools: "execute_tools",
+        prepare_execution: "prepare_execution",
       },
     )
+    .addEdge("prepare_execution", "execute_tools")
     .addEdge("execute_tools", "verify_outcome")
     .addEdge("verify_outcome", "repair_or_finalize")
     .addConditionalEdges(
