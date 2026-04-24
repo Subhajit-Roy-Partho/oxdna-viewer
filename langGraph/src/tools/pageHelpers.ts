@@ -93,6 +93,94 @@ function installOxViewLangGraphHelpers() {
     return Array.from(touched);
   };
 
+  const getElementCenter = (elementsToMeasure) => {
+    const center = new THREE.Vector3();
+    if (!elementsToMeasure.length) {
+      return center;
+    }
+    elementsToMeasure.forEach((element) => {
+      center.add(element.getPos());
+    });
+    return center.divideScalar(elementsToMeasure.length);
+  };
+
+  const randomSequence = (length, nucleicAcidType) => {
+    const alphabet = nucleicAcidType === "RNA"
+      ? ["A", "U", "C", "G"]
+      : ["A", "T", "C", "G"];
+    return Array.from({ length }, () =>
+      alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  };
+
+  const uniqueStrands = (elementsToCheck) =>
+    Array.from(
+      new Set(elementsToCheck.map((element) => element.strand).filter(Boolean)),
+    );
+
+  const getBundleBasis = (axis) => {
+    let reference = camera?.up?.clone?.() ?? new THREE.Vector3(0, 1, 0);
+    if (Math.abs(reference.clone().normalize().dot(axis)) > 0.95) {
+      reference = new THREE.Vector3(1, 0, 0);
+    }
+    const first = reference
+      .sub(axis.clone().multiplyScalar(reference.dot(axis)))
+      .normalize();
+    const second = axis.clone().cross(first).normalize();
+    return [first, second];
+  };
+
+  const getHexLatticeCoordinates = (count) => {
+    const coordinates = [[0, 0]];
+    const directions = [
+      [1, 0],
+      [1, -1],
+      [0, -1],
+      [-1, 0],
+      [-1, 1],
+      [0, 1],
+    ];
+
+    for (let radius = 1; coordinates.length < count; radius += 1) {
+      let q = -radius;
+      let r = radius;
+      for (const [dq, dr] of directions) {
+        for (let step = 0; step < radius && coordinates.length < count; step += 1) {
+          coordinates.push([q, r]);
+          q += dq;
+          r += dr;
+        }
+      }
+    }
+
+    return coordinates;
+  };
+
+  const focusCameraOnPoint = (targetCenter, targetDistance = 40) => {
+    const fallbackOffset = new THREE.Vector3(0, 0, 1);
+    const currentTarget = controls?.target?.clone?.() ?? targetCenter.clone();
+    const currentOffset = camera.position.clone().sub(currentTarget);
+    const offsetDirection =
+      currentOffset.lengthSq() > 1e-6
+        ? currentOffset.normalize()
+        : fallbackOffset;
+
+    if (controls?.target?.copy) {
+      controls.target.copy(targetCenter);
+    } else if (controls) {
+      controls.target = targetCenter.clone();
+    }
+    camera.position.copy(
+      targetCenter.clone().add(offsetDirection.multiplyScalar(targetDistance)),
+    );
+    if (typeof camera?.lookAt === "function") {
+      camera.lookAt(targetCenter);
+    }
+    if (typeof controls?.update === "function") {
+      controls.update();
+    }
+    render();
+  };
+
   globalThis.__oxviewLangGraphHelpers = {
     getSceneSummary(input = {}) {
       return {
@@ -205,6 +293,134 @@ function installOxViewLangGraphHelpers() {
         color: color.getHexString(),
         applyTo: input.applyTo,
         verification: ids.slice(0, 25).map((id) => api.getElementInfo(api.getElement(id))),
+      };
+    },
+
+    createHelixBundle(input) {
+      const startingElementCount = elements.size;
+      const helixCount = Math.max(1, input.numberOfHelices ?? 1);
+      const basePairsPerHelix = Math.max(1, input.basePairsPerHelix ?? 32);
+      const nucleicAcidType = input.nucleicAcidType ?? "DNA";
+      const duplex = input.duplex ?? true;
+      const spacing = input.spacing ?? 4;
+      const randomizeHelixPhase = input.randomizeHelixPhase ?? true;
+      const focusAfterCreate = input.focusAfterCreate ?? true;
+      const labelPrefix = input.labelPrefix ?? "bundle";
+      const lattice = getHexLatticeCoordinates(helixCount);
+
+      const createdHelices = [];
+      let anchorCenter = null;
+      let bundleAxis = null;
+      let basisU = null;
+      let basisV = null;
+
+      for (let index = 0; index < helixCount; index += 1) {
+        const sequence = randomSequence(basePairsPerHelix, nucleicAcidType);
+        const helixElements = edit.createStrand(
+          sequence,
+          duplex,
+          nucleicAcidType === "RNA",
+        );
+        const helixSet = new Set(helixElements);
+        const helixCenter = getElementCenter(helixElements);
+
+        if (!anchorCenter) {
+          anchorCenter = helixCenter.clone();
+          bundleAxis = helixElements[0]?.getA3?.()?.clone?.()?.normalize?.()
+            ?? new THREE.Vector3(0, 0, 1);
+          [basisU, basisV] = getBundleBasis(bundleAxis);
+        }
+
+        const [q, r] = lattice[index];
+        const x = spacing * (q + r / 2);
+        const y = spacing * (Math.sqrt(3) * r / 2);
+        const targetCenter = anchorCenter
+          .clone()
+          .add(basisU.clone().multiplyScalar(x))
+          .add(basisV.clone().multiplyScalar(y));
+
+        if (index > 0) {
+          translateElements(helixSet, targetCenter.clone().sub(helixCenter));
+        }
+
+        const finalCenter = index > 0 ? targetCenter : helixCenter;
+        if (randomizeHelixPhase) {
+          rotateElements(
+            helixSet,
+            bundleAxis.clone(),
+            Math.random() * Math.PI * 2,
+            finalCenter.clone(),
+          );
+        }
+
+        const strands = uniqueStrands(helixElements);
+        strands.forEach((strand, strandIndex) => {
+          strand.label = `${labelPrefix}_${index + 1}${strands.length > 1 ? String.fromCharCode(97 + strandIndex) : ""}`;
+        });
+
+        createdHelices.push({
+          helixIndex: index + 1,
+          sequence,
+          elementIds: helixElements.map((element) => element.id),
+          strandIds: strands.map((strand) => strand.id),
+          center: finalCenter.toArray(),
+        });
+      }
+
+      const createdElements = createdHelices.flatMap((helix) =>
+        helix.elementIds.map((id) => api.getElement(id)).filter(Boolean),
+      );
+      const createdIds = createdElements.map((element) => element.id);
+      if (createdIds.length === 0) {
+        return {
+          success: false,
+          mutation: false,
+          helixCount,
+          basePairsPerHelix,
+          nucleicAcidType,
+          duplex,
+          spacing,
+          focusAfterCreate,
+          idsAffected: [],
+          error: "Helix bundle creation reported success, but no created elements were resolvable in the scene.",
+        };
+      }
+
+      if (typeof api.showEverything === "function") {
+        api.showEverything();
+      }
+      if (typeof api.selectElements === "function") {
+        api.selectElements(createdElements, false);
+      }
+
+      const bundleCenter = getElementCenter(createdElements);
+
+      if (focusAfterCreate) {
+        const bundleRadius = Math.max(
+          spacing * Math.sqrt(Math.max(1, helixCount)),
+          basePairsPerHelix * 0.35,
+          20,
+        );
+        focusCameraOnPoint(bundleCenter, bundleRadius * 2);
+      }
+
+      return {
+        success: true,
+        mutation: true,
+        helixCount,
+        basePairsPerHelix,
+        nucleicAcidType,
+        duplex,
+        spacing,
+        focusAfterCreate,
+        bundleCenter: bundleCenter.toArray(),
+        sceneElementCountBefore: startingElementCount,
+        sceneElementCountAfter: elements.size,
+        strandCount: createdHelices.reduce((count, helix) => count + helix.strandIds.length, 0),
+        elementCount: createdIds.length,
+        idsAffected: createdIds,
+        selectedIds: api.getSelectedElementIDs ? api.getSelectedElementIDs() : createdIds,
+        createdHelices,
       };
     },
 

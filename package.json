@@ -10,12 +10,17 @@
     "build": "npm run build:three && npm run build:app",
     "prepare:gh-pages": "node ./scripts/prepare-gh-pages.mjs",
     "start": "electron-forge start",
+    "start:cdp": "electron-forge start -- --cdp",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "echo \"No linting configured\"",
     "load": "npm run build:three && tsc -w & reload -b",
-    "save-canvas-image": "electron ./script/save-canvas-image.js"
+    "save-canvas-image": "electron ./script/save-canvas-image.js",
+    "langgraph:install": "npm --prefix ./langGraph install",
+    "langgraph:build": "npm --prefix ./langGraph run build",
+    "langgraph:test": "npm --prefix ./langGraph run test",
+    "langgraph:chat": "npm --prefix ./langGraph run chat"
   },
   "repository": {
     "type": "git",

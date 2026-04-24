@@ -73,6 +73,17 @@ export const ToggleVisibilityInputSchema = z.object({
   filter: ElementFilterSchema,
 });
 
+export const CreateHelixBundleInputSchema = z.object({
+  numberOfHelices: z.number().int().positive().default(6),
+  basePairsPerHelix: z.number().int().positive().default(32),
+  nucleicAcidType: z.enum(["DNA", "RNA"]).default("DNA"),
+  duplex: z.boolean().default(true),
+  spacing: z.number().positive().default(4),
+  randomizeHelixPhase: z.boolean().default(true),
+  focusAfterCreate: z.boolean().default(true),
+  labelPrefix: z.string().min(1).default("bundle"),
+});
+
 export const FocusElementInputSchema = z.object({
   elementId: z.number().int().nonnegative(),
   steps: z.number().int().positive().default(20),

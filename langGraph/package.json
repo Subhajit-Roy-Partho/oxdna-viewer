@@ -6,7 +6,8 @@
   "description": "Standalone LangGraph helper for controlling oxView through typed tool calls over CDP.",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "chat": "tsx src/cli/chat.ts",
+    "chat": "npm run build && node dist/cli/chat.js",
+    "chat:dev": "tsx src/cli/chat.ts",
     "test": "tsx --test test/**/*.test.ts"
   },
   "engines": {

@@ -153,6 +153,30 @@ If a colorbar is present, the script also saves it next to the main image as `*-
 
 ---
 
+## LangGraph Helper
+
+This repo also includes a standalone LangGraph-based oxView assistant in [`langGraph/`](./langGraph/README.md). It connects to a running oxView Electron instance over the Chrome DevTools Protocol and translates natural-language requests into typed oxView tool calls.
+
+From the repo root:
+
+```bash
+npm run langgraph:install
+npm run start:cdp
+npm run langgraph:chat
+```
+
+The helper reads `langGraph/.env`. Its default OpenAI-compatible provider is `https://nano-gpt.com/api/v1`, and its default model is `zai-org/glm-5.1:thinking`.
+
+If you need a different CDP port, start oxView with:
+
+```bash
+npm start -- --cdp-port=9333
+```
+
+and set `OXVIEW_CDP_URL=http://127.0.0.1:9333` in `langGraph/.env`.
+
+---
+
 ## Console Commands
 In addition to the visualization and editing features highlighted in the menu, oxView is scriptable through the browser console.  To facilitate use, there are two APIs containing useful functions for changing visuals and for editing.
 

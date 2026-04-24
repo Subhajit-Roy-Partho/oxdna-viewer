@@ -298,6 +298,7 @@ Attribute predicate:
 - `select_elements`
 - `clear_selection`
 - `color_elements`
+- `create_helix_bundle`
 - `focus_element`
 - `toggle_visibility`
 - `show_everything`
@@ -466,10 +467,19 @@ Expected clarification:
 Environment variables:
 
 - `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
 - `OPENAI_MODEL`
 - `OXVIEW_CDP_URL`
 - `OXVIEW_EXECUTION_MODE`
 - `OXVIEW_MAX_REPAIR_ATTEMPTS`
+
+Default model endpoint:
+
+- `https://nano-gpt.com/api/v1`
+
+Default model:
+
+- `zai-org/glm-5.1:thinking`
 
 Default execution mode:
 
@@ -477,18 +487,30 @@ Default execution mode:
 
 ## Running Locally
 
-1. Start oxView with remote debugging enabled.
-2. Copy `.env.example` to `.env` and fill in values.
-3. Install dependencies:
+1. From the repo root, install the helper dependencies:
+
+```bash
+npm run langgraph:install
+```
+
+2. Start oxView with CDP enabled:
+
+```bash
+npm run start:cdp
+```
+
+3. Review `langGraph/.env` or copy `.env.example` to `.env` if you want different credentials or a different model.
+4. Run the CLI from the repo root:
+
+```bash
+npm run langgraph:chat
+```
+
+Direct package-local commands still work too:
 
 ```bash
 cd langGraph
 npm install
-```
-
-4. Run the CLI:
-
-```bash
 npm run chat
 ```
 
@@ -505,14 +527,13 @@ what is the backbone position of element 44
 Run the lightweight mocked test suite:
 
 ```bash
-cd langGraph
-npm test
+npm run langgraph:test
 ```
 
 Run a build:
 
 ```bash
-npm run build
+npm run langgraph:build
 ```
 
 ## Current Limitations

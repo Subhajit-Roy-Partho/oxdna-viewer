@@ -27,6 +27,8 @@ const PLANNER_SYSTEM_PROMPT = `You are the oxView LangGraph planner. You must us
 Guidelines:
 - Prefer read tools first when you need scene grounding.
 - Prefer find_elements + action tools over inventing raw JavaScript.
+- For requests to create a new random multi-helix bundle, use create_helix_bundle instead of refusing or falling back to raw JavaScript.
+- When the user specifies a helix count or base-pair length for create_helix_bundle, include those values in the tool arguments.
 - Use the minimum number of tool calls needed to satisfy the request.
 - If the request is informational, you may answer directly without tools only when the answer is obvious from the provided scene summary.
 - If the request is ambiguous, do not guess.
@@ -85,14 +87,60 @@ function applyClassificationHeuristics(
   };
 }
 
+export function applyToolCallHeuristics(
+  request: string,
+  toolCalls: Array<{
+    id?: string;
+    name: string;
+    args: Record<string, unknown>;
+  }>,
+) {
+  const helixCountMatch = request.match(/\b(\d+)\s*[- ]?helix(?:es)?\b/i);
+  const basePairMatch = request.match(/\b(\d+)\s*(?:bp|base ?pairs?)\b/i);
+  const mentionsRNA = /\brna\b/i.test(request);
+  const mentionsDNA = /\bdna\b/i.test(request);
+
+  return toolCalls.map((toolCall) => {
+    if (toolCall.name !== "create_helix_bundle") {
+      return toolCall;
+    }
+
+    const args = { ...toolCall.args };
+    if (args.numberOfHelices === undefined && helixCountMatch) {
+      args.numberOfHelices = Number(helixCountMatch[1]);
+    }
+    if (args.basePairsPerHelix === undefined && basePairMatch) {
+      args.basePairsPerHelix = Number(basePairMatch[1]);
+    }
+    if (args.nucleicAcidType === undefined) {
+      if (mentionsRNA) {
+        args.nucleicAcidType = "RNA";
+      } else if (mentionsDNA) {
+        args.nucleicAcidType = "DNA";
+      }
+    }
+
+    return {
+      ...toolCall,
+      args,
+    };
+  });
+}
+
 export class OpenAIModelFacade implements ModelFacadeLike {
   private readonly model: ChatOpenAI;
 
-  constructor(options: { apiKey: string; model: string }) {
+  constructor(options: { apiKey: string; model: string; baseUrl?: string }) {
     this.model = new ChatOpenAI({
       apiKey: options.apiKey,
       model: options.model,
       temperature: 0,
+      useResponsesApi: false,
+      configuration: options.baseUrl
+        ? {
+            baseURL: options.baseUrl,
+          }
+        : undefined,
     });
   }
 
@@ -156,12 +204,14 @@ export class OpenAIModelFacade implements ModelFacadeLike {
       ),
     ]);
 
-    const toolCalls =
+    const toolCalls = applyToolCallHeuristics(
+      input.request,
       response.tool_calls?.map((toolCall) => ({
         id: toolCall.id,
         name: toolCall.name,
         args: (toolCall.args ?? {}) as Record<string, unknown>,
-      })) ?? [];
+      })) ?? [],
+    );
 
     return {
       assistantReasoning:

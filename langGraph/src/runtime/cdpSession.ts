@@ -18,6 +18,14 @@ type PendingCall = {
   reject: (error: Error) => void;
 };
 
+type OxViewPageTarget = {
+  id?: string;
+  type?: string;
+  title?: string;
+  url?: string;
+  webSocketDebuggerUrl: string;
+};
+
 export class OxViewCDPSession {
   private readonly baseUrl: URL;
   private readonly waitForTargetMs: number;
@@ -26,6 +34,7 @@ export class OxViewCDPSession {
   private nextId = 0;
   private pending = new Map<number, PendingCall>();
   private helpersInstalled = false;
+  private connectedTarget: OxViewPageTarget | null = null;
 
   constructor(options: {
     baseUrl: string;
@@ -42,8 +51,9 @@ export class OxViewCDPSession {
       return;
     }
 
-    const wsUrl = await this.waitForOxViewTarget();
-    this.ws = new WebSocket(wsUrl);
+    const target = await this.waitForOxViewTarget();
+    this.connectedTarget = target;
+    this.ws = new WebSocket(target.webSocketDebuggerUrl);
 
     await new Promise<void>((resolve, reject) => {
       if (!this.ws) {
@@ -67,6 +77,16 @@ export class OxViewCDPSession {
     }
     this.pending.clear();
     this.helpersInstalled = false;
+    this.connectedTarget = null;
+  }
+
+  getTargetInfo(): { id?: string; title?: string; url?: string } | null {
+    if (!this.connectedTarget) {
+      return null;
+    }
+
+    const { id, title, url } = this.connectedTarget;
+    return { id, title, url };
   }
 
   async evaluate<T>(expression: string): Promise<T> {
@@ -108,11 +128,11 @@ export class OxViewCDPSession {
     this.helpersInstalled = true;
   }
 
-  private async waitForOxViewTarget(): Promise<string> {
+  private async waitForOxViewTarget(): Promise<OxViewPageTarget> {
     const deadline = Date.now() + this.waitForTargetMs;
     while (Date.now() < deadline) {
       try {
-        const targets = await this.fetchJson<any[]>("/json/list");
+        const targets = await this.fetchJson<OxViewPageTarget[]>("/json/list");
         const pageTarget = targets.find(
           (target) =>
             target.type === "page" &&
@@ -121,7 +141,7 @@ export class OxViewCDPSession {
         );
 
         if (pageTarget?.webSocketDebuggerUrl) {
-          return pageTarget.webSocketDebuggerUrl;
+          return pageTarget;
         }
       } catch {
         // Keep polling until the deadline.

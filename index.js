@@ -1,6 +1,20 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
+const DEFAULT_CDP_PORT = '9222';
+const cdpPortArg = process.argv.find(arg => arg.startsWith('--cdp-port='));
+const shouldEnableCDP = process.argv.includes('--cdp') || Boolean(cdpPortArg);
+const requestedCdpPort = cdpPortArg
+  ? cdpPortArg.slice('--cdp-port='.length)
+  : process.env.OXVIEW_REMOTE_DEBUGGING_PORT;
+
+if (shouldEnableCDP) {
+  const cdpPort = /^\d+$/.test(requestedCdpPort || '')
+    ? requestedCdpPort
+    : DEFAULT_CDP_PORT;
+  app.commandLine.appendSwitch('remote-debugging-port', cdpPort);
+}
+
 
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.

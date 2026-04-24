@@ -72,6 +72,28 @@ function summarizeToolResults(toolResults: ToolExecutionRecord[]): string {
     .join("\n");
 }
 
+function getNumericResultField(result: unknown, field: string): number | null {
+  if (!result || typeof result !== "object") {
+    return null;
+  }
+
+  const value = (result as Record<string, unknown>)[field];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function getResultIds(result: unknown): number[] {
+  if (!result || typeof result !== "object") {
+    return [];
+  }
+
+  const ids = (result as Record<string, unknown>).idsAffected;
+  if (!Array.isArray(ids)) {
+    return [];
+  }
+
+  return ids.filter((value): value is number => Number.isInteger(value));
+}
+
 async function ingestRequestNode(state: GraphState) {
   return {
     normalizedRequest: state.userRequest.trim(),
@@ -238,6 +260,10 @@ async function verifyOutcomeNode(state: GraphState, runtime: GraphRuntime) {
     last: { message?: string } | null;
     history: unknown[];
   }>("getApiErrors", {});
+  const postSceneSummary = await runtime.session.runHelper<GraphState["sceneSummary"]>(
+    "getSceneSummary",
+    { includeSelection: true },
+  );
 
   const failedTool = state.toolResults.find((result) => !result.success);
   if (failedTool) {
@@ -258,6 +284,28 @@ async function verifyOutcomeNode(state: GraphState, runtime: GraphRuntime) {
         retryable: state.repairAttempts < runtime.maxRepairAttempts,
       } satisfies VerificationResult,
     };
+  }
+
+  const createdBundleResults = state.toolResults.filter(
+    (result) => result.success && result.name === "create_helix_bundle",
+  );
+  if (createdBundleResults.length > 0 && state.sceneSummary && postSceneSummary) {
+    const expectedCreatedCount = createdBundleResults.reduce((sum, result) => {
+      const reportedCount = getNumericResultField(result.result, "elementCount");
+      return sum + (reportedCount ?? getResultIds(result.result).length);
+    }, 0);
+    const actualCreatedCount = postSceneSummary.elementCount - state.sceneSummary.elementCount;
+
+    if (expectedCreatedCount > 0 && actualCreatedCount < expectedCreatedCount) {
+      return {
+        verification: {
+          status: "failed",
+          message:
+            `Bundle creation reported ${expectedCreatedCount} new elements, but the scene only grew by ${actualCreatedCount}.`,
+          retryable: state.repairAttempts < runtime.maxRepairAttempts,
+        } satisfies VerificationResult,
+      };
+    }
   }
 
   return {

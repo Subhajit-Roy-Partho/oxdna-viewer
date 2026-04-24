@@ -10,10 +10,12 @@ async function main() {
   const env = loadEnv();
   const session = new OxViewCDPSession({ baseUrl: env.OXVIEW_CDP_URL });
   await session.connect();
+  const targetInfo = session.getTargetInfo();
 
   const model = new OpenAIModelFacade({
     apiKey: env.OPENAI_API_KEY,
     model: env.OPENAI_MODEL,
+    baseUrl: env.OPENAI_BASE_URL,
   });
   const toolCatalog = createOxViewTools(session);
   const graph = createOxViewGraph({
@@ -27,6 +29,9 @@ async function main() {
 
   const rl = readline.createInterface({ input, output });
   console.log("oxView LangGraph helper connected. Type 'exit' to quit.");
+  if (targetInfo?.url) {
+    console.log(`Connected CDP target: ${targetInfo.title ?? "(untitled)"} -> ${targetInfo.url}`);
+  }
 
   try {
     while (true) {

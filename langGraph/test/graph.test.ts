@@ -5,6 +5,9 @@ import { createOxViewTools } from "../src/tools/catalog.js";
 import type { ModelFacadeLike } from "../src/types.js";
 
 class MockSession {
+  private elementCount = 100;
+  private selectedIds: number[] = [];
+
   async connect() {}
 
   async disconnect() {}
@@ -14,8 +17,8 @@ class MockSession {
       case "getSceneSummary":
         return {
           systemCount: 1,
-          elementCount: 100,
-          selectedIds: [],
+          elementCount: this.elementCount,
+          selectedIds: this.selectedIds,
           coloringMode: "Strand",
           transformMode: "Translate",
           cameraType: "PerspectiveCamera",
@@ -27,6 +30,19 @@ class MockSession {
           mutation: true,
           idsAffected: [1, 3, 5],
         };
+      case "createHelixBundle": {
+        const createdIds = Array.from({ length: 1280 }, (_, index) => this.elementCount + index);
+        this.elementCount += createdIds.length;
+        this.selectedIds = createdIds;
+        return {
+          success: true,
+          mutation: true,
+          helixCount: 20,
+          strandCount: 40,
+          elementCount: 1280,
+          idsAffected: createdIds,
+        };
+      }
       case "getApiErrors":
         return {
           last: null,
@@ -130,4 +146,119 @@ test("graph asks for clarification on ambiguous numeric nucleotide targets", asy
 
   assert.equal(result.status, "needs_clarification");
   assert.match(result.finalResponse, /element ID 13/i);
+});
+
+test("graph can execute helix bundle creation when the planner selects the typed tool", async () => {
+  const session = new MockSession();
+  const tools = createOxViewTools(session as any);
+  const model: ModelFacadeLike = {
+    async classifyRequest() {
+      return {
+        requestKind: "mutating",
+        requiresConfirmation: false,
+        requiresClarification: false,
+        explanation: "This is a bundle creation request that can be satisfied with a typed creation tool.",
+        clarificationQuestion: null,
+      };
+    },
+    async planWithTools() {
+      return {
+        assistantReasoning: "Create a 20-helix DNA bundle using the typed creation tool.",
+        directResponse: null,
+        toolCalls: [
+          {
+            name: "create_helix_bundle",
+            args: {
+              numberOfHelices: 20,
+            },
+          },
+        ],
+      };
+    },
+    async generateRawJsPreview() {
+      return "";
+    },
+  };
+
+  const graph = createOxViewGraph({
+    session,
+    model,
+    availableTools: tools.availableTools,
+    toolMap: tools.toolMap as any,
+    executionMode: "safe-auto",
+    maxRepairAttempts: 1,
+  });
+
+  const result = await (graph as any).invoke(
+    createInitialState("Create a 20 helix random bundle", "safe-auto"),
+  );
+
+  assert.equal(result.status, "completed");
+  assert.equal(result.toolResults.length, 1);
+  assert.equal(result.toolResults[0].name, "create_helix_bundle");
+});
+
+test("graph fails verification when helix bundle creation does not increase the scene element count", async () => {
+  class BrokenBundleSession extends MockSession {
+    override async runHelper(helperName: string, input: unknown = {}) {
+      if (helperName === "createHelixBundle") {
+        return {
+          success: true,
+          mutation: true,
+          helixCount: 20,
+          strandCount: 40,
+          elementCount: 1280,
+          idsAffected: Array.from({ length: 1280 }, (_, index) => index),
+        };
+      }
+      return super.runHelper(helperName, input);
+    }
+  }
+
+  const session = new BrokenBundleSession();
+  const tools = createOxViewTools(session as any);
+  const model: ModelFacadeLike = {
+    async classifyRequest() {
+      return {
+        requestKind: "mutating",
+        requiresConfirmation: false,
+        requiresClarification: false,
+        explanation: "This is a bundle creation request that can be satisfied with a typed creation tool.",
+        clarificationQuestion: null,
+      };
+    },
+    async planWithTools() {
+      return {
+        assistantReasoning: "Create a 20-helix DNA bundle using the typed creation tool.",
+        directResponse: null,
+        toolCalls: [
+          {
+            name: "create_helix_bundle",
+            args: {
+              numberOfHelices: 20,
+            },
+          },
+        ],
+      };
+    },
+    async generateRawJsPreview() {
+      return "";
+    },
+  };
+
+  const graph = createOxViewGraph({
+    session,
+    model,
+    availableTools: tools.availableTools,
+    toolMap: tools.toolMap as any,
+    executionMode: "safe-auto",
+    maxRepairAttempts: 0,
+  });
+
+  const result = await (graph as any).invoke(
+    createInitialState("Create a 20 helix random bundle", "safe-auto"),
+  );
+
+  assert.equal(result.status, "failed");
+  assert.match(result.finalResponse, /scene only grew by 0/i);
 });

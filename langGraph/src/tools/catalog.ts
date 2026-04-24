@@ -3,6 +3,7 @@ import type { OxViewCDPSession } from "../runtime/cdpSession.js";
 import {
   CenterOfMassInputSchema,
   ColorElementsInputSchema,
+  CreateHelixBundleInputSchema,
   DistanceInputSchema,
   EmptyInputSchema,
   FindElementsInputSchema,
@@ -169,6 +170,22 @@ export function createOxViewTools(session: OxViewCDPSession) {
           description:
             "Mutating tool for recoloring filtered elements. Supports parity, ids, strand ids, base type, selection membership, and attribute predicates.",
           schema: ColorElementsInputSchema,
+        },
+      ),
+    },
+    {
+      name: "create_helix_bundle",
+      description:
+        "Create a new parallel bundle of DNA or RNA helices with random sequences, laid out on a hexagonal lattice near the current camera view.",
+      mutation: true,
+      tool: tool(
+        async (input) =>
+          withEnvelope(true, await session.runHelper("createHelixBundle", input)),
+        {
+          name: "create_helix_bundle",
+          description:
+            "Mutating tool for creating a new multi-helix bundle. Defaults to duplex DNA helices with random sequences and sensible spacing when the user does not specify all geometry details.",
+          schema: CreateHelixBundleInputSchema,
         },
       ),
     },
