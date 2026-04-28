@@ -802,6 +802,10 @@ abstract class PlaneForce extends Force {
 }
 class RepulsionPlaneMoving extends PlaneForce {
     public override type = 'repulsion_plane_moving';
+    public particles: BasicElement[] | number = -1;
+    public stiff: number = 0.09;
+    public dir: THREE.Vector3 = new THREE.Vector3(0, 0, 1);
+    public position: number = 0;
     public ref_particles: BasicElement[] = [];   // adjust BasicElement import/type as in your repo
 
     public override setFromParsedJson(parsedjson: any) {
