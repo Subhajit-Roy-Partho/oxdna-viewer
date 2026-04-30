@@ -25,3 +25,16 @@ test("applyToolCallHeuristics fills in base-pair length and polymer type", () =>
   assert.equal(toolCalls[0].args.basePairsPerHelix, 48);
   assert.equal(toolCalls[0].args.nucleicAcidType, "RNA");
 });
+
+test("applyToolCallHeuristics fills in strand length, duplex, and polymer type", () => {
+  const toolCalls = applyToolCallHeuristics("Create 20 nucleotide DNA duplex", [
+    {
+      name: "create_strand",
+      args: {},
+    },
+  ]);
+
+  assert.equal(toolCalls[0].args.length, 20);
+  assert.equal(toolCalls[0].args.duplex, true);
+  assert.equal(toolCalls[0].args.polymerType, "DNA");
+});

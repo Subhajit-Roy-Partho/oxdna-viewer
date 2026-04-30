@@ -608,7 +608,7 @@ export function createOxViewTools(session: OxViewCDPSession) {
       name: "create_strand",
       helperName: "createStrand",
       description:
-        "Create a new DNA or RNA strand from a sequence, optionally as a duplex, and register the addition in undo history.",
+        "Create a new DNA or RNA strand from a sequence or random requested length by filling oxView's Create controls and invoking createWrapper(), optionally as a duplex.",
       risk: "destructive",
       category: "editing",
       schema: CreateStrandInputSchema,

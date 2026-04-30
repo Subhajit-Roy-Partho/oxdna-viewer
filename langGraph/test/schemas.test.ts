@@ -58,6 +58,19 @@ test("CreateStrandInputSchema accepts duplex DNA creation", () => {
   assert.equal(parsed.polymerType, "DNA");
 });
 
+test("CreateStrandInputSchema accepts length-based duplex DNA creation", () => {
+  const parsed = CreateStrandInputSchema.parse({
+    length: 20,
+    duplex: true,
+    polymerType: "DNA",
+  });
+
+  assert.equal(parsed.length, 20);
+  assert.equal(parsed.duplex, true);
+  assert.equal(parsed.polymerType, "DNA");
+  assert.equal(parsed.focusAfterCreate, true);
+});
+
 test("SetSelectionModeInputSchema validates explicit selection mode changes", () => {
   const parsed = SetSelectionModeInputSchema.parse({
     mode: "Strand",

@@ -300,11 +300,17 @@ export const MoveElementsToInputSchema = z.object({
   anchorElementId: ElementIdSchema.optional(),
 });
 
-export const CreateStrandInputSchema = z.object({
-  sequence: z.string().min(1),
-  duplex: z.boolean().default(false),
-  polymerType: PolymerTypeSchema.default("DNA"),
-});
+export const CreateStrandInputSchema = z
+  .object({
+    sequence: z.string().min(1).optional(),
+    length: PositiveIntSchema.optional(),
+    duplex: z.boolean().default(false),
+    polymerType: PolymerTypeSchema.default("DNA"),
+    focusAfterCreate: z.boolean().default(true),
+  })
+  .refine((value) => value.sequence !== undefined || value.length !== undefined, {
+    message: "Provide either sequence or length.",
+  });
 
 export const ExtendStrandInputSchema = z.object({
   endElementId: ElementIdSchema,

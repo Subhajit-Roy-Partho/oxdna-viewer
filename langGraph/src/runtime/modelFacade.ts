@@ -34,6 +34,7 @@ Guidelines:
 - Prefer find_elements + action tools over inventing raw JavaScript.
 - For requests to create a new random multi-helix bundle, use create_helix_bundle instead of refusing or falling back to raw JavaScript.
 - When the user specifies a helix count or base-pair length for create_helix_bundle, include those values in the tool arguments.
+- For requests like "create a 20 nucleotide DNA duplex", use create_strand with length, duplex=true, and the requested polymerType.
 - Use the minimum number of tool calls needed to satisfy the request.
 - If the request is informational, you may answer directly without tools only when the answer is obvious from the provided scene summary.
 - If the request is ambiguous, do not guess.
@@ -106,26 +107,49 @@ export function applyToolCallHeuristics(
 ) {
   const helixCountMatch = request.match(/\b(\d+)\s*[- ]?helix(?:es)?\b/i);
   const basePairMatch = request.match(/\b(\d+)\s*(?:bp|base ?pairs?)\b/i);
+  const nucleotideLengthMatch = request.match(
+    /\b(\d+)\s*(?:nt|nucleotides?|bases?)\b/i,
+  );
+  const mentionsDuplex = /\bduplex\b/i.test(request);
   const mentionsRNA = /\brna\b/i.test(request);
   const mentionsDNA = /\bdna\b/i.test(request);
 
   return toolCalls.map((toolCall) => {
-    if (toolCall.name !== "create_helix_bundle") {
-      return toolCall;
+    const args = { ...toolCall.args };
+
+    if (toolCall.name === "create_helix_bundle") {
+      if (args.numberOfHelices === undefined && helixCountMatch) {
+        args.numberOfHelices = Number(helixCountMatch[1]);
+      }
+      if (args.basePairsPerHelix === undefined && basePairMatch) {
+        args.basePairsPerHelix = Number(basePairMatch[1]);
+      }
+      if (args.nucleicAcidType === undefined) {
+        if (mentionsRNA) {
+          args.nucleicAcidType = "RNA";
+        } else if (mentionsDNA) {
+          args.nucleicAcidType = "DNA";
+        }
+      }
     }
 
-    const args = { ...toolCall.args };
-    if (args.numberOfHelices === undefined && helixCountMatch) {
-      args.numberOfHelices = Number(helixCountMatch[1]);
-    }
-    if (args.basePairsPerHelix === undefined && basePairMatch) {
-      args.basePairsPerHelix = Number(basePairMatch[1]);
-    }
-    if (args.nucleicAcidType === undefined) {
-      if (mentionsRNA) {
-        args.nucleicAcidType = "RNA";
-      } else if (mentionsDNA) {
-        args.nucleicAcidType = "DNA";
+    if (toolCall.name === "create_strand") {
+      if (
+        args.sequence === undefined &&
+        args.length === undefined &&
+        nucleotideLengthMatch
+      ) {
+        args.length = Number(nucleotideLengthMatch[1]);
+      }
+      if (args.duplex === undefined && mentionsDuplex) {
+        args.duplex = true;
+      }
+      if (args.polymerType === undefined) {
+        if (mentionsRNA) {
+          args.polymerType = "RNA";
+        } else if (mentionsDNA) {
+          args.polymerType = "DNA";
+        }
       }
     }
 

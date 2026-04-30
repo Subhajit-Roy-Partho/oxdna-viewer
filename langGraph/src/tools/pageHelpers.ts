@@ -17,6 +17,31 @@ function installOxViewLangGraphHelpers() {
       .replace(/\s+/g, "")
       .toUpperCase();
 
+  const dispatchInputChange = (element) => {
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+
+  const setTextInputValue = (id, value) => {
+    const element = document.getElementById(id);
+    if (!element) {
+      return false;
+    }
+    element.value = value;
+    dispatchInputChange(element);
+    return true;
+  };
+
+  const setCheckboxValue = (id, value) => {
+    const element = document.getElementById(id);
+    if (!element) {
+      return false;
+    }
+    element.checked = Boolean(value);
+    dispatchInputChange(element);
+    return true;
+  };
+
   const resolveElementKind = (element) => {
     if (element?.isNucleotide?.()) return "nucleotide";
     if (element?.isAminoAcid?.()) return "aminoAcid";
@@ -236,6 +261,79 @@ function installOxViewLangGraphHelpers() {
       controls.update();
     }
     render();
+  };
+
+  const isSystemDrawable = (system) => {
+    if (!system) {
+      return false;
+    }
+    if (typeof system.isPatchySystem === "function" && system.isPatchySystem()) {
+      return Array.isArray(system.patchyMeshes) &&
+        system.patchyMeshes.some((mesh) => scene.children.includes(mesh));
+    }
+    return [system.backbone, system.nucleoside, system.connector, system.bbconnector]
+      .some((mesh) => mesh && scene.children.includes(mesh));
+  };
+
+  const setGeometryInstanceCount = (geometry) => {
+    const instanceCount = geometry?.attributes?.instanceOffset?.count;
+    if (typeof instanceCount === "number" && Number.isFinite(instanceCount)) {
+      geometry.instanceCount = instanceCount;
+      geometry._maxInstanceCount = instanceCount;
+    }
+  };
+
+  const refreshSystemInstanceCounts = (system) => {
+    if (!system) {
+      return;
+    }
+    [
+      system.backboneGeometry,
+      system.nucleosideGeometry,
+      system.connectorGeometry,
+      system.spGeometry,
+      system.pickingGeometry,
+    ].forEach((geometry) => setGeometryInstanceCount(geometry));
+    (system.patchyGeometries ?? []).forEach((geometry) => setGeometryInstanceCount(geometry));
+    (system.pickingMeshes ?? []).forEach((mesh) => setGeometryInstanceCount(mesh?.geometry));
+  };
+
+  const ensureSystemsInScene = async (systemsToDraw) => {
+    const uniqueSystems = Array.from(new Set(systemsToDraw)).filter(Boolean);
+    for (const system of uniqueSystems) {
+      if (!isSystemDrawable(system) && typeof addSystemToScene === "function") {
+        await addSystemToScene(system);
+      }
+      refreshSystemInstanceCounts(system);
+    }
+    uniqueSystems.forEach((system) => {
+      if (typeof system.callAllUpdates === "function") {
+        system.callAllUpdates();
+      } else {
+        system.callUpdates?.([
+          "instanceOffset",
+          "instanceRotation",
+          "instanceScale",
+          "instanceColor",
+          "instanceVisibility",
+        ]);
+      }
+    });
+  };
+
+  const ensureElementsDrawable = async (elementsToDraw) =>
+    ensureSystemsInScene(elementsToDraw.map((element) => element.dummySys ?? element.getSystem?.()));
+
+  const focusCameraOnElements = (elementsToFocus) => {
+    if (!elementsToFocus.length) {
+      return;
+    }
+    const targetCenter = averagePosition(elementsToFocus, "center");
+    const radius = elementsToFocus.reduce((maxRadius, element) => {
+      const position = api.getElementPosition(element, "center");
+      return position ? Math.max(maxRadius, position.distanceTo(targetCenter)) : maxRadius;
+    }, 0);
+    focusCameraOnPoint(targetCenter, Math.max(25, radius * 3));
   };
 
   const cloneNetworkEdges = (sourceEdges) => {
@@ -1029,7 +1127,7 @@ function installOxViewLangGraphHelpers() {
       });
     },
 
-    createHelixBundle(input) {
+    async createHelixBundle(input) {
       const startingElementCount = elements.size;
       const helixCount = Math.max(1, input.numberOfHelices ?? 1);
       const basePairsPerHelix = Math.max(1, input.basePairsPerHelix ?? 32);
@@ -1119,6 +1217,7 @@ function installOxViewLangGraphHelpers() {
         };
       }
 
+      await ensureElementsDrawable(createdElements);
       if (typeof api.showEverything === "function") {
         api.showEverything();
       }
@@ -1427,26 +1526,50 @@ function installOxViewLangGraphHelpers() {
       });
     },
 
-    createStrand(input) {
-      const sequence = normalizeSequence(input.sequence);
+    async createStrand(input) {
+      const polymerType = String(input.polymerType ?? "DNA").toUpperCase();
+      const explicitSequence = normalizeSequence(input.sequence);
+      const sequence = explicitSequence ||
+        randomSequence(Number(input.length ?? 0), polymerType);
       if (!sequence) {
-        return failure("Sequence is required.");
+        return failure("Sequence or length is required.");
       }
-      const addedElements = edit.createStrand(
-        sequence,
-        Boolean(input.duplex),
-        String(input.polymerType).toUpperCase() === "RNA",
-      );
+      if (typeof createWrapper !== "function") {
+        return failure("oxView createWrapper() is not available.");
+      }
+      const controlsReady = [
+        setTextInputValue("sequence", sequence),
+        setCheckboxValue("setCompl", Boolean(input.duplex)),
+        setTextInputValue("NA_toggle", polymerType),
+      ];
+      if (controlsReady.some((ready) => !ready)) {
+        return failure("The Create UI controls were not found.");
+      }
+      const existingElementIds = new Set(getAllElements().map((element) => element.id));
+      createWrapper();
+      const addedElements = getAllElements()
+        .filter((element) => !existingElementIds.has(element.id))
+        .sort((a, b) => a.id - b.id);
       if (!addedElements?.length) {
-        return failure("oxView did not create any elements.");
+        return failure("createWrapper() did not create any elements.");
       }
-      const { instanceCopies, position } = captureAdditionUndoState(addedElements);
-      editHistory.add(new RevertableAddition(instanceCopies, addedElements, position));
+      await ensureElementsDrawable(addedElements);
+      if (typeof api.showEverything === "function") {
+        api.showEverything();
+      }
+      if (typeof api.selectElements === "function") {
+        api.selectElements(addedElements, false);
+      }
+      if (input.focusAfterCreate !== false) {
+        focusCameraOnElements(addedElements);
+      }
       markTopologyEdited();
       render();
       return success({
         idsAffected: addedElements.map((element) => element.id),
         strandIds: Array.from(new Set(addedElements.map((element) => element.strand?.id).filter((id) => id !== undefined))),
+        sequence,
+        polymerType,
       });
     },
 
