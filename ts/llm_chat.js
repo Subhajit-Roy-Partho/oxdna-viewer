@@ -37,6 +37,8 @@ A 20bp duplex: edit.createStrand('ATCGATCGATCGATCGATCG', true);
 
 Multiple operations: separate with semicolons on one line or use multiple statements.
 
+Always end your code with render(); to update the viewport.
+
 Respond with ONLY the JavaScript code to execute.`;
 
 const llmChat = {
@@ -138,11 +140,13 @@ const llmChat = {
             this.history.push({ role: 'assistant', content: rawContent });
             this.renderCode(code);
 
-            // Execute the returned code
+            // Execute the returned code in global scope, then force a render
             try {
-                eval(code);
+                (new Function(code))();
+                if (typeof render === 'function') render();
             } catch (execErr) {
                 this.renderMessage('error', 'Execution error: ' + execErr.message);
+                console.error('LLM eval error:', execErr);
             }
 
         } catch (err) {
