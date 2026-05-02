@@ -32,13 +32,23 @@ Available APIs:
 - scene - THREE.js scene object
 - render() - Re-render the scene
 
-For "create N helix duplex" or "20 helix duplex": create a duplex strand with N base pairs.
-A 20bp duplex: edit.createStrand('ATCGATCGATCGATCGATCG', true);
+CRITICAL - Moving/translating elements (systems[0].position does NOT exist):
+  To move all elements of a system to position (x, y, z):
+    var monomers = systems[0].getMonomers();
+    var com = new THREE.Vector3();
+    monomers.forEach(function(e) { com.add(e.getPos()); });
+    com.divideScalar(monomers.length);
+    translateElements(new Set(monomers), new THREE.Vector3(x, y, z).sub(com));
+    render();
 
-Multiple operations: separate with semicolons on one line or use multiple statements.
+  translateElements(elementSet, displaceVector) - global function that moves a Set of elements by a displacement vector
+  element.getPos() - returns a THREE.Vector3 of the element's position
+  system.getMonomers() - returns array of all elements in a system
+
+For "create N helix duplex": create a duplex strand with N base pairs.
+  20bp duplex: edit.createStrand('ATCGATCGATCGATCGATCG', true); render();
 
 Always end your code with render(); to update the viewport.
-
 Respond with ONLY the JavaScript code to execute.`;
 
 const llmChat = {
