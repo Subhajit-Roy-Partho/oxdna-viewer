@@ -319,15 +319,15 @@ THREE.ShaderLib.lambert = { // this is a cut-and-paste of the lambert shader -- 
 };
 
 //gpu picking allows us to interact with nucleotides without raycasting, which is very CPU-intensive
-var pickingScene = new THREE.Scene();
+const pickingScene = new THREE.Scene();
 
 //var pickingTexture = new THREE.WebGLRenderTarget(renderer.domElement.clientWidth, renderer.domElement.clientHeight)
-var pickingTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+const pickingTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
 
 pickingTexture.texture.minFilter = THREE.LinearFilter; //voodoo
 
 //create dummy vertex and fragment shaders 
-var vs3D = `
+const vs3D = `
 attribute vec3 instanceColor;
 attribute vec3 instanceVisibility;
 varying vec3 vinstanceColor;
@@ -340,22 +340,26 @@ pos *= instanceVisibility;
 gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 1.0);
 }`;
 
-var fs3D = `
+const fs3D = `
 varying vec3 vinstanceColor;
 void main(void) {
 gl_FragColor = vec4(vinstanceColor,1.0);
 }`;
 
-var pickingMaterial = new THREE.ShaderMaterial(
+const pickingMaterial = new THREE.ShaderMaterial(
     {
         vertexShader: vs3D,
         fragmentShader: fs3D
 	});
 	
-//Renders the secret scene containing the picking materials
-//Returns the global id of the particle under the mouse.
-//The GPU picker can accommodate 16,581,375 particles...
-//I have no idea what happens if you go over that, but I kinda doubt we'll find out any time soon.
+/**
+ * Renders the secret scene containing the picking materials
+ * Returns the global id of the particle under the mouse.
+ * The GPU picker can accommodate 16,581,375 particles...
+ * I have no idea what happens if you go over that, but I kinda doubt we'll find out any time soon.
+ * @param event The mouse event
+ * @returns The particle ID
+ */
 function gpuPicker(event): number {
 	renderer.setRenderTarget(pickingTexture);
 	renderer.render(pickingScene, camera);

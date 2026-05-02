@@ -2,6 +2,11 @@
  * Bits of code to facilitate querying structures from the browser console
  */
 module api{
+    /**
+     * Toggles the visibility of a strand.
+     * @param strand The strand to toggle
+     * @returns The strand
+     */
     export function toggleStrand(strand: Strand): Strand{
         strand.map( 
             (n:Nucleotide) => n.toggleVisibility());
@@ -16,6 +21,11 @@ module api{
     }
 
     // get a dictionary with every strand length : [strand] listed   
+    /**
+     * Get a dictionary with every strand length : [strand] listed.
+     * @param system The system to query
+     * @returns Dictionary of strand lengths
+     */
     export function countStrandLength(system = systems[0]) {
         let strandLength : { [index: number]: [Strand] } = {};
         system.strands.map((strand: Strand) => {
@@ -29,6 +39,10 @@ module api{
     };
 
     //highlight
+    /**
+     * Highlights the 5' ends of strands in the system.
+     * @param system The system to highlight
+     */
     export function highlight5ps(system = systems[0]){
         system.strands.forEach(strand=>strand.end5.select());
         updateView(system);
@@ -36,6 +50,10 @@ module api{
     }
 
     //highlight
+    /**
+     * Highlights the 3' ends of strands in the system.
+     * @param system The system to highlight
+     */
     export function highlight3ps(system = systems[0]){
         system.strands.forEach(strand=>strand.end3.select());
         updateView(system);
@@ -59,6 +77,10 @@ module api{
         render();
     }
 
+    /**
+     * Toggles the visibility of a list of elements.
+     * @param elems List of elements to toggle
+     */
     export function toggleElements(elems: BasicElement[]) {
         let sys = new Set<System>();
         let tmpSys = new Set<System>();
@@ -74,6 +96,10 @@ module api{
         render();
     }
 
+    /**
+     * Toggles the visibility of all elements in the system.
+     * @param system The system to toggle
+     */
     export function toggleAll(system = systems[0]){
         system.strands.forEach(strand=>strand.forEach(n => n.toggleVisibility()));
         system.callUpdates(['instanceVisibility'])
@@ -86,6 +112,9 @@ module api{
     }
 
     //toggles the nuceloside colors on and off
+    /**
+     * Toggles the nucleoside colors on and off (switching between element color and grey).
+     */
     export function toggleBaseColors() {
         elements.forEach(
             (e: BasicElement) => {
@@ -121,6 +150,11 @@ module api{
         render();
     }
     
+    /**
+     * Traces elements from 5' to 3' starting from the given element.
+     * @param element The starting element
+     * @returns Array of elements
+     */
     export function trace53(element: BasicElement): BasicElement[]{
         let elems : BasicElement[] = [];
         let c : BasicElement = element; 
@@ -131,6 +165,11 @@ module api{
         return elems;
     }
 
+    /**
+     * Traces elements from 3' to 5' starting from the given element.
+     * @param element The starting element
+     * @returns Array of elements
+     */
     export function trace35(element: BasicElement): BasicElement[]{
         let elems : BasicElement[] = [];
         let c : BasicElement = element; 
@@ -141,6 +180,11 @@ module api{
         return elems;
     }
 
+    /**
+     * Gets elements by their IDs.
+     * @param targets Array of element IDs
+     * @returns Array of elements
+     */
     export function getElements(targets: number[]): BasicElement[] {
         let out = [];
         targets.forEach((n) => {
@@ -155,10 +199,21 @@ module api{
         return(out);
     }
 
+    /**
+     * Selects elements by their IDs.
+     * @param targets Array of element IDs
+     * @param keepPrevious Whether to keep previous selection
+     */
     export function selectElementIDs(targets: number[], keepPrevious?: boolean) {
         selectElements(getElements(targets), keepPrevious);
     }
 
+    /**
+     * Selects elements by their PDB IDs.
+     * @param targetPDBNumber Array of PDB numbers
+     * @param chainids Array of chain IDs
+     * @param keepPrevious Whether to keep previous selection
+     */
     export function selectPDBIDs(targetPDBNumber: number[], chainids?: string[], keepPrevious?: boolean) {
         if (!keepPrevious) {
             clearSelection();
@@ -230,6 +285,11 @@ module api{
         }
     }
 
+    /**
+     * Selects a list of elements.
+     * @param elems List of elements to select
+     * @param keepPrevious Whether to keep previous selection
+     */
     export function selectElements(elems: BasicElement[], keepPrevious?: boolean) {
         if (!keepPrevious) {
             clearSelection();
@@ -249,6 +309,9 @@ module api{
     }
     
     //there's probably a less blunt way to do this...
+    /**
+     * Removes the colorbar from the scene.
+     */
     export function removeColorbar() {
         let l = colorbarScene.children.length;
         for (let i = 0; i < l; i++) {
@@ -265,6 +328,9 @@ module api{
     }
 
     //turns out that lut doesn't save the sprites so you have to completley remake it
+    /**
+     * Shows the colorbar in the scene.
+     */
     export function showColorbar() {
         colorbarScene.add(lut.legend.mesh);
         let notation, decimal;
@@ -282,6 +348,10 @@ module api{
         renderColorbar();
     }
 
+    /**
+     * Changes the colormap used for visualization.
+     * @param name Name of the colormap
+     */
     export function changeColormap(name: string) {
         if (lut != undefined) {
             api.removeColorbar();
@@ -311,6 +381,11 @@ module api{
         }
     }
 
+    /**
+     * Sets the bounds for the color mapping.
+     * @param min Minimum value
+     * @param max Maximum value
+     */
     export function setColorBounds(min: number, max: number) {
         let key = lut.legend.labels.title;
         lut.setMax(max);
@@ -328,6 +403,9 @@ module api{
         updateColoring();
     }
 
+    /**
+     * Resets the visualization to show everything with default scaling.
+     */
     export function showEverything() {
         elements.forEach((n: BasicElement) => {
             n.setInstanceParameter('scales', [1, 1, 1]);
@@ -343,6 +421,9 @@ module api{
         render();
     }
 
+    /**
+     * Switches between Perspective and Orthographic camera modes.
+     */
     export function switchCamera() {
         if (camera instanceof THREE.PerspectiveCamera) {
             //get camera parameters
