@@ -403,7 +403,7 @@
             <li ondblclick="view.sectionClicked()"><a href="#section-dynamics">Dynamics</a></li>
             <li ondblclick="view.sectionClicked()"><a href="#section-protein">Protein</a></li>
             <li ondblclick="view.sectionClicked()"><a href="#section-plugins">Plugins</a></li>
-            <li ondblclick="view.sectionClicked()"><a href="#section-llm">AI Chat</a></li>
+            <li ondblclick="view.sectionClicked()"><a href="#section-llm">AI Tools</a></li>
 
         </ul>
 
@@ -1229,11 +1229,15 @@
 
             <div class="section" id="section-llm">
                 <div class="group" style="height: 100px">
-                    <button class="ribbon-button" onclick="llmChat.toggle()" title="Open AI Chat assistant">
+                    <button class="ribbon-button" onclick="llmChat.toggle()" title="Open AI Chat assistant (direct LLM)">
                         <span style="font-size:24px">🤖</span>
                         <span class="caption">AI Chat</span>
                     </button>
-                    <span class="title">LLM Assistant</span>
+                    <button class="ribbon-button" onclick="agentChat.toggle()" title="Open Agent AI (multi-agent pipeline: Planner → Executor → Observer → Summarizer)">
+                        <span style="font-size:24px">🧠</span>
+                        <span class="caption">Agent AI</span>
+                    </button>
+                    <span class="title">AI Assistants</span>
                 </div>
             </div>
 
@@ -1266,7 +1270,75 @@
         .llm-msg-code { background: #1a1a2e; color: #ffd700; align-self: flex-start; font-family: monospace; font-size: 12px; border-left: 3px solid #5a5af0; }
         .llm-msg-error { background: #3a1a1a; color: #ff8080; align-self: flex-start; }
         .llm-msg-system { background: transparent; color: #888; align-self: center; }
+
+        /* ── Agent Chat styles ── */
+        .agent-msg { padding: 6px 10px; border-radius: 7px; font-size: 12.5px; max-width: 98%; word-break: break-word; }
+        .agent-msg-user      { background: #2e2b50; color: #c7c4f0; align-self: flex-end; font-size: 13px; padding: 8px 12px; }
+        .agent-msg-planner   { background: #2d1f4a; color: #c4b5fd; border-left: 3px solid #7c3aed; }
+        .agent-msg-planner-step { background: transparent; color: #a78bfa; padding: 2px 10px; font-style: italic; }
+        .agent-msg-executor  { background: #1e2a40; color: #93c5fd; border-left: 3px solid #2563eb; }
+        .agent-msg-observer  { background: #2a2010; color: #fcd34d; border-left: 3px solid #d97706; }
+        .agent-msg-summarizer{ background: #0f2820; color: #6ee7b7; border-left: 3px solid #059669; }
+        .agent-msg-summary   { background: #0d2420; color: #a7f3d0; border-left: 3px solid #059669; font-size: 13px; padding: 8px 12px; }
+        .agent-msg-success   { background: #0f2a18; color: #6ee7b7; border-left: 3px solid #10b981; }
+        .agent-msg-warning   { background: #2a1f0a; color: #fbbf24; border-left: 3px solid #f59e0b; }
+        .agent-msg-error     { background: #2a1010; color: #f87171; border-left: 3px solid #ef4444; }
+        .agent-msg-system    { background: transparent; color: #6b7280; align-self: center; font-size: 11.5px; }
+        .agent-msg-divider   { color: #374151; font-size: 11px; font-family: monospace; align-self: stretch; }
+        .agent-msg-code      { background: #111827; border-left: 3px solid #4f46e5; align-self: flex-start; max-width: 100%; overflow-x: auto; }
+        .agent-msg-code pre  { margin: 0; color: #fde68a; font-family: monospace; font-size: 11.5px; white-space: pre-wrap; word-break: break-all; }
+
+        /* Pipeline stage bar */
+        .agent-pipeline { display: flex; gap: 4px; padding: 6px 10px; background: #111827; border-bottom: 1px solid #374151; flex-shrink: 0; }
+        .agent-pipeline-stage {
+            flex: 1; text-align: center; padding: 4px 2px; border-radius: 5px;
+            font-size: 11px; color: #6b7280; background: #1f2937;
+            transition: all 0.2s;
+        }
+        .agent-pipeline-stage.active {
+            color: #f9fafb; font-weight: bold;
+        }
+        #agent-stage-planner.active   { background: #5b21b6; color: #ddd6fe; }
+        #agent-stage-executor.active  { background: #1d4ed8; color: #bfdbfe; }
+        #agent-stage-observer.active  { background: #b45309; color: #fde68a; }
+        #agent-stage-summarizer.active{ background: #065f46; color: #a7f3d0; }
     </style>
+
+    <!-- Agent AI Panel — multi-agent pipeline (Planner → Executor → Observer → Summarizer) -->
+    <div id="agent-chat-panel" style="display:none; position:fixed; bottom:20px; left:20px; width:420px; height:560px; background:#0f172a; border:1px solid #374151; border-radius:10px; flex-direction:column; z-index:9999; box-shadow:0 4px 28px rgba(0,0,0,0.6); font-family:sans-serif;">
+        <!-- Header -->
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#1e293b; border-radius:10px 10px 0 0; border-bottom:1px solid #374151; flex-shrink:0;">
+            <span style="color:#e2e8f0; font-weight:bold; font-size:14px;">🧠 Agent AI Pipeline</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span id="agent-key-status" style="font-size:10px; color:#6b7280; cursor:pointer;" onclick="agentChat.setApiKey()" title="Click to set API key">🔑 No key set</span>
+                <button onclick="agentChat.setApiKey()" title="Set Anthropic API key" style="background:none; border:none; color:#9ca3af; cursor:pointer; font-size:15px; padding:0 2px;">🔑</button>
+                <button onclick="agentChat.clearLog()" title="Clear log" style="background:none; border:none; color:#9ca3af; cursor:pointer; font-size:15px; padding:0 2px;">🗑</button>
+                <button onclick="agentChat.toggle()" style="background:none; border:none; color:#9ca3af; cursor:pointer; font-size:18px; padding:0 2px;">✕</button>
+            </div>
+        </div>
+        <!-- Pipeline stage indicator -->
+        <div class="agent-pipeline" style="flex-shrink:0;">
+            <div class="agent-pipeline-stage" id="agent-stage-planner">🗂 Plan</div>
+            <div style="color:#374151; line-height:24px;">→</div>
+            <div class="agent-pipeline-stage" id="agent-stage-executor">⚙️ Execute</div>
+            <div style="color:#374151; line-height:24px;">→</div>
+            <div class="agent-pipeline-stage" id="agent-stage-observer">🔍 Observe</div>
+            <div style="color:#374151; line-height:24px;">→</div>
+            <div class="agent-pipeline-stage" id="agent-stage-summarizer">📝 Summarize</div>
+        </div>
+        <!-- Message log -->
+        <div id="agent-chat-log" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px;">
+            <div class="agent-msg agent-msg-system" style="text-align:center;">Multi-agent pipeline for complex tasks. The planner breaks your request into steps, each step is executed and verified, then results are summarized.</div>
+            <div class="agent-msg agent-msg-system" style="text-align:center;">Try: "Create a 20-bp DNA duplex, color it blue, and zoom to it"</div>
+        </div>
+        <!-- Input row -->
+        <div style="display:flex; gap:6px; padding:10px; border-top:1px solid #374151; flex-shrink:0;">
+            <input id="agent-chat-input" type="text" placeholder="Describe a complex task..." onkeydown="agentChat.handleKeydown(event)"
+                style="flex:1; background:#0a0f1e; color:#e2e8f0; border:1px solid #374151; border-radius:6px; padding:8px 10px; font-size:13px; outline:none;">
+            <button id="agent-chat-send" onclick="agentChat.run()"
+                style="background:#4f46e5; color:#fff; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-size:13px; font-weight:bold; white-space:nowrap;">▶ Run</button>
+        </div>
+    </div>
 
     <div class="metro-round-rect" id ="floatingMenu">
         <div class="selection modes" id="selection-modes">
@@ -1515,6 +1587,8 @@
         <script src="./renderer.js"></script>
         <!-- LLM Chat -->
         <script src="./ts/llm_chat.js"></script>
+        <!-- Agent AI (multi-agent pipeline) -->
+        <script src="./ts/agent_chat.js"></script>
     </div>
 </body>
 
