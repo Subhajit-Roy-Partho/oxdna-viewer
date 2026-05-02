@@ -291,6 +291,89 @@ If you want to extend the code for your own purposes, you will also need to inst
 Alternatively if you are just interested in using oxView locally, do step 1 and proceed straight to step 7. 
 Or check out the release section 
 
+---
+
+## AI Chat Assistant — Local Setup
+
+oxView includes a built-in AI assistant that translates natural-language commands into live viewer API calls. It is powered by [nano-gpt.com](https://nano-gpt.com) and requires no additional installation beyond serving the page.
+
+### Quickstart (no build step needed)
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Subhajit-Roy-Partho/oxdna-viewer.git
+cd oxdna-viewer
+
+# 2. Start any static file server — no build required
+python3 -m http.server 8080
+# or: npx serve .
+# or: npx reload -b
+
+# 3. Open in browser
+open http://localhost:8080
+```
+
+> The AI chat uses compiled files already present in `dist/`. You do not need to run `tsc` unless you change TypeScript source files.
+
+### Using the AI Chat
+
+1. Open the viewer at `http://localhost:8080`.
+2. Click the **AI Chat** tab in the ribbon menu at the top.
+3. Click the **🤖 AI Chat** button that appears in the ribbon section.
+4. A chat panel slides open in the bottom-right corner.
+5. Type a natural-language command and press **Enter** (or click **Send**).
+
+**Example commands:**
+```
+create 20 helix duplex
+move the duplex to 20 20 20
+rotate the structure 90 degrees around the Z axis
+highlight all 5' ends
+nick at element 10
+change the colormap to viridis
+set the background to black
+delete selected elements
+get the sequence of selected bases
+```
+
+### How it works
+
+1. Your message is sent via `fetch()` to `https://nano-gpt.com/api/v1/chat/completions` — an OpenAI-compatible REST endpoint.
+2. The model (`zai-org/glm-5.1:thinking`) receives a detailed system prompt listing every available viewer API function, then returns a JavaScript code string.
+3. The code is executed in the browser's global scope using `new Function(code)()`, giving it direct access to `edit`, `api`, `systems`, `translateElements`, `render`, and all other viewer globals.
+4. `render()` is called after every execution to force a THREE.js repaint.
+5. The model's reasoning chain and the generated code are both shown in the chat panel.
+
+### Configuration
+
+All AI settings live at the top of `ts/llm_chat.js`:
+
+```javascript
+const LLM_CONFIG = {
+    baseURL: "https://nano-gpt.com/api/v1",   // any OpenAI-compatible endpoint
+    model:   "zai-org/glm-5.1:thinking",
+    apiKey:  "sk-nano-..."
+};
+```
+
+To use a different model or provider (OpenAI, Anthropic via a gateway, a local Ollama server, etc.), change `baseURL`, `model`, and `apiKey` accordingly. The request format is standard OpenAI `chat/completions`.
+
+### No CORS issues
+
+nano-gpt.com returns `Access-Control-Allow-Origin: *`, so the fetch works from any `localhost` origin without a proxy.
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Chat panel does not open | `ts/llm_chat.js` failed to load | Check browser console for errors; verify the file is served at `/ts/llm_chat.js` |
+| Red "Error:" bubble | API call failed | Check network tab; verify API key; test with `curl` (see `Agents.md`) |
+| Red "Execution error:" bubble | Generated code used a wrong API | Check console for the full error + code; see `Agents.md` debugging guide |
+| Structure created but not visible | `render()` not triggered | This is handled automatically; reload and try again |
+| Model returns explanation instead of code | Model ignored the system prompt | Click 🗑 to clear history and resend |
+
+For full developer documentation of the AI integration — including the complete API reference, code execution model, system prompt design, and extension guide — see **[Agents.md](./Agents.md)**.
+
 ## Citation
 If you use oxView or our oxDNA analysis package in your research, please cite:  
 
