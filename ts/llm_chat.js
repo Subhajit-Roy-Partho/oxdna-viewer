@@ -4,9 +4,9 @@
  */
 
 const LLM_CONFIG = {
-    baseURL: (window.OXVIEW_CONFIG || {}).llmBaseURL || "https://floodgate.g.apple.com/api/anthropic/v1",
-    model: "zai-org/glm-5.1:thinking",
-    apiKey: (window.OXVIEW_CONFIG || {}).llmApiKey || "sk-nano-74ab9a6a-b1f8-4d34-bec2-d413387c20b6"
+    baseURL: (window.OXVIEW_CONFIG || {}).llmBaseURL || "https://floodgate.g.apple.com/api/openai/v1",
+    model: (window.OXVIEW_CONFIG || {}).llmModel || "aws:anthropic.claude-3-5-haiku-20241022-v1:0",
+    apiKey: (window.OXVIEW_CONFIG || {}).llmApiKey || ""
 };
 
 const SYSTEM_PROMPT = `You are an AI assistant for oxDNA viewer (oxView), a 3D molecular visualization and editing tool for DNA/RNA nanostructures.

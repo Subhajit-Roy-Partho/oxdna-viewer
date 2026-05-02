@@ -14,15 +14,14 @@
  */
 
 const AGENT_CONFIG = {
-    baseURL: (window.OXVIEW_CONFIG || {}).agentBaseURL || "https://floodgate.g.apple.com/api/anthropic/v1",
-    model: (window.OXVIEW_CONFIG || {}).agentModel || "claude-haiku-4-5-20251001",  // swap to "claude-sonnet-4-6" for harder tasks
+    baseURL: (window.OXVIEW_CONFIG || {}).agentBaseURL || "https://floodgate.g.apple.com/api/openai/v1",
+    model: (window.OXVIEW_CONFIG || {}).agentModel || "aws:anthropic.claude-3-5-haiku-20241022-v1:0",
     get apiKey() {
         return localStorage.getItem('oxview_agent_api_key') || (window.OXVIEW_CONFIG || {}).llmApiKey || '';
     }
 };
 
 const AGENT_MAX_RETRIES = 3;
-const ANTHROPIC_VERSION = "2023-06-01";
 
 // ─────────────────────────────────────────────────────────────
 // Viewer API reference shared by all agents
@@ -184,47 +183,49 @@ Be friendly, specific about what changed in the molecular structure, and mention
 Do not use markdown formatting. Start directly with what was done.`;
 
 // ─────────────────────────────────────────────────────────────
-// Core Anthropic API call
+// Core API call — OpenAI-compatible /chat/completions format
 // ─────────────────────────────────────────────────────────────
 async function agentApiCall(systemPrompt, userMessage) {
     const key = AGENT_CONFIG.apiKey;
     if (!key) {
-        throw new Error('NO_KEY: No API key set. Click the 🔑 button in the Agent AI panel to add your Anthropic API key.');
+        throw new Error('NO_KEY: No API key set. Click the 🔑 button in the Agent AI panel to add your API key.');
     }
 
-    const response = await fetch(`${AGENT_CONFIG.baseURL}/messages`, {
+    const response = await fetch(`${AGENT_CONFIG.baseURL}/chat/completions`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-api-key': key,
-            'anthropic-version': ANTHROPIC_VERSION,
-            'anthropic-dangerous-direct-browser-access': 'true'
+            'Authorization': `Bearer ${key}`
         },
         body: JSON.stringify({
             model: AGENT_CONFIG.model,
             max_tokens: 2048,
-            system: systemPrompt,
-            messages: [{ role: 'user', content: userMessage }]
+            temperature: 0.1,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userMessage }
+            ]
         })
     });
 
     if (!response.ok) {
         let errBody = {};
         try { errBody = await response.json(); } catch (_) {}
-        const msg = errBody.error?.message || '';
+        const msg = errBody.error?.message || JSON.stringify(errBody);
 
         if (response.status === 401 || response.status === 403) {
-            throw new Error(`AUTH_ERROR: API key invalid or unauthorized. Check your key. (${msg})`);
+            throw new Error(`AUTH_ERROR: API key invalid or unauthorized. (${msg})`);
         }
         if (response.status === 429) {
-            throw new Error(`QUOTA_ERROR: API key rate-limited or quota exhausted. Check your Anthropic account. (${msg})`);
+            throw new Error(`QUOTA_ERROR: Rate-limited or quota exhausted. (${msg})`);
         }
-        throw new Error(`API error ${response.status}: ${msg || JSON.stringify(errBody)}`);
+        throw new Error(`API error ${response.status}: ${msg}`);
     }
 
     const data = await response.json();
-    if (!data.content || !data.content[0]) throw new Error('Empty response from Anthropic API');
-    return data.content[0].text;
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) throw new Error('Empty response from API');
+    return text;
 }
 
 // ─────────────────────────────────────────────────────────────
