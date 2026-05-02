@@ -4,9 +4,9 @@
  */
 
 const LLM_CONFIG = {
-    baseURL: "https://nano-gpt.com/api/v1",
+    baseURL: (window.OXVIEW_CONFIG || {}).llmBaseURL || "https://floodgate.g.apple.com/api/anthropic/v1",
     model: "zai-org/glm-5.1:thinking",
-    apiKey: "sk-nano-74ab9a6a-b1f8-4d34-bec2-d413387c20b6"
+    apiKey: (window.OXVIEW_CONFIG || {}).llmApiKey || "sk-nano-74ab9a6a-b1f8-4d34-bec2-d413387c20b6"
 };
 
 const SYSTEM_PROMPT = `You are an AI assistant for oxDNA viewer (oxView), a 3D molecular visualization and editing tool for DNA/RNA nanostructures.

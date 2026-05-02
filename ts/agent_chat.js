@@ -14,10 +14,10 @@
  */
 
 const AGENT_CONFIG = {
-    baseURL: "https://floodgate.g.apple.com/api/anthropic/v1",
-    model: "claude-haiku-4-5-20251001",  // swap to "claude-sonnet-4-6" for harder tasks
+    baseURL: (window.OXVIEW_CONFIG || {}).agentBaseURL || "https://floodgate.g.apple.com/api/anthropic/v1",
+    model: (window.OXVIEW_CONFIG || {}).agentModel || "claude-haiku-4-5-20251001",  // swap to "claude-sonnet-4-6" for harder tasks
     get apiKey() {
-        return localStorage.getItem('oxview_agent_api_key') || '';
+        return localStorage.getItem('oxview_agent_api_key') || (window.OXVIEW_CONFIG || {}).llmApiKey || '';
     }
 };
 

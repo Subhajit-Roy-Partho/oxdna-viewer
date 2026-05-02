@@ -67,6 +67,9 @@ typings/
 .env
 .env.test
 
+# Local AI config (contains API keys — never commit)
+ts/config.js
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 
