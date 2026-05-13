@@ -105,6 +105,23 @@ edit.createStrand(sequence, createDuplex?, isRNA?)    → BasicElement[]
     Create a new strand. sequence is a base string (A/T/G/C/U).
     createDuplex=true builds the complementary strand too.
     isRNA=true uses RNA nucleotides.
+    Returns addedElems[]:
+      [0]  = first nucleotide of the top (sense) strand
+      [1]  = first nucleotide of the bottom (antisense) strand — its base-pair partner
+      [2..n]   = remaining top strand nucleotides
+      [n+1..]  = remaining bottom strand nucleotides
+    To get strands from return value: elems[0].strand (top), elems[1].strand (bottom).
+    NEVER use elems[0].pair.strand — .pair can be null if a second strand is placed on top
+    of an existing one (findPair finds a cross-duplex match and skips createBP).
+
+    CRITICAL — when calling createStrand more than once:
+    Translate the FIRST strand away immediately before calling createStrand again.
+    Both calls place the strand at the same camera position; overlap causes findPair() to
+    incorrectly match nucleotides across duplexes and leaves .pair undefined.
+      var d1 = edit.createStrand(seq, true);
+      translateElements(new Set(d1.filter(Boolean)), new THREE.Vector3(10, 0, 0));
+      var d2 = edit.createStrand(seq, true);  // now safe — no overlap
+
     Examples:
       edit.createStrand('ATCGATCGATCGATCGATCG', true);   // 20-bp DNA duplex
       edit.createStrand('AAAGGGCCC', true, true);        // RNA duplex
@@ -325,6 +342,38 @@ render();
 
 // Ligate element 3 (3') to element 7 (5'):
 edit.ligate(api.getElements([3])[0], api.getElements([7])[0]);
+render();
+
+// Create a Holliday junction (X-shaped four-way DNA junction):
+// Two 20-bp duplexes nicked and cross-ligated at their midpoints.
+var seq = 'ATCGATCGATCGATCGATCG';
+var d1 = edit.createStrand(seq, true);
+// Immediately move duplex 1 away so duplex 2 is placed without overlap
+translateElements(new Set(d1.filter(Boolean)), new THREE.Vector3(0, 10, 0));
+var d2 = edit.createStrand(seq, true);
+// Access strands via index (NOT .pair.strand — .pair can be null when overlap occurs)
+var s0 = d1[0].strand;   // top strand duplex 1
+var s1 = d1[1].strand;   // bottom strand duplex 1
+var s2 = d2[0].strand;   // top strand duplex 2
+var s3 = d2[1].strand;   // bottom strand duplex 2
+// Position duplex 2 parallel and adjacent to duplex 1 at the crossover point
+var d2elems = d2.filter(Boolean);
+var com1 = new THREE.Vector3(), com2 = new THREE.Vector3();
+d1.filter(Boolean).forEach(function(e){ com1.add(e.getPos()); });
+com1.divideScalar(d1.filter(Boolean).length);
+d2elems.forEach(function(e){ com2.add(e.getPos()); });
+com2.divideScalar(d2elems.length);
+translateElements(new Set(d2elems), new THREE.Vector3(2.3, 0, 0).add(com1).sub(com2));
+// Nick both duplexes at midpoint (between index 9 and 10 of a 20-nt strand)
+var s0m = s0.getMonomers(), s1m = s1.getMonomers();
+var s2m = s2.getMonomers(), s3m = s3.getMonomers();
+edit.nick(s0m[10]); edit.nick(s1m[10]);
+edit.nick(s2m[10]); edit.nick(s3m[10]);
+// Cross-ligate: strand 0 first-half → strand 2 second-half, and vice versa
+edit.ligate(s0m[9], s2m[10]); edit.ligate(s2m[9], s0m[10]);
+edit.ligate(s1m[9], s3m[10]); edit.ligate(s3m[9], s1m[10]);
+updateColoring('Strand');
+notify('Holliday junction created', 'success');
 render();
 
 // Extend an existing duplex end-to-end (PREFERRED over creating a second duplex and ligating):

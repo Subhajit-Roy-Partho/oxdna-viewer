@@ -66,6 +66,14 @@ api.showEverything()                                  → void
 edit.* — STRUCTURE EDITING
 ════════════════════════════════════════
 edit.createStrand(sequence, createDuplex?, isRNA?)    → BasicElement[]
+    Returns: [0]=first top-strand nucleotide, [1]=first bottom-strand nucleotide, then rest.
+    Get strands: elems[0].strand (top), elems[1].strand (bottom). NEVER use elems[0].pair.strand.
+    CRITICAL: if calling createStrand more than once, translateElements the first result away
+    BEFORE the second call — both place at the same camera position and findPair() will
+    incorrectly match across duplexes, leaving .pair undefined.
+      var d1 = edit.createStrand(seq, true);
+      translateElements(new Set(d1.filter(Boolean)), new THREE.Vector3(10, 0, 0));
+      var d2 = edit.createStrand(seq, true); // now safe
 edit.extendStrand(end: BasicElement, sequence)        → BasicElement[]
 edit.extendDuplex(end: Nucleotide, sequence)          → BasicElement[]
     Physically extend a duplex from a terminal nucleotide, growing the helix geometry.
