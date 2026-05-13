@@ -213,8 +213,16 @@ notify(message, type?, keepOpen?, title?)   — toast notification
 
 ask(title, content, onYes?, onNo?)          — confirmation dialog
 
-colorElements(color?, elems?)               — colour selected/given elements
-    color is a THREE.Color; elems defaults to selectedBases
+colorElements(color?, elems?)               — colour elements
+    IMPORTANT: elems is a BasicElement[] (not a Set). If omitted, uses Array.from(selectedBases).
+    If selectedBases is empty and elems is not given, shows a warning and colours NOTHING.
+    colorElements() also calls clearSelection() after colouring — selectedBases will be empty afterwards.
+    ALWAYS pass elems explicitly. Never rely on implicit selection state.
+    color: THREE.Color
+    Examples:
+      colorElements(new THREE.Color(1,0,0), Array.from(selectedBases)); // colour current selection
+      colorElements(new THREE.Color(1,0,0), systems[0].getMonomers());  // colour all in system 0
+      colorElements(new THREE.Color(0,0,1), api.getElements([0,1,2])); // colour by ID
 
 updateColoring(mode?)                       — refresh colours
     modes: 'Overlay','Strand','Custom','Position','Base','Index','Cluster'
@@ -229,6 +237,27 @@ view.scaleComponent(name, factor)           — scale a geometry component
 
 resetScene(resetCamera?)                    — wipe all systems and start fresh
 findBasepairs(minLen?)                      — detect and pair complementary bases
+
+════════════════════════════════════════
+CRITICAL RULES
+════════════════════════════════════════
+1. colorElements() REQUIRES elems to be passed explicitly.
+   WRONG:  colorElements(new THREE.Color(1,0,0));
+   RIGHT:  colorElements(new THREE.Color(1,0,0), Array.from(selectedBases));
+   RIGHT:  colorElements(new THREE.Color(1,0,0), systems[0].getMonomers());
+
+2. When the user says "selected", "current", or "highlighted" elements:
+   - Capture selectedBases BEFORE any colorElements call (it clears selection afterwards).
+   - Guard against empty selection:
+     var targets = Array.from(selectedBases);
+     if (targets.length === 0) { notify("No elements selected", "warning"); } else { colorElements(color, targets); render(); }
+
+3. edit.deleteElements, edit.getSequence, edit.setSequence operate on selectedBases or an explicit set.
+   When the user references "selected" elements, pass selectedBases (a Set) directly:
+     edit.deleteElements([...selectedBases]);
+     edit.getSequence(selectedBases);
+
+4. api.selectElements() and api.selectElementIDs() internally call render() — no extra render() needed after them unless you also modify geometry.
 
 ════════════════════════════════════════
 COMMON PATTERNS
@@ -250,9 +279,22 @@ com.divideScalar(monomers.length);
 rotateElements(new Set(monomers), new THREE.Vector3(0,0,1), Math.PI/4, com);
 render();
 
-// Select strand of element 5, then highlight it:
-api.selectElements(api.getElements([5])[0].strand.getMonomers());
-colorElements(new THREE.Color(1, 0, 0));
+// Color the currently selected elements red (guard against empty selection):
+var targets = Array.from(selectedBases);
+if (targets.length === 0) {
+    notify('No elements selected — select elements first', 'warning');
+} else {
+    colorElements(new THREE.Color(1, 0, 0), targets);
+    render();
+}
+
+// Color ALL elements in system 0 blue (no prior selection needed):
+colorElements(new THREE.Color(0, 0, 1), systems[0].getMonomers());
+render();
+
+// Select strand of element 5, then colour it red:
+var strandElems = api.getElements([5])[0].strand.getMonomers();
+colorElements(new THREE.Color(1, 0, 0), strandElems);
 render();
 
 // Delete selected elements:

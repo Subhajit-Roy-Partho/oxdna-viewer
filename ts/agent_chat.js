@@ -108,14 +108,32 @@ element.changeType(base: string) → void
 UI HELPERS
 ════════════════════════════════════════
 notify(message, type?, keepOpen?, title?)
+    type: 'success'|'warning'|'alert'|'info'
+
 ask(title, content, onYes?, onNo?)
+
 colorElements(color?, elems?)
-updateColoring(mode?)
-resetCustomColoring()
+    IMPORTANT: elems is BasicElement[] (not a Set). If omitted, uses Array.from(selectedBases).
+    If selectedBases is empty and elems is not given, shows a warning and colours NOTHING.
+    colorElements() also clears the selection (selectedBases) after colouring.
+    ALWAYS pass elems explicitly — never rely on implicit selection state.
+      colorElements(new THREE.Color(1,0,0), Array.from(selectedBases)); // colour selection
+      colorElements(new THREE.Color(1,0,0), systems[0].getMonomers());  // colour all
+      colorElements(new THREE.Color(0,0,1), api.getElements([0,1,2])); // colour by ID
+
+updateColoring(mode?)   — modes: 'Overlay','Strand','Custom','Position','Base','Index','Cluster'
+resetCustomColoring()   — reset to Strand mode
 view.toggleWindow(id, oncreate?)
 view.saveCanvasImage(scaleFactor?)
 resetScene(resetCamera?)
 findBasepairs(minLen?)
+
+CRITICAL SELECTION RULES:
+- colorElements(color) alone does NOTHING if selectedBases is empty. Always pass elems explicitly.
+- Capture selectedBases into a local var BEFORE calling colorElements (it clears selection afterwards):
+    var targets = Array.from(selectedBases);
+    colorElements(new THREE.Color(1,0,0), targets);
+- edit.deleteElements / edit.getSequence / edit.setSequence: pass selectedBases (a Set) directly.
 `;
 
 // ─────────────────────────────────────────────────────────────
@@ -133,6 +151,8 @@ Rules:
 - Each step is a clear imperative action: "Select all nucleotides in system 0", "Color selected elements red".
 - Maximum 5 steps.
 - Order steps so each builds on the previous.
+- For colouring tasks: always specify WHAT to colour explicitly in the step description.
+  Use "Color all nucleotides in system 0 red" (not just "Color red") so the executor knows the target without relying on implicit selection state.
 
 Example: ["Select all nucleotides in system 0", "Color the selection blue", "Zoom camera to the selection"]`;
 
@@ -152,13 +172,21 @@ com.divideScalar(monomers.length);
 translateElements(new Set(monomers), new THREE.Vector3(X,Y,Z).sub(com));
 render();
 
-// Color selected elements:
-colorElements(new THREE.Color(1, 0, 0));
+// Color the currently selected elements red (capture before colorElements clears selection):
+var targets = Array.from(selectedBases);
+if (targets.length === 0) {
+    notify('No elements selected', 'warning');
+} else {
+    colorElements(new THREE.Color(1, 0, 0), targets);
+    render();
+}
+
+// Color ALL elements in system 0 red (no selection needed):
+colorElements(new THREE.Color(1, 0, 0), systems[0].getMonomers());
 render();
 
-// Select all in system 0:
-api.selectElements(systems[0].getMonomers());
-render();`;
+// Select all in system 0 (api.selectElements calls render() internally):
+api.selectElements(systems[0].getMonomers());`;
 
 const OBSERVER_SYSTEM = `You are a code verification agent for oxDNA viewer. Evaluate whether a step executed correctly.
 

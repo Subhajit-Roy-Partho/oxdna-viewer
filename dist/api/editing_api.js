@@ -58,6 +58,11 @@ var edit;
         sys.callUpdates(['instanceColor']);
         return newStrand;
     }
+    /**
+     * Displace a list of elements towards the position of a target element.
+     * @param e The target element to move towards
+     * @param to_displace The list of elements to displace
+     */
     function move_to(e, to_displace) {
         //displace a list of elements tovards the position of e
         let origin = to_displace[0].getPos();
@@ -70,6 +75,12 @@ var edit;
         render();
     }
     edit.move_to = move_to;
+    /**
+     * Insert a sequence of bases into a strand at a specific element.
+     * @param e The element after which to insert
+     * @param sequence The sequence string to insert
+     * @returns The newly added elements
+     */
     function insert(e, sequence) {
         let edits = [];
         let end5 = e;
@@ -109,6 +120,10 @@ var edit;
         return added;
     }
     edit.insert = insert;
+    /**
+     * Deletes the elements and ligates their neighbors.
+     * @param elems The elements to skip/delete
+     */
     function skip(elems) {
         let edits = [];
         elems.forEach(e => {
@@ -127,11 +142,20 @@ var edit;
         editHistory.add(new RevertableMultiEdit(edits));
     }
     edit.skip = skip;
+    /**
+     * Nicks the strand at the specified element.
+     * @param element The element to nick at
+     */
     function nick(element) {
         splitStrand(element);
         render();
     }
     edit.nick = nick;
+    /**
+     * Ligates two elements together.
+     * @param a The first element
+     * @param b The second element
+     */
     function ligate(a, b) {
         let end5, end3;
         //find out which is the 5' end and which is 3'
@@ -686,6 +710,11 @@ var edit;
         return addedElems;
     }
     edit.extendDuplex = extendDuplex;
+    /**
+     * Gets the sequence string from a set of elements.
+     * @param elems The set of elements
+     * @returns The sequence string
+     */
     function getSequence(elems) {
         // Sort elements in 5' to 3' order
         let strands = new Set();
@@ -698,6 +727,12 @@ var edit;
     }
     edit.getSequence = getSequence;
     ;
+    /**
+     * Sets the sequence for a set of elements.
+     * @param elems The set of elements to modify
+     * @param sequence The new sequence string
+     * @param setComplementaryBases (optional) Whether to update complementary bases
+     */
     function setSequence(elems, sequence, setComplementaryBases) {
         setComplementaryBases = setComplementaryBases || false;
         if (elems.size != sequence.length) {
