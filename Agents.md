@@ -40,16 +40,23 @@ llmChat.sendMessage()          [ts/llm_chat.js]
         │
         ▼
 POST /chat/completions          [nano-gpt.com/api/v1]
-  model: zai-org/glm-5.1:thinking
+  model: from window.OXVIEW_CONFIG.llmModel  (ts/config.js)
   messages: [system_prompt, ...conversation_history]
         │
         ▼
-Response { content, reasoning } 
+Response { content, reasoning }
   content  → JavaScript code string (sometimes wrapped in ```js...```)
   reasoning → model's internal chain-of-thought (shown as 💭 excerpt)
         │
         ▼
-Strip markdown fences if present
+Extract code:
+  1. Search for first ```...``` fence anywhere in content
+  2. Fall back to raw content if no fences found
+        │
+        ▼
+Safety check: does extracted text contain JS tokens?
+  NO  → show "Model returned explanation instead of code" error, stop
+  YES → continue
         │
         ▼
 (new Function(code))()          Execute in global scope
@@ -110,22 +117,31 @@ The user types into `#llm-chat-input` and presses Enter (or clicks Send). `llmCh
 The conversation history (`llmChat.history`) is an array of `{role, content}` objects. Each user message is pushed with `role: 'user'` before the API call. The system prompt is prepended fresh each request (not stored in history) to avoid context drift.
 
 ### Step 3 — API Call
-A `fetch` POST is sent to `https://nano-gpt.com/api/v1/chat/completions` with:
-- `model`: `zai-org/glm-5.1:thinking`
+A `fetch` POST is sent to `{OXVIEW_CONFIG.llmBaseURL}/chat/completions` with:
+- `model`: `window.OXVIEW_CONFIG.llmModel` (configured in `ts/config.js`)
 - `messages`: `[{role:'system', content: SYSTEM_PROMPT}, ...llmChat.history]`
 - `temperature`: `0.1` (low = deterministic, consistent code generation)
-- `max_tokens`: `1024`
+- `max_tokens`: `10000`
 
-The nano-gpt API is OpenAI-compatible. The `zai-org/glm-5.1:thinking` model is a reasoning model — it returns both a `content` field (the answer) and a `reasoning` field (its chain-of-thought).
+The nano-gpt API is OpenAI-compatible. Thinking models (e.g. `zai-org/glm-5.1:thinking`) return both a `content` field (the answer) and a `reasoning` field (internal chain-of-thought).
 
 ### Step 4 — Response Parsing
 ```javascript
 const rawContent = msg.content || '';
 let code = rawContent.trim();
-const codeBlockMatch = code.match(/^```[a-z]*\n?([\s\S]*?)```$/);
-if (codeBlockMatch) code = codeBlockMatch[1].trim();
+
+// Find first code fence block anywhere in the response
+const fenceMatch = code.match(/```(?:javascript|js)?\n?([\s\S]*?)```/);
+if (fenceMatch) code = fenceMatch[1].trim();
 ```
-If the model wraps output in triple-backtick fences the regex strips them. The extracted string is pure JavaScript.
+The fence search is **not anchored** — it finds a code block even if the model emits reasoning prose before it. If no fences are present, the full `rawContent` is used as-is.
+
+### Step 4b — Prose Safety Check
+Before executing, the extracted string is tested for JS-like tokens:
+```javascript
+const looksLikeJs = /\b(var|let|const|function|edit\.|api\.|systems|render\(|notify\(|THREE\.|colorElements|translateElements|rotateElements)\b/.test(code);
+```
+If no JS tokens are found, the model returned an explanation instead of code. A friendly error is shown and execution is skipped — preventing the cryptic `"Unexpected identifier"` errors that occurred when prose was passed to `new Function()`.
 
 ### Step 5 — Execution
 ```javascript
@@ -138,26 +154,39 @@ if (typeof render === 'function') render();
 - The reasoning excerpt (first 150 chars) is shown as a `💭` system message.
 - The extracted code is shown in a gold monospace bubble prefixed with `▶`.
 - Any runtime error from step 5 is caught and shown as a red error bubble.
+- If the prose guard fires (step 4b), a red error bubble is shown instead of code.
 
 ---
 
 ## 4. LLM Configuration
 
-All configuration lives at the top of `ts/llm_chat.js`:
+Configuration is split between two files:
 
+**`ts/config.js`** (gitignored, never committed — copy from `ts/config.example.js`):
 ```javascript
-const LLM_CONFIG = {
-    baseURL: "https://nano-gpt.com/api/v1",
-    model:   "zai-org/glm-5.1:thinking",
-    apiKey:  "sk-nano-74ab9a6a-b1f8-4d34-bec2-d413387c20b6"
+window.OXVIEW_CONFIG = {
+    llmBaseURL: "https://nano-gpt.com/api/v1",
+    llmApiKey:  "sk-nano-...",          // your API key
+    llmModel:   "zai-org/glm-5.1:thinking",
+    agentBaseURL: "https://nano-gpt.com/api/v1",
+    agentModel:   "zai-org/glm-5.1:thinking"
 };
 ```
 
-**To swap the model:** change `model` to any OpenAI-compatible model string (e.g. `"gpt-4o"`, `"claude-3-5-sonnet-20241022"` via a compatible gateway).
+**`ts/llm_chat.js`** — reads from config at runtime with fallbacks:
+```javascript
+const LLM_CONFIG = {
+    baseURL: (window.OXVIEW_CONFIG || {}).llmBaseURL || "<default>",
+    model:   (window.OXVIEW_CONFIG || {}).llmModel   || "<default>",
+    apiKey:  (window.OXVIEW_CONFIG || {}).llmApiKey  || ""
+};
+```
 
-**To change temperature or token limit:** edit the `body` object inside `sendMessage()`.
+**To swap the model:** edit `llmModel` in `ts/config.js` — any OpenAI-compatible model string works (e.g. `"gpt-4o"`, `"moonshotai/kimi-k2.6:thinking"`).
 
-**To use a different API provider:** change `baseURL` to any OpenAI-compatible endpoint and update the API key. The request/response format is standard OpenAI.
+**To change temperature or token limit:** edit the `body` object inside `sendMessage()` in `ts/llm_chat.js`. Current values: `temperature: 0.1`, `max_tokens: 10000`.
+
+**To use a different API provider:** change `llmBaseURL` in `ts/config.js` to any OpenAI-compatible endpoint. The request/response format is standard OpenAI.
 
 ---
 
@@ -195,6 +224,50 @@ The system prompt (`SYSTEM_PROMPT` constant in `ts/llm_chat.js`) teaches the mod
 - Every function that could be confused with a THREE.js or browser API is disambiguated.
 - The most error-prone pattern (moving elements — which requires `translateElements` + center-of-mass math, NOT `system.position.set`) is shown with a complete, runnable template.
 - The prompt ends with `render();` reminder and over a dozen complete worked examples so the model can pattern-match.
+- A **CRITICAL RULES** section near the end of the prompt enforces the most common failure modes (see §5.1 below).
+
+---
+
+## 5.1 CRITICAL RULES in the System Prompt
+
+A dedicated **CRITICAL RULES** section was added to `SYSTEM_PROMPT` to prevent the most common model mistakes:
+
+### Rule 1 — `colorElements` requires explicit `elems`
+
+`colorElements(color)` with no second argument reads `Array.from(selectedBases)`. If nothing is selected it shows a warning toast and colours **nothing**. Additionally, `colorElements` calls `clearSelection()` after colouring — `selectedBases` is empty immediately after.
+
+The prompt enforces:
+```javascript
+// WRONG — silently does nothing if nothing is selected:
+colorElements(new THREE.Color(1, 0, 0));
+
+// RIGHT — always pass elems explicitly:
+colorElements(new THREE.Color(1, 0, 0), Array.from(selectedBases));
+colorElements(new THREE.Color(1, 0, 0), systems[0].getMonomers());
+```
+
+And a guard pattern for "colour the current/selected elements":
+```javascript
+var targets = Array.from(selectedBases);
+if (targets.length === 0) {
+    notify('No elements selected', 'warning');
+} else {
+    colorElements(new THREE.Color(1, 0, 0), targets);
+    render();
+}
+```
+
+### Rule 2 — Capture `selectedBases` before any operation that clears it
+
+`colorElements`, `clearSelection`, and several edit operations clear the selection. Always capture the set first:
+```javascript
+var targets = Array.from(selectedBases);  // capture before it's cleared
+colorElements(new THREE.Color(1, 0, 0), targets);
+```
+
+### Rule 3 — `api.selectElements()` calls `render()` internally
+
+No extra `render()` is needed after a select-only call.
 
 ---
 
@@ -210,13 +283,20 @@ THREE.js only repaints when `render()` is called. The editing functions update i
 
 ### Error handling
 
-Errors from the API call (network, 4xx/5xx) and from code execution are caught separately:
+Three error layers are caught separately:
 
 ```javascript
-// API errors
+// Layer 1 — API errors (network, 4xx/5xx)
 if (!response.ok) throw new Error(`API error ${response.status}: ${err}`);
 
-// Execution errors
+// Layer 2 — Prose guard (model returned explanation, not code)
+const looksLikeJs = /\b(var|let|const|function|edit\.|api\.|systems|render\(|...)\b/.test(code);
+if (!looksLikeJs) {
+    this.renderMessage('error', '⚠ Model returned an explanation instead of code...');
+    // execution skipped
+}
+
+// Layer 3 — Runtime execution errors
 try {
     (new Function(code))();
     if (typeof render === 'function') render();
@@ -705,11 +785,26 @@ rotateElements(new Set(monomers), new THREE.Vector3(0, 0, 1), Math.PI / 2, com);
 render();
 ```
 
-### Select and colour a strand red
+### Colour the currently selected elements red
 ```javascript
-var strand = systems[0].strands[0];
-api.selectElements(strand.getMonomers());
-colorElements(new THREE.Color(1, 0, 0));
+var targets = Array.from(selectedBases);
+if (targets.length === 0) {
+    notify('No elements selected — select elements first', 'warning');
+} else {
+    colorElements(new THREE.Color(1, 0, 0), targets);
+    render();
+}
+```
+
+### Colour all elements in system 0 blue (no selection needed)
+```javascript
+colorElements(new THREE.Color(0, 0, 1), systems[0].getMonomers());
+render();
+```
+
+### Colour a specific strand red (pass elements directly, no select needed)
+```javascript
+colorElements(new THREE.Color(1, 0, 0), systems[0].strands[0].getMonomers());
 render();
 ```
 
@@ -728,6 +823,17 @@ render();
 ### Ligate two elements
 ```javascript
 edit.ligate(api.getElements([3])[0], api.getElements([7])[0]);
+render();
+```
+
+### Ligate two duplexes end-to-end into one longer duplex
+```javascript
+// Assumes 2 duplexes already created → 4 strands total
+// Duplex 1: strands[0] (top) + strands[1] (bottom)
+// Duplex 2: strands[2] (top) + strands[3] (bottom)
+var strands = systems[0].strands;
+edit.ligate(strands[0].end3, strands[2].end5);  // connect top strands
+edit.ligate(strands[3].end3, strands[1].end5);  // connect bottom strands
 render();
 ```
 
@@ -856,6 +962,11 @@ myModule.doThing(arg1: type, arg2: type)   → returnType
 - Verify `ts/llm_chat.js` is being served: navigate to `http://localhost:8080/ts/llm_chat.js`.
 - Check that `llmChat` is defined: type `llmChat` in the console.
 
+### "Model returned an explanation instead of code"
+The prose safety guard fired — the model output reasoning text without any JavaScript. This usually happens on complex multi-step commands where the thinking model's `content` field contains only the chain-of-thought.
+- Try rephrasing the command more concretely: "ligate the 3' end of strand 0 to the 5' end of strand 2" instead of "ligate all the ends".
+- If it happens repeatedly for a specific command type, add a concrete pattern for it to `SYSTEM_PROMPT` in `ts/llm_chat.js`.
+
 ### API call fails (red error bubble)
 - Check the browser console for the full error.
 - Common causes: network block, expired API key, CORS issue.
@@ -889,13 +1000,13 @@ curl -X POST https://nano-gpt.com/api/v1/chat/completions \
 
 | Limitation | Notes |
 |---|---|
-| API key is hardcoded | The key is in `ts/llm_chat.js`. For production, load from an environment variable or a server-side proxy. |
+| API key in config.js | The key is in the gitignored `ts/config.js`. For a multi-user deployment, serve it from a server-side proxy instead. |
 | No streaming | The full response is awaited before display. Streaming would require handling `text/event-stream`. |
-| No multi-step reasoning | The model gets one shot per message. Complex tasks that need intermediate state inspection are harder. |
-| `new Function` security | Arbitrary JavaScript is executed. This is acceptable in a local tool but should not be exposed to untrusted users. |
-| Context window | Very long conversations will accumulate history until the model's context limit. Clear history periodically. |
+| Prose fallback on complex commands | Thinking models occasionally emit only reasoning text in `content` with no code. The prose guard catches this and shows a user-friendly error, but the command still fails. Add patterns for recurrent failures to `SYSTEM_PROMPT`. |
+| `new Function` security | Arbitrary JavaScript is executed in the page's global scope. Acceptable for a local lab tool; unsafe if exposed to untrusted users. |
+| Context window | Long conversations accumulate history until the model's context limit. Clear history periodically with the 🗑 button. |
 | Render timing | Some operations (e.g. `findBasepairs`) are asynchronous. The explicit `render()` fires immediately; async completions may need a subsequent render. |
-| No undo integration | The code executes raw; it is undoable via Ctrl+Z (which uses `editHistory`) but not auto-detected by the chat. |
+| No undo grouping | Commands are individually undoable via Ctrl+Z, but there is no "undo the entire chat command" operation. |
 
 ---
 
@@ -931,4 +1042,4 @@ Records commands that were generated but failed during verification. Used to avo
 
 ---
 
-*Last updated: 2026-05-02. Maintained by Subhajit-Roy-Partho.*
+*Last updated: 2026-05-13. Maintained by Subhajit-Roy-Partho.*

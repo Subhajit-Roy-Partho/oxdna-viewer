@@ -424,7 +424,7 @@ const llmChat = {
                     model: LLM_CONFIG.model,
                     messages: messages,
                     temperature: 0.1,
-                    max_tokens: 2048
+                    max_tokens: 10000
                 })
             });
 
