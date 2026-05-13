@@ -321,6 +321,15 @@ render();
 edit.ligate(api.getElements([3])[0], api.getElements([7])[0]);
 render();
 
+// Ligate two duplexes end-to-end into one longer duplex (assumes 2 duplexes = 4 strands):
+// Duplex 1 → strands[0] & strands[1], Duplex 2 → strands[2] & strands[3]
+// Connect top strands: 3' of strand 0 → 5' of strand 2
+// Connect bottom strands: 3' of strand 3 → 5' of strand 1
+var strands = systems[0].strands;
+edit.ligate(strands[0].end3, strands[2].end5);
+edit.ligate(strands[3].end3, strands[1].end5);
+render();
+
 // Get sequence of selected bases:
 var seq = edit.getSequence(selectedBases);
 notify('Sequence: ' + seq);
@@ -415,7 +424,7 @@ const llmChat = {
                     model: LLM_CONFIG.model,
                     messages: messages,
                     temperature: 0.1,
-                    max_tokens: 1024
+                    max_tokens: 2048
                 })
             });
 
@@ -428,11 +437,12 @@ const llmChat = {
             const msg = data.choices[0].message;
             const rawContent = msg.content || '';
 
-            // Extract code — strip markdown code fences if model wraps them
+            // Extract code — find the first code fence block anywhere in the response,
+            // then fall back to the raw content if no fences are present.
             let code = rawContent.trim();
-            const codeBlockMatch = code.match(/^```[a-z]*\n?([\s\S]*?)```$/);
-            if (codeBlockMatch) {
-                code = codeBlockMatch[1].trim();
+            const fenceMatch = code.match(/```(?:javascript|js)?\n?([\s\S]*?)```/);
+            if (fenceMatch) {
+                code = fenceMatch[1].trim();
             }
 
             thinking.remove();
@@ -446,15 +456,24 @@ const llmChat = {
             }
 
             this.history.push({ role: 'assistant', content: rawContent });
-            this.renderCode(code);
 
-            // Execute in global scope, then force a render pass
-            try {
-                (new Function(code))();
-                if (typeof render === 'function') render();
-            } catch (execErr) {
-                this.renderMessage('error', 'Execution error: ' + execErr.message);
-                console.error('LLM eval error:', execErr, '\nCode:', code);
+            // Safety check — if the extracted text has no JS-like tokens the model
+            // returned prose instead of code; show a friendly error instead of a
+            // cryptic syntax error from new Function().
+            const looksLikeJs = /\b(var|let|const|function|edit\.|api\.|systems|render\(|notify\(|THREE\.|colorElements|translateElements|rotateElements)\b/.test(code);
+            if (!looksLikeJs) {
+                this.renderMessage('error', '⚠ Model returned an explanation instead of code. Try rephrasing your command more specifically.');
+                console.warn('LLM returned prose instead of JS:', rawContent);
+            } else {
+                this.renderCode(code);
+                // Execute in global scope, then force a render pass
+                try {
+                    (new Function(code))();
+                    if (typeof render === 'function') render();
+                } catch (execErr) {
+                    this.renderMessage('error', 'Execution error: ' + execErr.message);
+                    console.error('LLM eval error:', execErr, '\nCode:', code);
+                }
             }
 
         } catch (err) {
