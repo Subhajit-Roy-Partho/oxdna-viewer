@@ -113,7 +113,10 @@ edit.extendStrand(end: BasicElement, sequence)        → BasicElement[]
     Extend a single strand from its end nucleotide.
 
 edit.extendDuplex(end: Nucleotide, sequence)          → BasicElement[]
-    Extend a duplex (adds both strands) from end.
+    Physically extend a duplex from a terminal nucleotide, growing the helix geometry.
+    Pass the terminal nucleotide (strand.end3 or strand.end5). Automatically extends both strands.
+    Use this — not ligate — when you want to make a longer physically valid duplex.
+    Example: edit.extendDuplex(systems[0].strands[0].end3, 'AAAGGG');
 
 edit.deleteElements(victims: BasicElement[])          → void
     Permanently delete elements.
@@ -125,6 +128,9 @@ edit.nick(element: BasicElement)                      → void
 
 edit.ligate(a: BasicElement, b: BasicElement)         → void
     Join the 3' of a to the 5' of b.
+    IMPORTANT: purely topological — does NOT move or reposition atoms.
+    Only use when the two ends are already physically adjacent and correctly oriented.
+    For growing a duplex end-to-end, use edit.extendDuplex instead.
 
 edit.skip(elems: BasicElement[])                      → void
     Delete elements and auto-ligate their neighbours.
@@ -321,13 +327,28 @@ render();
 edit.ligate(api.getElements([3])[0], api.getElements([7])[0]);
 render();
 
-// Ligate two duplexes end-to-end into one longer duplex (assumes 2 duplexes = 4 strands):
-// Duplex 1 → strands[0] & strands[1], Duplex 2 → strands[2] & strands[3]
-// Connect top strands: 3' of strand 0 → 5' of strand 2
-// Connect bottom strands: 3' of strand 3 → 5' of strand 1
-var strands = systems[0].strands;
-edit.ligate(strands[0].end3, strands[2].end5);
-edit.ligate(strands[3].end3, strands[1].end5);
+// Extend an existing duplex end-to-end (PREFERRED over creating a second duplex and ligating):
+// extendDuplex physically grows the helix — always geometrically valid.
+// Pass the terminal nucleotide of the strand you want to extend FROM.
+var elems = edit.createStrand('ATCGATCGATCGATC', true);
+edit.extendDuplex(elems[0].strand.end3, 'GCTAGCTAGCTAGCT');
+render();
+
+// Ligate two ALREADY-ADJACENT duplexes end-to-end using clusterId (robust, no strand index assumptions):
+// IMPORTANT: edit.ligate is purely topological — it does NOT move atoms.
+// Only call it when the two ends are already physically close and correctly oriented.
+// Use extendDuplex instead if you want one geometrically valid continuous duplex.
+var allMonomers = [];
+systems.forEach(function(sys){ allMonomers = allMonomers.concat(sys.getMonomers()); });
+var clusterIds = Array.from(new Set(allMonomers.map(function(e){ return e.clusterId; }))).sort(function(a,b){ return a-b; });
+var c1 = clusterIds[clusterIds.length-2];  // second-to-last created cluster
+var c2 = clusterIds[clusterIds.length-1];  // last created cluster
+var allStrands = [];
+systems.forEach(function(sys){ allStrands = allStrands.concat(sys.strands); });
+var s1 = allStrands.filter(function(s){ return s.getMonomers().some(function(e){ return e.clusterId===c1; }); });
+var s2 = allStrands.filter(function(s){ return s.getMonomers().some(function(e){ return e.clusterId===c2; }); });
+edit.ligate(s1[0].end3, s2[0].end5);
+edit.ligate(s2[1].end3, s1[1].end5);
 render();
 
 // Get sequence of selected bases:

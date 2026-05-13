@@ -68,9 +68,14 @@ edit.* — STRUCTURE EDITING
 edit.createStrand(sequence, createDuplex?, isRNA?)    → BasicElement[]
 edit.extendStrand(end: BasicElement, sequence)        → BasicElement[]
 edit.extendDuplex(end: Nucleotide, sequence)          → BasicElement[]
+    Physically extend a duplex from a terminal nucleotide, growing the helix geometry.
+    Use this — not ligate — when you want a longer physically valid duplex.
+    Example: edit.extendDuplex(systems[0].strands[0].end3, 'AAAGGG');
 edit.deleteElements(victims: BasicElement[])          → void
 edit.nick(element: BasicElement)                      → void
 edit.ligate(a: BasicElement, b: BasicElement)         → void
+    Purely topological — does NOT move or reposition atoms.
+    Only call when ends are already physically adjacent. For end-to-end extension use extendDuplex.
 edit.skip(elems: BasicElement[])                      → void
 edit.insert(e: BasicElement, sequence)                → BasicElement[]
 edit.getSequence(elems: Set<BasicElement>)            → string
@@ -186,7 +191,27 @@ colorElements(new THREE.Color(1, 0, 0), systems[0].getMonomers());
 render();
 
 // Select all in system 0 (api.selectElements calls render() internally):
-api.selectElements(systems[0].getMonomers());`;
+api.selectElements(systems[0].getMonomers());
+
+// Extend an existing duplex end-to-end (PREFERRED — physically grows the helix):
+var elems = edit.createStrand('ATCGATCGATCGATC', true);
+edit.extendDuplex(elems[0].strand.end3, 'GCTAGCTAGCTAGCT');
+render();
+
+// Ligate two already-adjacent duplexes using clusterId (robust strand lookup):
+// ONLY use ligate when ends are physically adjacent — it does NOT move atoms.
+var allMonomers = [];
+systems.forEach(function(sys){ allMonomers = allMonomers.concat(sys.getMonomers()); });
+var clusterIds = Array.from(new Set(allMonomers.map(function(e){ return e.clusterId; }))).sort(function(a,b){ return a-b; });
+var c1 = clusterIds[clusterIds.length-2];
+var c2 = clusterIds[clusterIds.length-1];
+var allStrands = [];
+systems.forEach(function(sys){ allStrands = allStrands.concat(sys.strands); });
+var s1 = allStrands.filter(function(s){ return s.getMonomers().some(function(e){ return e.clusterId===c1; }); });
+var s2 = allStrands.filter(function(s){ return s.getMonomers().some(function(e){ return e.clusterId===c2; }); });
+edit.ligate(s1[0].end3, s2[0].end5);
+edit.ligate(s2[1].end3, s1[1].end5);
+render();`;
 
 const OBSERVER_SYSTEM = `You are a code verification agent for oxDNA viewer. Evaluate whether a step executed correctly.
 
