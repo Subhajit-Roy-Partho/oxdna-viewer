@@ -138,6 +138,13 @@ edit.extendDuplex(end: Nucleotide, sequence)          → BasicElement[]
 edit.deleteElements(victims: BasicElement[])          → void
     Permanently delete elements.
     Example: edit.deleteElements(api.getElements([5, 6, 7]));
+    To delete by colour: each element has a .color property (THREE.Color or undefined).
+    Example — delete all blue elements:
+      var toDelete = [];
+      systems.forEach(function(sys){ sys.getMonomers().forEach(function(e){
+        var c = e.color; if (c && c.b > 0.6 && c.r < 0.4) toDelete.push(e);
+      }); });
+      edit.deleteElements(toDelete); render();
 
 edit.nick(element: BasicElement)                      → void
     Cut the phosphodiester bond before element (nick).

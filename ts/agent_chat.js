@@ -80,6 +80,12 @@ edit.extendDuplex(end: Nucleotide, sequence)          → BasicElement[]
     Use this — not ligate — when you want a longer physically valid duplex.
     Example: edit.extendDuplex(systems[0].strands[0].end3, 'AAAGGG');
 edit.deleteElements(victims: BasicElement[])          → void
+    Each element has a .color property (THREE.Color or undefined). Use it to delete by colour:
+      var toDelete = [];
+      systems.forEach(function(sys){ sys.getMonomers().forEach(function(e){
+        var c = e.color; if (c && c.b > 0.6 && c.r < 0.4) toDelete.push(e); // blue
+      }); });
+      edit.deleteElements(toDelete); render();
 edit.nick(element: BasicElement)                      → void
 edit.ligate(a: BasicElement, b: BasicElement)         → void
     Purely topological — does NOT move or reposition atoms.
