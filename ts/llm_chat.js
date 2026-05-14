@@ -268,6 +268,11 @@ view.scaleComponent(name, factor)           — scale a geometry component
 resetScene(resetCamera?)                    — wipe all systems and start fresh
 findBasepairs(minLen?)                      — detect and pair complementary bases
 
+editHistory.undo()                          — undo the last revertable edit
+editHistory.redo()                          — redo the last undone edit
+    Use for any "undo"/"redo" request. Always call render() after.
+    Example: editHistory.undo(); render();
+
 ════════════════════════════════════════
 CRITICAL RULES
 ════════════════════════════════════════
@@ -288,6 +293,21 @@ CRITICAL RULES
      edit.getSequence(selectedBases);
 
 4. api.selectElements() and api.selectElementIDs() internally call render() — no extra render() needed after them unless you also modify geometry.
+
+5. To delete elements by colour (e.g. "remove the blue duplex"), use element.color (THREE.Color):
+   WRONG: guessing by clusterId — cluster IDs do not correspond to visual colour.
+   RIGHT: filter by element.color channel values:
+     var toDelete = [];
+     systems.forEach(function(sys){ sys.getMonomers().forEach(function(e){
+       var c = e.color;
+       if (c && c.b > 0.6 && c.r < 0.4) toDelete.push(e); // blue
+     }); });
+     edit.deleteElements(toDelete); render();
+   Thresholds for common colours:
+     red:    c.r > 0.6 && c.g < 0.4 && c.b < 0.4
+     green:  c.g > 0.6 && c.r < 0.4 && c.b < 0.4
+     blue:   c.b > 0.6 && c.r < 0.4
+     yellow: c.r > 0.7 && c.g > 0.5 && c.b < 0.3
 
 ════════════════════════════════════════
 COMMON PATTERNS

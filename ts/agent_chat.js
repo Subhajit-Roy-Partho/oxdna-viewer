@@ -37,6 +37,8 @@ box              : THREE.Vector3    — simulation box dimensions
 scene            : THREE.Scene      — THREE.js scene
 camera           : THREE.Camera     — active camera
 editHistory      : EditHistory      — undo/redo stack
+    editHistory.undo(); render();   // undo last edit
+    editHistory.redo(); render();   // redo last undone edit
 
 ════════════════════════════════════════
 api.* — SCENE & VISUALIZATION
@@ -153,6 +155,16 @@ CRITICAL SELECTION RULES:
     var targets = Array.from(selectedBases);
     colorElements(new THREE.Color(1,0,0), targets);
 - edit.deleteElements / edit.getSequence / edit.setSequence: pass selectedBases (a Set) directly.
+- To delete by colour ("remove the blue duplex"), filter on element.color (THREE.Color) — NEVER guess by clusterId:
+    var toDelete = [];
+    systems.forEach(function(sys){ sys.getMonomers().forEach(function(e){
+      var c = e.color;
+      if (c && c.b > 0.6 && c.r < 0.4) toDelete.push(e); // blue
+    }); });
+    edit.deleteElements(toDelete); render();
+  Common thresholds:
+    red: c.r>0.6&&c.g<0.4&&c.b<0.4  green: c.g>0.6&&c.r<0.4&&c.b<0.4
+    blue: c.b>0.6&&c.r<0.4           yellow: c.r>0.7&&c.g>0.5&&c.b<0.3
 `;
 
 // ─────────────────────────────────────────────────────────────
