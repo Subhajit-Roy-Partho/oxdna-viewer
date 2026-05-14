@@ -219,6 +219,37 @@ var s1 = allStrands.filter(function(s){ return s.getMonomers().some(function(e){
 var s2 = allStrands.filter(function(s){ return s.getMonomers().some(function(e){ return e.clusterId===c2; }); });
 edit.ligate(s1[0].end3, s2[0].end5);
 edit.ligate(s2[1].end3, s1[1].end5);
+render();
+
+// Create a Holliday junction (X-shaped four-way DNA junction):
+// Two 20-bp duplexes nicked and cross-ligated at their midpoints.
+var seq = 'ATCGATCGATCGATCGATCG';
+var d1 = edit.createStrand(seq, true);
+translateElements(new Set(d1.filter(Boolean)), new THREE.Vector3(0, 10, 0));
+var d2 = edit.createStrand(seq, true);
+var s0 = d1[0].strand, s1_ = d1[1].strand;
+var s2 = d2[0].strand, s3 = d2[1].strand;
+var d2elems = d2.filter(Boolean);
+var com1 = new THREE.Vector3(), com2 = new THREE.Vector3();
+d1.filter(Boolean).forEach(function(e){ com1.add(e.getPos()); });
+com1.divideScalar(d1.filter(Boolean).length);
+d2elems.forEach(function(e){ com2.add(e.getPos()); });
+com2.divideScalar(d2elems.length);
+translateElements(new Set(d2elems), new THREE.Vector3(2.3, 0, 0).add(com1).sub(com2));
+// nick(s0m[9]) → s0m[9].n3=null (3' terminal), s0m[10].n5=null (5' terminal)
+// ligate(s0m[9], s2m[10]) succeeds because !a.n3 && !b.n5
+var s0m = s0.getMonomers(), s1m = s1_.getMonomers();
+var s2m = s2.getMonomers(), s3m = s3.getMonomers();
+edit.nick(s0m[9]); edit.nick(s1m[9]);
+edit.nick(s2m[9]); edit.nick(s3m[9]);
+edit.ligate(s0m[9], s2m[10]); edit.ligate(s2m[9], s0m[10]);
+edit.ligate(s1m[9], s3m[10]); edit.ligate(s3m[9], s1m[10]);
+// Colour the 4 resulting strands (ligate updates element.strand pointers)
+colorElements(new THREE.Color(0.9,0.1,0.1), s0m[0].strand.getMonomers());
+colorElements(new THREE.Color(0.1,0.5,0.9), s2m[0].strand.getMonomers());
+colorElements(new THREE.Color(0.1,0.8,0.1), s1m[0].strand.getMonomers());
+colorElements(new THREE.Color(0.9,0.7,0.1), s3m[0].strand.getMonomers());
+notify('Holliday junction created', 'success');
 render();`;
 
 const OBSERVER_SYSTEM = `You are a code verification agent for oxDNA viewer. Evaluate whether a step executed correctly.

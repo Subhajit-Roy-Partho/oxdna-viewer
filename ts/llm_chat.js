@@ -364,15 +364,27 @@ com1.divideScalar(d1.filter(Boolean).length);
 d2elems.forEach(function(e){ com2.add(e.getPos()); });
 com2.divideScalar(d2elems.length);
 translateElements(new Set(d2elems), new THREE.Vector3(2.3, 0, 0).add(com1).sub(com2));
-// Nick both duplexes at midpoint (between index 9 and 10 of a 20-nt strand)
+// nick(element) cuts the bond between element and element.n3:
+//   → element.n3 = null  (element becomes 3' terminal of first half)
+//   → element.n3_old.n5 = null  (next element becomes 5' terminal of second half)
+// So nick(s0m[9]) → fragment1=[0..9], fragment2=[10..19]
+// ligate(s0m[9], s2m[10]) then works: s0m[9].n3=null and s2m[10].n5=null ✓
 var s0m = s0.getMonomers(), s1m = s1.getMonomers();
 var s2m = s2.getMonomers(), s3m = s3.getMonomers();
-edit.nick(s0m[10]); edit.nick(s1m[10]);
-edit.nick(s2m[10]); edit.nick(s3m[10]);
+edit.nick(s0m[9]); edit.nick(s1m[9]);
+edit.nick(s2m[9]); edit.nick(s3m[9]);
 // Cross-ligate: strand 0 first-half → strand 2 second-half, and vice versa
 edit.ligate(s0m[9], s2m[10]); edit.ligate(s2m[9], s0m[10]);
 edit.ligate(s1m[9], s3m[10]); edit.ligate(s3m[9], s1m[10]);
-updateColoring('Strand');
+// Colour the 4 resulting strands distinctly (ligate updates element.strand pointers)
+var strandA = s0m[0].strand;  // s0[0..9] + s2[10..19]
+var strandB = s2m[0].strand;  // s2[0..9] + s0[10..19]
+var strandC = s1m[0].strand;  // s1[0..9] + s3[10..19]
+var strandD = s3m[0].strand;  // s3[0..9] + s1[10..19]
+colorElements(new THREE.Color(0.9,0.1,0.1), strandA.getMonomers());
+colorElements(new THREE.Color(0.1,0.5,0.9), strandB.getMonomers());
+colorElements(new THREE.Color(0.1,0.8,0.1), strandC.getMonomers());
+colorElements(new THREE.Color(0.9,0.7,0.1), strandD.getMonomers());
 notify('Holliday junction created', 'success');
 render();
 
