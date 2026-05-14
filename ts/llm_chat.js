@@ -276,6 +276,18 @@ editHistory.redo()                          — redo the last undone edit
 ════════════════════════════════════════
 CRITICAL RULES
 ════════════════════════════════════════
+0. EXECUTION SCOPE: Each code block runs inside its own new Function() — variables from previous
+   code blocks (d1, d2, seq, etc.) DO NOT EXIST in a new block.
+   To reference previously created structures, use global state only:
+     systems[]            — all systems; systems[0].getMonomers() for all elements
+     clusterId            — stamped on every element at creation; use to identify prior strands
+   Pattern to re-acquire the two most recently created clusters:
+     var allMonomers = [];
+     systems.forEach(function(sys){ allMonomers = allMonomers.concat(sys.getMonomers()); });
+     var clusterIds = Array.from(new Set(allMonomers.map(function(e){ return e.clusterId; }))).sort(function(a,b){ return a-b; });
+     var c1elems = allMonomers.filter(function(e){ return e.clusterId === clusterIds[clusterIds.length-2]; });
+     var c2elems = allMonomers.filter(function(e){ return e.clusterId === clusterIds[clusterIds.length-1]; });
+
 1. colorElements() REQUIRES elems to be passed explicitly.
    WRONG:  colorElements(new THREE.Color(1,0,0));
    RIGHT:  colorElements(new THREE.Color(1,0,0), Array.from(selectedBases));

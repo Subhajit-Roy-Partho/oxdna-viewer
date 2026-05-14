@@ -149,6 +149,15 @@ view.saveCanvasImage(scaleFactor?)
 resetScene(resetCamera?)
 findBasepairs(minLen?)
 
+CRITICAL SCOPE RULE:
+Each code block runs in its own new Function() scope. Variables from prior blocks (d1, d2, seq, etc.)
+DO NOT EXIST. Always re-acquire references from global state:
+  var allMonomers = [];
+  systems.forEach(function(sys){ allMonomers = allMonomers.concat(sys.getMonomers()); });
+  var clusterIds = Array.from(new Set(allMonomers.map(function(e){ return e.clusterId; }))).sort(function(a,b){ return a-b; });
+  var c1elems = allMonomers.filter(function(e){ return e.clusterId === clusterIds[clusterIds.length-2]; });
+  var c2elems = allMonomers.filter(function(e){ return e.clusterId === clusterIds[clusterIds.length-1]; });
+
 CRITICAL SELECTION RULES:
 - colorElements(color) alone does NOTHING if selectedBases is empty. Always pass elems explicitly.
 - Capture selectedBases into a local var BEFORE calling colorElements (it clears selection afterwards):
