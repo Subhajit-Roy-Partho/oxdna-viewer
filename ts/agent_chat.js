@@ -228,6 +228,24 @@ render();
 // Select all in system 0 (api.selectElements calls render() internally):
 api.selectElements(systems[0].getMonomers());
 
+// OXDNA UNIT REFERENCE: 1 oxDNA unit ≈ 0.85 nm.
+// DNA duplex diameter ≈ 2.35 oxDNA units. Adjacent parallel duplexes: ~3 units centre-to-centre.
+// NEVER use offsets > 5 for "next to each other" — that places duplexes far apart visually.
+
+// Create two duplexes side by side (~3 units apart):
+var seq = 'ATCGATCGATCGATCGATCG';
+var d1 = edit.createStrand(seq, true);
+var com1 = new THREE.Vector3();
+d1.filter(Boolean).forEach(function(e){ com1.add(e.getPos()); });
+com1.divideScalar(d1.filter(Boolean).length);
+translateElements(new Set(d1.filter(Boolean)), com1.clone().negate());
+var d2 = edit.createStrand(seq, true);
+var com2 = new THREE.Vector3();
+d2.filter(Boolean).forEach(function(e){ com2.add(e.getPos()); });
+com2.divideScalar(d2.filter(Boolean).length);
+translateElements(new Set(d2.filter(Boolean)), new THREE.Vector3(3, 0, 0).sub(com2));
+render();
+
 // Extend an existing duplex end-to-end (PREFERRED — physically grows the helix):
 var elems = edit.createStrand('ATCGATCGATCGATC', true);
 edit.extendDuplex(elems[0].strand.end3, 'GCTAGCTAGCTAGCT');

@@ -363,6 +363,28 @@ render();
 edit.deleteElements([...selectedBases]);
 render();
 
+// OXDNA UNIT REFERENCE: 1 oxDNA unit ≈ 0.85 nm.
+//   DNA duplex diameter ≈ 2.0 nm ≈ 2.35 oxDNA units.
+//   Minimum gap between parallel duplexes ≈ 0.5 oxDNA units.
+//   So adjacent parallel duplexes: centre-to-centre spacing ≈ 2.5–3.0 oxDNA units.
+//   NEVER use ±10 or larger for "next to each other" — that is ~8.5 nm, far apart.
+
+// Create two 20-bp duplexes side by side (parallel, ~3 units apart):
+var seq = 'ATCGATCGATCGATCGATCG';
+var d1 = edit.createStrand(seq, true);
+// Move d1 to origin first
+var com1 = new THREE.Vector3();
+d1.filter(Boolean).forEach(function(e){ com1.add(e.getPos()); });
+com1.divideScalar(d1.filter(Boolean).length);
+translateElements(new Set(d1.filter(Boolean)), com1.clone().negate());
+// Create d2 far away to avoid overlap during creation, then move it adjacent
+var d2 = edit.createStrand(seq, true);
+var com2 = new THREE.Vector3();
+d2.filter(Boolean).forEach(function(e){ com2.add(e.getPos()); });
+com2.divideScalar(d2.filter(Boolean).length);
+translateElements(new Set(d2.filter(Boolean)), new THREE.Vector3(3, 0, 0).sub(com2));
+render();
+
 // Create a 20-bp DNA duplex:
 edit.createStrand('ATCGATCGATCGATCGATCG', true);
 render();
