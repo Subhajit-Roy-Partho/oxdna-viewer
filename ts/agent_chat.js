@@ -266,6 +266,38 @@ edit.ligate(s1[0].end3, s2[0].end5);
 edit.ligate(s2[1].end3, s1[1].end5);
 render();
 
+// Set the angle between two end-to-end duplexes (e.g., 60 degrees):
+// CRITICAL: NEVER use a fixed axis like (0,0,1). Always compute the rotation axis
+// as the cross product of the two duplex direction vectors.
+var allMonomers = [];
+systems.forEach(function(sys){ allMonomers = allMonomers.concat(sys.getMonomers()); });
+var clusterIds = Array.from(new Set(allMonomers.map(function(e){ return e.clusterId; }))).sort(function(a,b){ return a-b; });
+var c1 = clusterIds[clusterIds.length-2];
+var c2 = clusterIds[clusterIds.length-1];
+var e1 = allMonomers.filter(function(e){ return e.clusterId === c1; });
+var e2 = allMonomers.filter(function(e){ return e.clusterId === c2; });
+var com1 = new THREE.Vector3(), com2 = new THREE.Vector3();
+e1.forEach(function(e){ com1.add(e.getPos()); }); com1.divideScalar(e1.length);
+e2.forEach(function(e){ com2.add(e.getPos()); }); com2.divideScalar(e2.length);
+// Find junction point (midpoint of the closest pair between the two clusters)
+var minDist = Infinity, junction = new THREE.Vector3();
+e1.forEach(function(a){ e2.forEach(function(b){
+    var d = a.getPos().distanceTo(b.getPos());
+    if(d < minDist){ minDist = d; junction = a.getPos().clone().add(b.getPos()).multiplyScalar(0.5); }
+}); });
+// Direction vectors from junction to each COM
+var dir1 = com1.clone().sub(junction).normalize();
+var dir2 = com2.clone().sub(junction).normalize();
+// Rotation axis: perpendicular to both duplex directions
+var rotAxis = new THREE.Vector3().crossVectors(dir1, dir2).normalize();
+if(rotAxis.lengthSq() < 0.001) rotAxis.set(0, 1, 0); // fallback if parallel
+// Current angle between duplexes
+var currentAngle = Math.acos(Math.max(-1, Math.min(1, dir1.dot(dir2))));
+var targetAngle = Math.PI / 3; // 60 degrees — change as needed
+var deltaAngle = currentAngle - targetAngle;
+rotateElements(new Set(e2), rotAxis, deltaAngle, junction);
+render();
+
 // Create a Holliday junction (X-shaped four-way DNA junction):
 // Two 20-bp duplexes nicked and cross-ligated at their midpoints.
 var seq = 'ATCGATCGATCGATCGATCG';
