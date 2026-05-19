@@ -266,9 +266,13 @@ edit.ligate(s1[0].end3, s2[0].end5);
 edit.ligate(s2[1].end3, s1[1].end5);
 render();
 
-// Set the angle between two end-to-end duplexes (e.g., 60 degrees):
-// CRITICAL: NEVER use a fixed axis like (0,0,1). Always compute the rotation axis
-// as the cross product of the two duplex direction vectors.
+// Set the angle between two ligated duplexes (e.g., 60 degrees):
+//
+// CRITICAL — junction point: do NOT use "closest physical atom pair" — for
+// parallel side-by-side duplexes that pair is in the middle of the structure,
+// not at the ligation point. Instead, traverse backbone bonds to find the
+// cross-cluster connection (the actual ligation bond).
+//
 // SIGN: deltaAngle = targetAngle - currentAngle  (NOT currentAngle - targetAngle)
 var allMonomers = [];
 systems.forEach(function(sys){ allMonomers = allMonomers.concat(sys.getMonomers()); });
@@ -280,27 +284,29 @@ var e2 = allMonomers.filter(function(e){ return e.clusterId === c2; });
 var com1 = new THREE.Vector3(), com2 = new THREE.Vector3();
 e1.forEach(function(e){ com1.add(e.getPos()); }); com1.divideScalar(e1.length);
 e2.forEach(function(e){ com2.add(e.getPos()); }); com2.divideScalar(e2.length);
-// Find junction point (midpoint of the closest pair between the two clusters)
-var minDist = Infinity, junction = com1.clone(); // fallback: use com1
-e1.forEach(function(a){ e2.forEach(function(b){
-    var d = a.getPos().distanceTo(b.getPos());
-    if(d < minDist){ minDist = d; junction = a.getPos().clone().add(b.getPos()).multiplyScalar(0.5); }
-}); });
-// Direction vectors from junction to each COM
+// Find true junction: look for a backbone bond that crosses cluster boundary
+var juncA = null, juncB = null;
+allMonomers.forEach(function(e) {
+    if (e.clusterId === c1) {
+        if (e.n3 && e.n3.clusterId === c2 && !juncA) { juncA = e; juncB = e.n3; }
+        if (e.n5 && e.n5.clusterId === c2 && !juncA) { juncA = e; juncB = e.n5; }
+    }
+});
+var junction = juncA ? juncA.getPos().clone().add(juncB.getPos()).multiplyScalar(0.5) : com1.clone();
+// Direction vectors from junction out along each duplex arm
 var dir1 = com1.clone().sub(junction).normalize();
 var dir2 = com2.clone().sub(junction).normalize();
-// Rotation axis: perpendicular to both duplex directions (crossVectors(dir1, dir2))
+// Rotation axis: perpendicular to the plane of the two duplex arms
 var rotAxis = new THREE.Vector3().crossVectors(dir1, dir2).normalize();
-// Fallback when nearly parallel/antiparallel: pick axis perpendicular to dir1
+// Fallback when arms are nearly parallel/antiparallel: pick an axis ⊥ to dir1
 if(rotAxis.lengthSq() < 0.01) {
     var perp = (Math.abs(dir1.x) < 0.9) ? new THREE.Vector3(1,0,0) : new THREE.Vector3(0,0,1);
     rotAxis = new THREE.Vector3().crossVectors(dir1, perp).normalize();
 }
-// Current angle between duplexes
+// Measure current angle and rotate e2 by the exact delta needed
 var currentAngle = Math.acos(Math.max(-1, Math.min(1, dir1.dot(dir2))));
 var targetAngle = Math.PI / 3; // 60 degrees — change as needed
-// SIGN: targetAngle - currentAngle (positive = rotate e2 away from e1)
-var deltaAngle = targetAngle - currentAngle;
+var deltaAngle = targetAngle - currentAngle; // CORRECT SIGN
 rotateElements(new Set(e2), rotAxis, deltaAngle, junction);
 render();
 
