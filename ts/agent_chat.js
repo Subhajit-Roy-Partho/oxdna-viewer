@@ -269,6 +269,7 @@ render();
 // Set the angle between two end-to-end duplexes (e.g., 60 degrees):
 // CRITICAL: NEVER use a fixed axis like (0,0,1). Always compute the rotation axis
 // as the cross product of the two duplex direction vectors.
+// SIGN: deltaAngle = targetAngle - currentAngle  (NOT currentAngle - targetAngle)
 var allMonomers = [];
 systems.forEach(function(sys){ allMonomers = allMonomers.concat(sys.getMonomers()); });
 var clusterIds = Array.from(new Set(allMonomers.map(function(e){ return e.clusterId; }))).sort(function(a,b){ return a-b; });
@@ -280,7 +281,7 @@ var com1 = new THREE.Vector3(), com2 = new THREE.Vector3();
 e1.forEach(function(e){ com1.add(e.getPos()); }); com1.divideScalar(e1.length);
 e2.forEach(function(e){ com2.add(e.getPos()); }); com2.divideScalar(e2.length);
 // Find junction point (midpoint of the closest pair between the two clusters)
-var minDist = Infinity, junction = new THREE.Vector3();
+var minDist = Infinity, junction = com1.clone(); // fallback: use com1
 e1.forEach(function(a){ e2.forEach(function(b){
     var d = a.getPos().distanceTo(b.getPos());
     if(d < minDist){ minDist = d; junction = a.getPos().clone().add(b.getPos()).multiplyScalar(0.5); }
@@ -288,13 +289,18 @@ e1.forEach(function(a){ e2.forEach(function(b){
 // Direction vectors from junction to each COM
 var dir1 = com1.clone().sub(junction).normalize();
 var dir2 = com2.clone().sub(junction).normalize();
-// Rotation axis: perpendicular to both duplex directions
+// Rotation axis: perpendicular to both duplex directions (crossVectors(dir1, dir2))
 var rotAxis = new THREE.Vector3().crossVectors(dir1, dir2).normalize();
-if(rotAxis.lengthSq() < 0.001) rotAxis.set(0, 1, 0); // fallback if parallel
+// Fallback when nearly parallel/antiparallel: pick axis perpendicular to dir1
+if(rotAxis.lengthSq() < 0.01) {
+    var perp = (Math.abs(dir1.x) < 0.9) ? new THREE.Vector3(1,0,0) : new THREE.Vector3(0,0,1);
+    rotAxis = new THREE.Vector3().crossVectors(dir1, perp).normalize();
+}
 // Current angle between duplexes
 var currentAngle = Math.acos(Math.max(-1, Math.min(1, dir1.dot(dir2))));
 var targetAngle = Math.PI / 3; // 60 degrees — change as needed
-var deltaAngle = currentAngle - targetAngle;
+// SIGN: targetAngle - currentAngle (positive = rotate e2 away from e1)
+var deltaAngle = targetAngle - currentAngle;
 rotateElements(new Set(e2), rotAxis, deltaAngle, junction);
 render();
 
