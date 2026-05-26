@@ -1010,7 +1010,335 @@ curl -X POST https://nano-gpt.com/api/v1/chat/completions \
 
 ---
 
-## 13. LLM Branch Background
+## 14. New APIs — Rotation, PCA, LLM Tracker, and Shape Drawing
+
+Three plain-JavaScript extension files are loaded after the compiled viewer scripts and before `llm_chat.js` / `agent_chat.js`:
+
+```
+ts/api/transform_api.js      ← api.rotateGroup, api.rotateSingle, api.getCOM, api.getPCA
+ts/api/llm_tracker_api.js    ← llmTracker global
+ts/api/shapes_api.js         ← shapes global
+```
+
+---
+
+### 14.1 `api.getCOM` — Centre of Mass
+
+```typescript
+api.getCOM(elems: BasicElement[]) → THREE.Vector3
+```
+
+Returns the arithmetic centre of mass of the given elements.
+
+```javascript
+var com = api.getCOM(systems[0].getMonomers());
+notify('CoM: ' + JSON.stringify(com), 'info');
+```
+
+---
+
+### 14.2 `api.rotateGroup` — Rotate a Group
+
+```typescript
+api.rotateGroup(elems: BasicElement[], axis: THREE.Vector3, angleDeg: number, pivot?: THREE.Vector3) → void
+```
+
+Rotates a group of elements around `axis` by `angleDeg` degrees. `pivot` defaults to the group's centre of mass.
+
+```javascript
+// Rotate system 0 by 90° around Y through its own CoM:
+api.rotateGroup(systems[0].getMonomers(), new THREE.Vector3(0,1,0), 90);
+
+// Rotate around an explicit pivot point:
+var pivot = new THREE.Vector3(0, 0, 0);
+api.rotateGroup(systems[0].getMonomers(), new THREE.Vector3(1,0,0), 45, pivot);
+```
+
+---
+
+### 14.3 `api.rotateSingle` — Rotate a Single Element
+
+```typescript
+api.rotateSingle(elem: BasicElement, axis: THREE.Vector3, angleDeg: number, pivot?: THREE.Vector3) → void
+```
+
+Rotates one element. `pivot` defaults to the element's own position.
+
+```javascript
+api.rotateSingle(api.getElements([5])[0], new THREE.Vector3(0,0,1), 30);
+```
+
+---
+
+### 14.4 `api.rotateCluster` — Rotate by Cluster ID
+
+```typescript
+api.rotateCluster(clusterId: number, axis: THREE.Vector3, angleDeg: number, pivot?: THREE.Vector3) → void
+```
+
+Rotates all elements sharing the given `clusterId`.
+
+```javascript
+api.rotateCluster(3, new THREE.Vector3(0,1,0), 60);
+```
+
+---
+
+### 14.5 `api.getPCA` — Principal Component Analysis
+
+```typescript
+api.getPCA(elems: BasicElement[]) → {
+    primaryAxis:   THREE.Vector3,   // direction of greatest positional variance
+    secondaryAxis: THREE.Vector3,
+    tertiaryAxis:  THREE.Vector3,
+    eigenvalues:   [number, number, number],  // variance along each axis (descending)
+    center:        THREE.Vector3,   // centre of mass
+    spread:        number           // RMS distance from center along primaryAxis
+} | null
+```
+
+Computes PCA via Jacobi eigendecomposition of the 3×3 covariance matrix. For a straight DNA duplex, `primaryAxis` is the helix axis.
+
+```javascript
+// Print helix axis:
+var pca = api.getPCA(systems[0].getMonomers());
+notify('Helix axis: ' + JSON.stringify(pca.primaryAxis), 'info');
+notify('Spread: ' + pca.spread.toFixed(2) + ' oxDNA units', 'info');
+
+// Align helix axis to Y axis:
+var pca = api.getPCA(systems[0].getMonomers());
+var q = new THREE.Quaternion().setFromUnitVectors(pca.primaryAxis, new THREE.Vector3(0,1,0));
+rotateElementsByQuaternion(new Set(systems[0].getMonomers()), q, pca.center);
+render();
+
+// Find angle between two duplexes:
+var e1 = llmTracker.getByName('duplex1');
+var e2 = llmTracker.getByName('duplex2');
+var pca1 = api.getPCA(e1);
+var pca2 = api.getPCA(e2);
+var angle = Math.acos(Math.abs(pca1.primaryAxis.dot(pca2.primaryAxis))) * 180 / Math.PI;
+notify('Angle between helices: ' + angle.toFixed(1) + '°', 'info');
+```
+
+---
+
+### 14.6 `llmTracker` — LLM Nucleotide Registry
+
+`llmTracker` is a global object that wraps the built-in `clusterId` system with a persistent name registry. Use it to track groups of nucleotides across multiple code blocks (since variables defined in one block don't exist in the next).
+
+#### `llmTracker.tag(elems, name?, color?) → clusterId: number`
+Assigns a new `clusterId` to all elements and stores them under `name`. `color` is optional and applied immediately.
+
+```javascript
+var elems = edit.createStrand('ATCGATCG', true);
+llmTracker.tag(elems.filter(Boolean), 'myDuplex', new THREE.Color(0, 0.8, 0));
+// Later, in ANY subsequent code block:
+var myElems = llmTracker.getByName('myDuplex');
+```
+
+#### `llmTracker.getByName(name) → BasicElement[]`
+Retrieves live element references by tag name. Always call this fresh — never store the array across blocks.
+
+#### `llmTracker.getByClusterId(id) → BasicElement[]`
+Retrieves by cluster ID number.
+
+#### `llmTracker.getAll() → BasicElement[]`
+All elements currently registered under any LLM tag.
+
+#### `llmTracker.list() → [{name, clusterId, size}]`
+List all registered tags.
+
+#### `llmTracker.deleteByName(name) → void`
+Delete all elements with the given tag and unregister the name.
+
+#### `llmTracker.clear() → void`
+Delete ALL LLM-tagged elements and clear the registry.
+
+#### `llmTracker.status() → void`
+Show a notification with the current registry contents and log to console.
+
+#### `llmTracker.selectByName(name) → void`
+Select all elements with the given tag.
+
+#### `llmTracker.colorByName(name, color) → void`
+Recolour all elements with the given tag.
+
+#### Properties
+- `llmTracker.lastTag : string|null` — most recently assigned tag name
+- `llmTracker.lastClusterId : number` — current value of `clusterCounter`
+
+```javascript
+// Full workflow example:
+var d1 = edit.createStrand('ATCGATCG', true);
+llmTracker.tag(d1.filter(Boolean), 'bottom', new THREE.Color(0.2, 0.4, 1));
+var d2 = edit.createStrand('GCTAGCTA', true);
+llmTracker.tag(d2.filter(Boolean), 'top', new THREE.Color(1, 0.3, 0.2));
+render();
+// Next block:
+api.rotateGroup(llmTracker.getByName('top'), new THREE.Vector3(0,1,0), 30);
+```
+
+---
+
+### 14.7 `shapes.*` — Shape Drawing API
+
+`shapes` is a global object that places DNA (or RNA) nucleotide strands along geometric shapes. All functions auto-tag via `llmTracker`.
+
+**Spacing note:** 1 oxDNA unit ≈ 0.85 nm. For backbone bonds to look natural, place bases ~0.6–1.2 units apart.
+
+#### `shapes.basesForLength(length, spacing?=1) → number`
+Returns the recommended base count for an edge of the given length.
+
+```javascript
+var n = shapes.basesForLength(10);   // → 10 bases for a 10-unit edge
+var n = shapes.basesForLength(10, 0.7);  // → 14 bases (denser)
+```
+
+#### `shapes.line(p1, p2, nBases, seq?, isRNA?, tagName?)`
+Single-stranded line from p1 to p2.
+
+```javascript
+shapes.line(new THREE.Vector3(0,0,0), new THREE.Vector3(10,0,0), 12, null, false, 'line1');
+colorElements(new THREE.Color(1,0,0), llmTracker.getByName('line1'));
+render();
+```
+
+#### `shapes.circle(center, normal, radius, nBases, seq?, isRNA?, tagName?)`
+Closed-loop strand around a circle. `normal` is the plane normal vector.
+
+```javascript
+// Ring of 24 bases in the XZ plane:
+shapes.circle(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 8, 24, null, false, 'ring');
+colorElements(new THREE.Color(0,0.7,1), llmTracker.getByName('ring'));
+render();
+```
+
+#### `shapes.polygon(nSides, center, normal, radius, basesPerSide, seq?, isRNA?, tagName?)`
+Regular n-gon; each edge is a separate strand.
+
+```javascript
+// Hexagon:
+shapes.polygon(6, new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 10, 8, null, false, 'hex');
+```
+
+#### `shapes.triangle(center, normal, sideLength, basesPerSide, seq?, isRNA?, tagName?)`
+Equilateral triangle (convenience wrapper around `polygon(3,...)`).
+
+```javascript
+shapes.triangle(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 12, 8, null, false, 'tri');
+colorElements(new THREE.Color(1,0.5,0), llmTracker.getByName('tri'));
+render();
+```
+
+#### `shapes.square(center, normal, sideLength, basesPerSide, seq?, isRNA?, tagName?)`
+Square (convenience wrapper around `polygon(4,...)`).
+
+```javascript
+shapes.square(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 10, 8, null, false, 'sq');
+```
+
+#### `shapes.cube(center, sideLength, basesPerEdge, seq?, isRNA?, tagName?)`
+Nucleotides along all 12 edges of a cube. Each edge is a separate strand.
+
+```javascript
+shapes.cube(new THREE.Vector3(0,0,0), 10, 5, null, false, 'cube1');
+colorElements(new THREE.Color(0.2,0.6,1), llmTracker.getByName('cube1'));
+render();
+```
+
+#### `shapes.tetrahedron(center, sideLength, basesPerEdge, seq?, isRNA?, tagName?)`
+6 edges of a regular tetrahedron.
+
+```javascript
+shapes.tetrahedron(new THREE.Vector3(0,0,0), 10, 6, null, false, 'tetra1');
+```
+
+#### `shapes.sphere(center, radius, nBases, seq?, isRNA?, tagName?)`
+Fibonacci-lattice distribution of nucleotides over a sphere surface.
+
+```javascript
+shapes.sphere(new THREE.Vector3(0,0,0), 8, 50, null, false, 'ball');
+colorElements(new THREE.Color(0,1,0.4), llmTracker.getByName('ball'));
+render();
+```
+
+#### `shapes.helix(center, axis, radius, risePerBase, turns, nBases, seq?, isRNA?, tagName?)`
+Custom helical path (placement geometry only — not a biophysically-valid DNA helix).
+
+```javascript
+// 3-turn coil around Y axis, radius 3:
+shapes.helix(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 3, 0.4, 3, 30, null, false, 'coil');
+```
+
+#### `shapes.spiral(center, normal, startRadius, endRadius, turns, nBases, seq?, isRNA?, tagName?)`
+Archimedean spiral growing from `startRadius` to `endRadius`.
+
+```javascript
+shapes.spiral(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 1, 8, 3, 30, null, false, 'spiral1');
+```
+
+#### `shapes.pointCloud(points: THREE.Vector3[], seq?, isRNA?, tagName?)`
+One nucleotide at each arbitrary 3-D point.
+
+```javascript
+var pts = [
+    new THREE.Vector3(0,0,0),  new THREE.Vector3(3,0,0),
+    new THREE.Vector3(1.5,3,0), new THREE.Vector3(0,0,3), new THREE.Vector3(3,0,3)
+];
+shapes.pointCloud(pts, null, false, 'cloud1');
+```
+
+---
+
+### 14.8 Common Shape Patterns
+
+#### Draw a DNA triangle and colour it
+```javascript
+shapes.triangle(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 12, 8, null, false, 'tri');
+colorElements(new THREE.Color(1,0.3,0), llmTracker.getByName('tri'));
+render();
+```
+
+#### Draw a cube with coloured edges
+```javascript
+shapes.cube(new THREE.Vector3(0,0,0), 10, 5, null, false, 'cube1');
+colorElements(new THREE.Color(0,0.5,1), llmTracker.getByName('cube1'));
+render();
+```
+
+#### Draw two triangles stacked (DNA Star of David)
+```javascript
+shapes.triangle(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 12, 8, null, false, 'tri1');
+colorElements(new THREE.Color(0,0.4,1), llmTracker.getByName('tri1'));
+// Second triangle rotated 60° around Y
+shapes.triangle(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 12, 8, null, false, 'tri2');
+api.rotateGroup(llmTracker.getByName('tri2'), new THREE.Vector3(0,1,0), 60);
+colorElements(new THREE.Color(1,0.2,0.2), llmTracker.getByName('tri2'));
+render();
+```
+
+#### Rotate a shape by its PCA primary axis to align it to Y
+```javascript
+var elems = llmTracker.getByName('tri');
+var pca = api.getPCA(elems);
+var q = new THREE.Quaternion().setFromUnitVectors(pca.primaryAxis, new THREE.Vector3(0,1,0));
+rotateElementsByQuaternion(new Set(elems), q, pca.center);
+render();
+```
+
+#### Delete a named shape
+```javascript
+llmTracker.deleteByName('cube1');
+```
+
+#### List all LLM-created objects
+```javascript
+llmTracker.status();
+```
+
+---
+
+## 15. LLM Training Data Background
 
 The `LLM` branch (merged into `master`) added the following **training infrastructure** — not a chat interface, but the data used to understand the viewer API:
 

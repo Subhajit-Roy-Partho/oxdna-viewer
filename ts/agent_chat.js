@@ -111,6 +111,108 @@ rotateElements(elements, axis: THREE.Vector3, angle: number, about: THREE.Vector
 rotateElementsByQuaternion(elements, q: THREE.Quaternion, about?) → void
 
 ════════════════════════════════════════
+api.* — ROTATION & PCA (transform_api.js)
+════════════════════════════════════════
+api.getCOM(elems: BasicElement[])  → THREE.Vector3
+    Centre of mass of an array of elements.
+
+api.rotateGroup(elems, axis: THREE.Vector3, angleDeg: number, pivot?: THREE.Vector3) → void
+    Rotate a group of elements around an axis by angleDeg degrees.
+    pivot defaults to group centre of mass.
+    Example — rotate all monomers 90° around Y:
+      api.rotateGroup(systems[0].getMonomers(), new THREE.Vector3(0,1,0), 90);
+
+api.rotateSingle(elem, axis: THREE.Vector3, angleDeg: number, pivot?: THREE.Vector3) → void
+    Rotate a single element. pivot defaults to the element's own position.
+    Example:
+      api.rotateSingle(api.getElements([3])[0], new THREE.Vector3(1,0,0), 45);
+
+api.rotateCluster(clusterId: number, axis, angleDeg, pivot?) → void
+    Rotate all elements sharing a clusterId.
+    Example: api.rotateCluster(2, new THREE.Vector3(0,1,0), 30);
+
+api.getPCA(elems: BasicElement[]) → { primaryAxis, secondaryAxis, tertiaryAxis, eigenvalues[3], center, spread }
+    Principal Component Analysis. primaryAxis = direction of greatest variance = helix axis for a duplex.
+    Example — find helix axis and align it to Y:
+      var pca = api.getPCA(systems[0].getMonomers());
+      var q = new THREE.Quaternion().setFromUnitVectors(pca.primaryAxis, new THREE.Vector3(0,1,0));
+      rotateElementsByQuaternion(new Set(systems[0].getMonomers()), q, pca.center);
+      render();
+
+════════════════════════════════════════
+llmTracker — LLM nucleotide registry (llm_tracker_api.js)
+════════════════════════════════════════
+llmTracker.tag(elems, name?: string, color?) → clusterId: number
+    Assign a new clusterId to elems and register under name.
+    Example: llmTracker.tag(myElems, 'duplex1', new THREE.Color(0,1,0));
+
+llmTracker.getByName(name: string)    → BasicElement[]
+llmTracker.getByClusterId(id: number) → BasicElement[]
+llmTracker.getAll()                   → BasicElement[]  — all LLM-tagged elements
+llmTracker.list()                     → [{name, clusterId, size}]
+llmTracker.deleteByName(name: string) → void   — deletes elements and unregisters tag
+llmTracker.clear()                    → void   — delete ALL LLM-tagged elements
+llmTracker.status()                   → void   — notify + console.log registry
+llmTracker.selectByName(name: string) → void
+llmTracker.colorByName(name, color)   → void
+llmTracker.lastTag                    : string|null
+llmTracker.lastClusterId              : number
+
+CRITICAL — Always re-acquire by name (never store the BasicElement[] across blocks):
+  var elems = llmTracker.getByName('duplex1');
+
+════════════════════════════════════════
+shapes.* — Shape drawing (shapes_api.js)
+════════════════════════════════════════
+All shapes place DNA (or RNA) nucleotides at geometric positions and auto-tag via llmTracker.
+Spacing: 1 oxDNA unit ≈ 0.85 nm. Use ~1 unit spacing for natural-looking backbones.
+shapes.basesForLength(length, spacing?=1) → number  — recommended base count for a given edge length
+
+shapes.line(p1, p2, nBases, seq?, isRNA?, tagName?)
+    Strand along straight line p1→p2.
+    Example: shapes.line(new THREE.Vector3(0,0,0), new THREE.Vector3(10,0,0), 12, null, false, 'myLine');
+
+shapes.circle(center, normal, radius, nBases, seq?, isRNA?, tagName?)
+    Closed-loop strand around a circle. normal = plane normal (e.g. new THREE.Vector3(0,1,0)).
+    Example: shapes.circle(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 8, 24, null, false, 'ring');
+
+shapes.polygon(nSides, center, normal, radius, basesPerSide, seq?, isRNA?, tagName?)
+    Regular n-gon. Each edge is a separate strand.
+    Example (hexagon): shapes.polygon(6, new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 10, 8, null, false, 'hex');
+
+shapes.triangle(center, normal, sideLength, basesPerSide, seq?, isRNA?, tagName?)
+    Equilateral triangle. sideLength in oxDNA units.
+    Example: shapes.triangle(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 12, 8, null, false, 'tri');
+
+shapes.square(center, normal, sideLength, basesPerSide, seq?, isRNA?, tagName?)
+    Example: shapes.square(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 10, 8, null, false, 'sq');
+
+shapes.cube(center, sideLength, basesPerEdge, seq?, isRNA?, tagName?)
+    Nucleotides along all 12 edges of a cube.
+    Example: shapes.cube(new THREE.Vector3(0,0,0), 10, 5, null, false, 'myCube');
+
+shapes.tetrahedron(center, sideLength, basesPerEdge, seq?, isRNA?, tagName?)
+    6 edges of a tetrahedron.
+    Example: shapes.tetrahedron(new THREE.Vector3(0,0,0), 10, 6, null, false, 'tetra');
+
+shapes.sphere(center, radius, nBases, seq?, isRNA?, tagName?)
+    Fibonacci-lattice sphere surface.
+    Example: shapes.sphere(new THREE.Vector3(0,0,0), 8, 50, null, false, 'ball');
+
+shapes.helix(center, axis, radius, risePerBase, turns, nBases, seq?, isRNA?, tagName?)
+    Custom helical path (distinct from DNA helix geometry).
+    Example: shapes.helix(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 3, 0.4, 3, 30, null, false, 'coil');
+
+shapes.spiral(center, normal, startRadius, endRadius, turns, nBases, seq?, isRNA?, tagName?)
+    Archimedean spiral in a plane.
+
+shapes.pointCloud(points: THREE.Vector3[], seq?, isRNA?, tagName?)
+    One nucleotide at each arbitrary 3-D point.
+    Example:
+      var pts = [new THREE.Vector3(0,0,0), new THREE.Vector3(2,0,0), new THREE.Vector3(1,2,0)];
+      shapes.pointCloud(pts, null, false, 'cloud');
+
+════════════════════════════════════════
 SYSTEM & ELEMENT METHODS
 ════════════════════════════════════════
 system.getMonomers()   → BasicElement[]
@@ -118,10 +220,13 @@ system.strands         : Strand[]
 strand.getMonomers()   → BasicElement[]
 strand.end5 / strand.end3 : BasicElement
 element.getPos()       → THREE.Vector3
+element.getA1()        → THREE.Vector3   (base-pair axis, outward from backbone)
+element.getA3()        → THREE.Vector3   (stacking axis, along helix)
 element.strand         : Strand
 element.pair           : Nucleotide|null
 element.n3 / element.n5 : BasicElement
 element.id             : number
+element.clusterId      : number
 element.isPaired()     → bool
 element.changeType(base: string) → void
 
@@ -339,6 +444,43 @@ colorElements(new THREE.Color(0.1,0.5,0.9), s2m[0].strand.getMonomers());
 colorElements(new THREE.Color(0.1,0.8,0.1), s1m[0].strand.getMonomers());
 colorElements(new THREE.Color(0.9,0.7,0.1), s3m[0].strand.getMonomers());
 notify('Holliday junction created', 'success');
+render();
+
+// Draw a triangle of DNA and colour it red:
+shapes.triangle(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 12, 8, null, false, 'tri');
+colorElements(new THREE.Color(1,0,0), llmTracker.getByName('tri'));
+render();
+
+// Draw a cube and colour it blue:
+shapes.cube(new THREE.Vector3(0,0,0), 10, 5, null, false, 'myCube');
+colorElements(new THREE.Color(0,0.4,1), llmTracker.getByName('myCube'));
+render();
+
+// Draw a DNA circle (ring) in the XZ plane:
+shapes.circle(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 8, 24, null, false, 'ring');
+render();
+
+// Draw a sphere of nucleotides and colour it green:
+shapes.sphere(new THREE.Vector3(0,0,0), 8, 50, null, false, 'ball');
+colorElements(new THREE.Color(0,0.8,0.2), llmTracker.getByName('ball'));
+render();
+
+// Rotate a named group 45° around Y through its own centre of mass:
+var grp = llmTracker.getByName('tri');
+api.rotateGroup(grp, new THREE.Vector3(0,1,0), 45);
+
+// Find the helix axis of system 0 and align it to Y:
+var pca = api.getPCA(systems[0].getMonomers());
+var q = new THREE.Quaternion().setFromUnitVectors(pca.primaryAxis, new THREE.Vector3(0,1,0));
+rotateElementsByQuaternion(new Set(systems[0].getMonomers()), q, pca.center);
+render();
+
+// Tag newly created elements and retrieve them later:
+var newElems = edit.createStrand('ATCGATCG', true);
+llmTracker.tag(newElems.filter(Boolean), 'myDuplex', new THREE.Color(1,0.5,0));
+// In the NEXT code block, retrieve by name — never store elems across blocks:
+var myElems = llmTracker.getByName('myDuplex');
+api.rotateGroup(myElems, new THREE.Vector3(0,1,0), 30);
 render();`;
 
 const OBSERVER_SYSTEM = `You are a code verification agent for oxDNA viewer. Evaluate whether a step executed correctly.
@@ -380,7 +522,7 @@ async function agentApiCall(systemPrompt, userMessage) {
         },
         body: JSON.stringify({
             model: AGENT_CONFIG.model,
-            max_tokens: 2048,
+            max_tokens: 4096,
             temperature: 0.1,
             messages: [
                 { role: 'system', content: systemPrompt },
