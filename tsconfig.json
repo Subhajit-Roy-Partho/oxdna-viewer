@@ -63,8 +63,10 @@
       "./ts/editing/distance.ts",
       "./ts/file_handling/plateDB.ts",
       "./ts/editing/selections.ts",
+      "./ts/editing/structure_editing.ts",
       "./ts/api/plugin_api.ts",
-      "./ts/file_handling/taco.ts"
+      "./ts/file_handling/taco.ts",
+      "./ts/api/structure_factory.ts"
 
     ]
 }

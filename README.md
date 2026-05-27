@@ -42,6 +42,21 @@ Please provide feedback if you encounter any bugs or have suggestions for how to
 
 Edited strands can also be exported for ordering purposes in CSV format by clicking the "Download Sequences" button.
 
+### DNA Nanostructure Factory
+oxView now includes a built-in factory for creating specialized DNA nanotechnology motifs directly in the browser:
+
+| Structure | Description |
+|---|---|
+| **Holliday Junction** | 4-way branched DNA junction (mobile or immobile) |
+| **Three-Way Junction** | 3-arm junction with 120° angles |
+| **Double Crossover (DX) Tile** | Two parallel duplexes connected by two crossovers (antiparallel) |
+| **Single Crossover Tile** | Two parallel duplexes with one crossover |
+| **DX Lattice** | 2D grid of DX tiles |
+| **Tensegrity Triangle** | Triangle motif with 3 duplex edges (for 3D crystallography) |
+| **Staple Connector** | Short duplex for DNA origami staple/scaffold bridging |
+
+Access via the **Nanostructures** button in the Edit ribbon. All structures are created with ideal B-DNA geometry and should be relaxed via oxDNA simulation before production use.
+
 See a tutorial [here](https://www.youtube.com/watch?v=arhmT0LStUQ).
 
 ---
@@ -151,6 +166,13 @@ The edit API can be accessed by typing `edit.<command>(<arguments>)` in the brow
  * `createStrand(<string>)`: Same as extendStrand, except a new strand is created 20 units in front of the camera. Hooked up to the "Create" button in the menu.
  * `interconnectDuplex3p(<Strand1>,<Strand2>,<string>)` : connects 2 strands with a duplex patch using their 3-primes.
  * `interconnectDuplex5p(<Strand1>,<Strand2>,<string>)` : connects 2 strands with a duplex patch using their 5-primes.
+ * `structureFactory.createHollidayJunction(<armLength>, <sequences>)` : creates a 4-way Holliday junction.
+ * `structureFactory.createThreeWayJunction(<armLength>)` : creates a 3-way junction with 120° arms.
+ * `structureFactory.createDXTile(<length>, <crossoverSpacing>)` : creates a double-crossover tile.
+ * `structureFactory.createSingleCrossoverTile(<length>)` : creates a single-crossover tile.
+ * `structureFactory.createDXLattice(<rows>, <cols>, <tileLength>)` : creates a 2D lattice of DX tiles.
+ * `structureFactory.createTensegrityTriangle(<edgeLength>)` : creates a tensegrity triangle motif.
+ * `structureFactory.createStapleConnector(<sequence>)` : creates a short duplex staple connector.
 
 Note that many of these require system, strand or nucleotide objects. The viewer has a simple object hierarchy where systems contain strands which contain elements. The elements are organised as a double-linked lists within the strands and can be iterated: `strand.forEach` or listed: `strand.getMonomers()`. Arrays in JavaScript are 0-indexed, so to access the 2nd nucleotide of the 6th strand in the 1st system, you would type systems[0].strands[5].getMonomers()[1].  There is also an array of all monomers indexed by global id (shown when an element is selected), so the 1000th monomer can be accessed by elements.get(999). If you hover above an element, you will see its system ID, its strand ID and its element ID respectively.
 

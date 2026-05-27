@@ -1338,7 +1338,71 @@ llmTracker.status();
 
 ---
 
-## 15. LLM Training Data Background
+## 15. DNA Structure Factory (`structureFactory.*`)
+
+A dedicated module for creating specialized DNA nanotechnology motifs — Holliday junctions, crossover tiles, three-way junctions, and lattice arrays. Defined in `ts/api/structure_factory.ts` with UI wrappers in `ts/editing/structure_editing.ts`.
+
+### Console API
+
+#### `structureFactory.createHollidayJunction(armLength?, sequences?) → BasicElement[]`
+Creates a 4-way junction with `armLength` bp per arm (default 8). Optional `sequences` array of 4 strings. Arms are arranged in an unstacked (open-X) conformation.
+
+```javascript
+// Default poly-G arms
+structureFactory.createHollidayJunction(10);
+
+// Custom sequences
+structureFactory.createHollidayJunction(8, ['ATCGATCG','GCTAGCTA','TATATATA','CGCGCGCG']);
+```
+
+#### `structureFactory.createThreeWayJunction(armLength?) → BasicElement[]`
+Creates a 3-way junction with 120° arm angles.
+
+```javascript
+structureFactory.createThreeWayJunction(8);
+```
+
+#### `structureFactory.createDXTile(length?, crossoverSpacing?) → BasicElement[]`
+Creates an antiparallel double-crossover tile with two parallel duplexes.
+
+```javascript
+structureFactory.createDXTile(16, 8);
+```
+
+#### `structureFactory.createSingleCrossoverTile(length?) → BasicElement[]`
+Creates two parallel duplexes with a single crossover connection.
+
+```javascript
+structureFactory.createSingleCrossoverTile(16);
+```
+
+#### `structureFactory.createDXLattice(rows?, cols?, tileLength?) → BasicElement[]`
+Creates a 2D grid of DX tiles.
+
+```javascript
+structureFactory.createDXLattice(3, 3, 12);
+```
+
+#### `structureFactory.createTensegrityTriangle(edgeLength?) → BasicElement[]`
+Creates a triangle motif with 3 duplex edges (used for 3D DNA crystallography).
+
+```javascript
+structureFactory.createTensegrityTriangle(10);
+```
+
+#### `structureFactory.createStapleConnector(sequence?) → BasicElement[]`
+Creates a short duplex for use as a DNA origami staple/scaffold connector.
+
+```javascript
+structureFactory.createStapleConnector('GGGGGGGG');
+```
+
+### UI Access
+Open the **Nanostructures** button in the Edit ribbon (or call `view.toggleWindow('structureFactoryWindow')`).
+
+---
+
+## 16. LLM Training Data Background
 
 The `LLM` branch (merged into `master`) added the following **training infrastructure** — not a chat interface, but the data used to understand the viewer API:
 
