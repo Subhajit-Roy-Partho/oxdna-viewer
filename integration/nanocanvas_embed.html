@@ -821,9 +821,10 @@ async function llmSend() {
 
     addLLMMsg('code', code);
 
-    // Execute with proxy objects available
+    // Execute with proxy objects available (AsyncFunction allows await)
     try {
-      const fn = new Function('ncAPI', 'oxAPI', 'integration', 'syncNanoToOx', 'syncOxToNano', code);
+      const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+      const fn = new AsyncFunction('ncAPI', 'oxAPI', 'integration', 'syncNanoToOx', 'syncOxToNano', code);
       const result = await fn(ncAPI, oxAPI, integration, syncNanoToOx, syncOxToNano);
       if (result) addLLMMsg('action', '✓ ' + result);
     } catch (execErr) {
