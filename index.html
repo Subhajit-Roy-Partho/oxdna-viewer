@@ -1594,6 +1594,57 @@
         <script src="./ts/llm_chat.js"></script>
         <!-- Agent AI (multi-agent pipeline) -->
         <script src="./ts/agent_chat.js"></script>
+        <!-- NanoCanvas + Integration postMessage bridge -->
+        <script>
+        // 1. Receive oxDNA file paths from NanoCanvas or integration page
+        window.addEventListener('message', function(e) {
+            if (!e.data) return;
+            var d = e.data;
+
+            // Load oxDNA/oxView files
+            if (d.type === 'load-oxdna-paths') {
+                if (typeof readFilesFromURLPath === 'function' && d.paths && d.paths.length) {
+                    readFilesFromURLPath(d.paths);
+                }
+                return;
+            }
+
+            // Run arbitrary JS injected by integration page
+            if (d.type === 'run_js' && d.code) {
+                try { (new Function(d.code))(); if (typeof render === 'function') render(); } catch(err) { console.error('[oxView bridge]', err); }
+                return;
+            }
+        });
+
+        // 2. Install window.__NC_BRIDGE__ — proxies NanoCanvas calls to parent frame
+        window.__NC_BRIDGE__ = {
+            runMethod: function(method) {
+                var args = Array.prototype.slice.call(arguments, 1);
+                if (window.parent !== window) {
+                    window.parent.postMessage({ type: 'run_api', method: method, args: args }, '*');
+                } else if (typeof notify === 'function') {
+                    notify('NanoCanvas bridge not available (open integration page)', 'warning');
+                }
+            },
+            runCode: function(code) {
+                if (window.parent !== window) {
+                    window.parent.postMessage({ type: 'run_api', code: code }, '*');
+                } else if (typeof notify === 'function') {
+                    notify('NanoCanvas bridge not available (open integration page)', 'warning');
+                }
+            },
+            syncToOxView: function() {
+                if (window.parent !== window) {
+                    window.parent.postMessage({ type: 'integration_sync_request' }, '*');
+                }
+            }
+        };
+
+        // 3. Signal to parent frame that oxView is ready
+        if (window.parent !== window) {
+            window.parent.postMessage({ message: 'oxview_ready' }, '*');
+        }
+        </script>
     </div>
 </body>
 

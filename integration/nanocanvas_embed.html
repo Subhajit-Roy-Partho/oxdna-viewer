@@ -599,7 +599,12 @@ async function syncNanoToOx() {
 }
 
 function loadDesignIntoOxView({ top_url, dat_url, oxview_url }) {
-  const paths = oxview_url ? [oxview_url] : [top_url, dat_url];
+  const fixUrl = u => u ? (u.startsWith('http') ? u : `${BACKEND}${u.startsWith('/') ? '' : '/'}${u}`) : null;
+  const top = fixUrl(top_url);
+  const dat = fixUrl(dat_url);
+  const oxv = fixUrl(oxview_url);
+  const paths = oxv ? [oxv] : [top, dat].filter(Boolean);
+  console.log('[loadDesignIntoOxView] Pushing paths to oxView:', paths);
   oxFrame.contentWindow.postMessage({ type: 'load-oxdna-paths', paths }, '*');
 }
 
