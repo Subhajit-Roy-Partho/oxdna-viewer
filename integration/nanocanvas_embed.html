@@ -76,7 +76,7 @@
     /* ─── Main layout ─── */
     .workspace {
       display: flex;
-      height: calc(100vh - var(--header-h) - var(--controls-h));
+      height: calc(100vh - var(--header-h));
     }
 
     .panel { display: flex; flex-direction: column; overflow: hidden; position: relative; transition: flex .25s ease, opacity .2s ease; }
@@ -225,6 +225,13 @@
   <button class="btn btn-ghost btn-sm" id="btnLayoutSplit" onclick="setLayout('split')">◫ Split</button>
   <button class="btn btn-ghost btn-sm" id="btnLayout2D"    onclick="setLayout('2d')">◧ 2D Only</button>
   <button class="btn btn-ghost btn-sm" id="btnLayout3D"    onclick="setLayout('3d')">◨ 3D Only</button>
+  <div class="top-bar-sep"></div>
+  <span class="controls-label">TOOLS:</span>
+  <button class="btn btn-ghost btn-sm" title="AutoStaple Design" onclick="autostaple()">⚡ AutoStaple</button>
+  <button class="btn btn-ghost btn-sm" title="Fix Weak Regions" onclick="fixWeakRegions()">🔧 Auto-Fix</button>
+  <button class="btn btn-ghost btn-sm" title="Wiggle Test Rigidity" onclick="runWiggleTest()">🔬 Wiggle Test</button>
+  <button class="btn btn-ghost btn-sm" title="Build Star Origami" onclick="buildStar()">⭐ Star</button>
+  <button class="btn btn-ghost btn-sm" title="Build Sphere Cage" onclick="buildSphere()">🔵 Sphere</button>
   <div class="top-bar-spacer"></div>
   <button class="btn btn-ghost"   onclick="openLLMBridge()">🤖 Unified AI</button>
   <button class="btn btn-ghost btn-sm" onclick="location.reload()">↺ Reload</button>
@@ -264,26 +271,6 @@
     <iframe id="oxFrame" title="oxDNA Viewer"
             allow="clipboard-write; clipboard-read"></iframe>
   </div>
-</div>
-
-<!-- ── Bottom controls ── -->
-<div class="controls-bar">
-  <span class="controls-label">SYNC</span>
-  <button class="btn btn-ghost btn-sm" onclick="syncNanoToOx()">2D → 3D</button>
-  <button class="btn btn-ghost btn-sm" onclick="syncOxToNano()">3D → 2D</button>
-  <button class="btn btn-ghost btn-sm" onclick="exportCadnano()">Export cadnano JSON</button>
-  <button class="btn btn-ghost btn-sm" onclick="exportOxDNA()">Export oxDNA</button>
-  <div class="controls-sep"></div>
-  <span class="controls-label">DESIGN</span>
-  <button class="btn btn-ghost btn-sm" onclick="runWiggleTest()">🔬 Wiggle Test</button>
-  <button class="btn btn-ghost btn-sm" onclick="fixWeakRegions()">🔧 Fix Weak Regions</button>
-  <button class="btn btn-ghost btn-sm" onclick="autostaple()">⚡ AutoStaple</button>
-  <div class="controls-sep"></div>
-  <span class="controls-label">SHAPES</span>
-  <button class="btn btn-ghost btn-sm" onclick="buildStar()">⭐ Star</button>
-  <button class="btn btn-ghost btn-sm" onclick="buildSphere()">🔵 Sphere</button>
-  <div class="controls-sep"></div>
-  <span class="controls-label" id="wsStatus">WS: off</span>
 </div>
 
 <!-- ── LLM Bridge Overlay ── -->
