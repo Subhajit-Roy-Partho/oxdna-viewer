@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NanoCanvas + oxDNA-Viewer — Unified Integration</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #12131a;
+      --surface: #1e1f2b;
+      --surface2: #262838;
+      --border: #30324a;
+      --accent: #6c63ff;
+      --accent2: #00d4aa;
+      --text: #e2e4f0;
+      --text-muted: #8890b0;
+      --success: #23d18b;
+      --warning: #f0a500;
+      --error: #f55353;
+      --header-h: 52px;
+      --controls-h: 56px;
+      --resizer-w: 6px;
+    }
+
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+
+    /* ─── Top header ─── */
+    .top-bar {
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 14px; padding: 0 18px;
+      position: relative; z-index: 200;
+    }
+    .logo { font-size: 15px; font-weight: 700; letter-spacing: .3px; white-space: nowrap; }
+    .logo span { color: var(--accent); }
+    .logo em { color: var(--accent2); font-style: normal; }
+    .top-bar-sep { width: 1px; height: 26px; background: var(--border); }
+
+    /* sync status pill */
+    .sync-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 4px 12px; font-size: 12px;
+      cursor: pointer; transition: border-color .2s;
+    }
+    .sync-pill:hover { border-color: var(--accent); }
+    .sync-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-muted); transition: background .3s;
+    }
+    .sync-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .sync-dot.syncing   { background: var(--warning); animation: pulse 1s infinite; }
+    .sync-dot.error     { background: var(--error); }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .top-bar-spacer { flex: 1; }
+
+    /* action buttons */
+    .btn {
+      border: none; border-radius: 6px; cursor: pointer;
+      font-size: 12px; font-weight: 600; padding: 6px 14px;
+      transition: opacity .15s, transform .1s; white-space: nowrap;
+    }
+    .btn:hover { opacity: .85; }
+    .btn:active { transform: scale(.97); }
+    .btn-primary  { background: var(--accent);  color: #fff; }
+    .btn-teal     { background: var(--accent2); color: #0d1a18; }
+    .btn-ghost    { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger   { background: var(--error);   color: #fff; }
+    .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+    /* ─── Main layout ─── */
+    .workspace {
+      display: flex;
+      height: calc(100vh - var(--header-h) - var(--controls-h));
+    }
+
+    .panel { display: flex; flex-direction: column; overflow: hidden; position: relative; transition: flex .25s ease, opacity .2s ease; }
+    .panel-nc  { flex: 0 0 55%; }
+    .panel-ox  { flex: 1; }
+    .panel.collapsed { flex: 0 0 0% !important; opacity: 0; pointer-events: none; overflow: hidden; display: none; }
+
+    .resizer {
+      width: 14px; background: var(--border); cursor: col-resize;
+      transition: background .2s; position: relative; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; z-index: 50;
+    }
+    .resizer:hover, .resizer.dragging { background: var(--accent); }
+
+    .resizer-controls {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex; flex-direction: column; gap: 5px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 4px 2px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.6); z-index: 60;
+    }
+
+    .resizer-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 50%; width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 10px; transition: all .15s;
+    }
+    .resizer-btn:hover {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+      transform: scale(1.18);
+    }
+
+    .panel-header {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 14px;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 12px; font-weight: 600; flex-shrink: 0;
+    }
+    .panel-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 8px;
+      border-radius: 10px; letter-spacing: .5px;
+    }
+    .badge-nc  { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+    .badge-ox  { background: color-mix(in srgb, var(--accent2) 20%, transparent); color: var(--accent2); }
+
+    .panel-status { font-size: 10px; color: var(--text-muted); margin-left: auto; }
+
+    iframe { width: 100%; flex: 1; border: none; display: block; background: #0d0e14; }
+
+    /* ─── Bottom controls bar ─── */
+    .controls-bar {
+      height: var(--controls-h);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px; padding: 0 16px;
+      position: relative; z-index: 100;
+    }
+    .controls-sep { width: 1px; height: 28px; background: var(--border); }
+    .controls-label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+
+    /* ─── LLM bridge chat overlay ─── */
+    .llm-bridge-overlay {
+      position: fixed; bottom: calc(var(--controls-h) + 12px); right: 16px;
+      width: 400px; max-height: 60vh;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.6);
+      display: flex; flex-direction: column;
+      transform: translateY(20px); opacity: 0; pointer-events: none;
+      transition: transform .25s cubic-bezier(.4,0,.2,1), opacity .25s;
+      z-index: 500;
+    }
+    .llm-bridge-overlay.open { transform: translateY(0); opacity: 1; pointer-events: all; }
+
+    .llm-bridge-header {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 11px 11px 0 0; padding: 10px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px; font-weight: 700;
+    }
+    .llm-close-btn { background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; line-height: 22px; text-align: center; }
+
+    .llm-log {
+      flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+      min-height: 120px;
+    }
+    .llm-msg { font-size: 12px; padding: 6px 10px; border-radius: 8px; line-height: 1.5; }
+    .llm-msg.user    { background: color-mix(in srgb, var(--accent) 15%, transparent); align-self: flex-end; max-width: 85%; }
+    .llm-msg.system  { background: var(--surface2); color: var(--text-muted); font-style: italic; }
+    .llm-msg.code    { background: #0d1117; font-family: monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; border-left: 3px solid var(--accent2); }
+    .llm-msg.error   { background: color-mix(in srgb, var(--error) 15%, transparent); color: var(--error); }
+    .llm-msg.action  { background: color-mix(in srgb, var(--accent2) 15%, transparent); color: var(--accent2); }
+
+    .llm-input-row {
+      border-top: 1px solid var(--border); padding: 10px 12px;
+      display: flex; gap: 8px; align-items: center;
+    }
+    .llm-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: 7px 12px; font-size: 12px;
+      resize: none; height: 34px;
+    }
+    .llm-input:focus { outline: none; border-color: var(--accent); }
+    .llm-config-row {
+      border-top: 1px solid var(--border); padding: 8px 12px;
+      display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+    }
+    .llm-config-input {
+      flex: 1; min-width: 0; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 6px; padding: 4px 8px; font-size: 11px;
+    }
+    .config-label { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+
+    /* ─── Toast ─── */
+    .toast {
+      position: fixed; top: calc(var(--header-h) + 10px); left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 18px; font-size: 12px; font-weight: 600;
+      box-shadow: 0 4px 20px rgba(0,0,0,.4); opacity: 0;
+      transition: opacity .2s, transform .2s; z-index: 1000; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error   { border-color: var(--error);   color: var(--error); }
+    .toast.info    { border-color: var(--accent);  color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- ── Top bar ── -->
+<div class="top-bar">
+  <div class="logo">Nano<span>Canvas</span> + ox<em>View</em> Integration</div>
+  <div class="top-bar-sep"></div>
+  <div class="sync-pill" id="syncPill" onclick="toggleLiveSync()">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncLabel">Disconnected</span>
+  </div>
+  <div class="top-bar-sep"></div>
+  <button class="btn btn-primary" onclick="syncNanoToOx()">Push 2D → 3D</button>
+  <button class="btn btn-teal"    onclick="syncOxToNano()">Pull 3D → 2D</button>
+  <div class="top-bar-sep"></div>
+  <span class="controls-label">LAYOUT:</span>
+  <button class="btn btn-ghost btn-sm" id="btnLayoutSplit" onclick="setLayout('split')">◫ Split</button>
+  <button class="btn btn-ghost btn-sm" id="btnLayout2D"    onclick="setLayout('2d')">◧ 2D Only</button>
+  <button class="btn btn-ghost btn-sm" id="btnLayout3D"    onclick="setLayout('3d')">◨ 3D Only</button>
+  <div class="top-bar-spacer"></div>
+  <button class="btn btn-ghost"   onclick="openLLMBridge()">🤖 Unified AI</button>
+  <button class="btn btn-ghost btn-sm" onclick="location.reload()">↺ Reload</button>
+</div>
+
+<!-- ── Workspace ── -->
+<div class="workspace" id="workspace">
+  <!-- NanoCanvas panel -->
+  <div class="panel panel-nc" id="panelNC">
+    <div class="panel-header">
+      <span class="panel-badge badge-nc">NANOCANVAS</span>
+      2D Lattice Design Editor
+      <span class="panel-status" id="ncStatus">Loading…</span>
+      <button class="btn btn-ghost btn-sm" style="padding: 2px 6px; font-size: 10px;" title="Hide 2D Pane (Full 3D View)" onclick="togglePane('left')">◀ Hide 2D</button>
+    </div>
+    <iframe id="ncFrame" title="NanoCanvas Editor"
+            allow="clipboard-write; clipboard-read"></iframe>
+  </div>
+
+  <!-- Resizer with Adjustment Border Controls -->
+  <div class="resizer" id="resizer" title="Drag to resize panes">
+    <div class="resizer-controls" onclick="event.stopPropagation()">
+      <button class="resizer-btn" id="btnHideLeft" title="Hide 2D NanoCanvas (Full 3D oxView)" onclick="togglePane('left')">◀</button>
+      <button class="resizer-btn" id="btnResetSplit" title="Reset 50/50 Split" onclick="resetSplit()">◫</button>
+      <button class="resizer-btn" id="btnHideRight" title="Hide 3D oxView (Full 2D NanoCanvas)" onclick="togglePane('right')">▶</button>
+    </div>
+  </div>
+
+  <!-- oxView panel -->
+  <div class="panel panel-ox" id="panelOX">
+    <div class="panel-header">
+      <span class="panel-badge badge-ox">OXDNA-VIEWER</span>
+      3D Molecular Viewer
+      <span class="panel-status" id="oxStatus">Loading…</span>
+      <button class="btn btn-ghost btn-sm" style="padding: 2px 6px; font-size: 10px;" title="Hide 3D Pane (Full 2D View)" onclick="togglePane('right')">Hide 3D ▶</button>
+    </div>
+    <iframe id="oxFrame" title="oxDNA Viewer"
+            allow="clipboard-write; clipboard-read"></iframe>
+  </div>
+</div>
+
+<!-- ── Bottom controls ── -->
+<div class="controls-bar">
+  <span class="controls-label">SYNC</span>
+  <button class="btn btn-ghost btn-sm" onclick="syncNanoToOx()">2D → 3D</button>
+  <button class="btn btn-ghost btn-sm" onclick="syncOxToNano()">3D → 2D</button>
+  <button class="btn btn-ghost btn-sm" onclick="exportCadnano()">Export cadnano JSON</button>
+  <button class="btn btn-ghost btn-sm" onclick="exportOxDNA()">Export oxDNA</button>
+  <div class="controls-sep"></div>
+  <span class="controls-label">DESIGN</span>
+  <button class="btn btn-ghost btn-sm" onclick="runWiggleTest()">🔬 Wiggle Test</button>
+  <button class="btn btn-ghost btn-sm" onclick="fixWeakRegions()">🔧 Fix Weak Regions</button>
+  <button class="btn btn-ghost btn-sm" onclick="autostaple()">⚡ AutoStaple</button>
+  <div class="controls-sep"></div>
+  <span class="controls-label">SHAPES</span>
+  <button class="btn btn-ghost btn-sm" onclick="buildStar()">⭐ Star</button>
+  <button class="btn btn-ghost btn-sm" onclick="buildSphere()">🔵 Sphere</button>
+  <div class="controls-sep"></div>
+  <span class="controls-label" id="wsStatus">WS: off</span>
+</div>
+
+<!-- ── LLM Bridge Overlay ── -->
+<div class="llm-bridge-overlay" id="llmBridge">
+  <div class="llm-bridge-header">
+    🤖 Unified AI — NanoCanvas + oxView
+    <button class="llm-close-btn" onclick="closeLLMBridge()">×</button>
+  </div>
+  <div class="llm-config-row">
+    <span class="config-label">API URL:</span>
+    <input class="llm-config-input" id="llmUrl" type="text" placeholder="https://api.openai.com/v1" />
+    <span class="config-label">Model:</span>
+    <input class="llm-config-input" id="llmModel" type="text" placeholder="zai-org/glm-5.2:thinking" style="max-width:150px" />
+  </div>
+  <div class="llm-config-row" style="padding-top:0">
+    <span class="config-label">API Key:</span>
+    <input class="llm-config-input" id="llmKey" type="password" placeholder="sk-..." />
+  </div>
+  <div class="llm-log" id="llmLog">
+    <div class="llm-msg system">Unified AI bridges NanoCanvas and oxView. Describe what you want to build or analyze.</div>
+  </div>
+  <div class="llm-input-row">
+    <textarea class="llm-input" id="llmInput" placeholder="e.g. Build a 5-arm star origami and show in 3D…" onkeydown="llmKeydown(event)"></textarea>
+    <button class="btn btn-primary btn-sm" onclick="llmSend()">Send</button>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// State & Dynamic Origins (tailscale/localhost safe)
+// ════════════════════════════════════════════════════════════════════════════
+const host = window.location.hostname || 'localhost';
+const isHttps = window.location.protocol === 'https:';
+
+const NC_ORIGIN  = (isHttps ? 'https://' : 'http://') + host + (host === 'localhost' || host === '127.0.0.1' ? ':5173' : '');
+const OX_ORIGIN  = (isHttps ? 'https://' : 'http://') + host + ':8766';
+const BACKEND    = (isHttps ? 'https://' : 'http://') + host + ':8765';
+const WS_URL     = (isHttps ? 'wss://' : 'ws://') + host + ':8765/ws';
+
+let ws = null;
+let liveSyncEnabled = false;
+let ncReady = false;
+let oxReady = false;
+let llmHistory = [];
+
+const ncFrame  = document.getElementById('ncFrame');
+const oxFrame  = document.getElementById('oxFrame');
+
+// Set iframe src dynamically based on resolved origins
+if (ncFrame) ncFrame.src = NC_ORIGIN;
+if (oxFrame) oxFrame.src = OX_ORIGIN;
+
+// ════════════════════════════════════════════════════════════════════════════
+// Resizer
+// ════════════════════════════════════════════════════════════════════════════
+(function () {
+  const resizer   = document.getElementById('resizer');
+  const workspace = document.getElementById('workspace');
+  const panelNC   = document.getElementById('panelNC');
+  const panelOX   = document.getElementById('panelOX');
+  let dragging = false, startX = 0, startPct = 55;
+
+  resizer.addEventListener('mousedown', e => {
+    dragging = true;
+    startX   = e.clientX;
+    startPct = parseInt(getComputedStyle(panelNC).flexBasis) || 55;
+    resizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    // Prevent iframes from capturing mouse
+    ncFrame.style.pointerEvents = 'none';
+    oxFrame.style.pointerEvents = 'none';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const rect  = workspace.getBoundingClientRect();
+    const pct   = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
+    const clamped = Math.min(80, Math.max(20, pct));
+    panelNC.style.flex = `0 0 ${clamped}%`;
+    panelOX.style.flex = `1`;
+  });
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    resizer.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    ncFrame.style.pointerEvents = '';
+    oxFrame.style.pointerEvents = '';
+
+    // Remember custom split percentage
+    const rect = workspace.getBoundingClientRect();
+    const pct = parseInt(getComputedStyle(panelNC).flexBasis);
+    if (!isNaN(pct) && pct > 10 && pct < 90) lastSplitPct = pct;
+  });
+})();
+
+// ════════════════════════════════════════════════════════════════════════════
+// Pane Toggle & Layout Management
+// ════════════════════════════════════════════════════════════════════════════
+let currentLayout = 'split'; // 'split' | '2d' | '3d'
+let lastSplitPct = 50;
+
+function setLayout(mode) {
+  const panelNC = document.getElementById('panelNC');
+  const panelOX = document.getElementById('panelOX');
+
+  currentLayout = mode;
+
+  if (mode === '2d') {
+    panelNC.classList.remove('collapsed');
+    panelOX.classList.add('collapsed');
+    panelNC.style.flex = '1 1 100%';
+    toast('Switched to Full 2D View (NanoCanvas)', 'info');
+  } else if (mode === '3d') {
+    panelNC.classList.add('collapsed');
+    panelOX.classList.remove('collapsed');
+    panelOX.style.flex = '1 1 100%';
+    toast('Switched to Full 3D View (oxDNA-Viewer)', 'info');
+  } else {
+    panelNC.classList.remove('collapsed');
+    panelOX.classList.remove('collapsed');
+    panelNC.style.flex = `0 0 ${lastSplitPct}%`;
+    panelOX.style.flex = '1';
+    toast('Switched to Side-by-Side Split View', 'info');
+  }
+}
+
+function togglePane(side) {
+  if (side === 'left') {
+    if (currentLayout === '3d') setLayout('split');
+    else setLayout('3d');
+  } else if (side === 'right') {
+    if (currentLayout === '2d') setLayout('split');
+    else setLayout('2d');
+  }
+}
+
+function resetSplit() {
+  lastSplitPct = 50;
+  setLayout('split');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Toast
+// ════════════════════════════════════════════════════════════════════════════
+let toastTimer = null;
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Frame ready detection via postMessage
+// ════════════════════════════════════════════════════════════════════════════
+window.addEventListener('message', e => {
+  const d = e.data;
+  if (!d) return;
+
+  // NanoCanvas signals (custom event from the embedded app)
+  if (d.type === 'nanocanvas_ready' || d.source === 'nanocanvas') {
+    ncReady = true;
+    document.getElementById('ncStatus').textContent = 'Ready';
+  }
+
+  // oxView signals
+  if (d.message === 'oxview_ready') {
+    oxReady = true;
+    document.getElementById('oxStatus').textContent = 'Ready';
+  }
+
+  // WebSocket relay: broadcast from NC backend → oxView
+  if (d.type === 'ws_relay' && d.target === 'oxview') {
+    oxFrame.contentWindow.postMessage(d.payload, '*');
+  }
+
+  // WebSocket relay: broadcast from oxView → NC
+  if (d.type === 'ws_relay' && d.target === 'nanocanvas') {
+    ncFrame.contentWindow.postMessage(d.payload, '*');
+  }
+});
+
+// Poll iframe readiness via load events
+ncFrame.addEventListener('load', () => {
+  ncReady = true;
+  document.getElementById('ncStatus').textContent = 'Ready';
+  // tell NC we're the integration host
+  try { ncFrame.contentWindow.postMessage({ type: 'integration_host', origin: location.origin }, '*'); } catch(e) {}
+});
+oxFrame.addEventListener('load', () => {
+  oxReady = true;
+  document.getElementById('oxStatus').textContent = 'Ready';
+  try { oxFrame.contentWindow.postMessage({ message: 'remove-event' }, '*'); } catch(e) {}
+
+  // Install __NC_BRIDGE__ inside oxView so its LLM can call NanoCanvas
+  // We can't directly assign across origins, but we install a relay function
+  // that uses postMessage back to the integration page which forwards to NanoCanvas.
+  installNCBridge();
+});
+
+function installNCBridge() {
+  // Since oxView is cross-origin we can't directly set window.__NC_BRIDGE__.
+  // Instead we inject a <script> via a blob URL posted as an iframe_drop — 
+  // the cleanest approach is to listen for oxView LLM code execution and
+  // intercept __NC_BRIDGE__ calls via a message relay pattern.
+  //
+  // We post a special init message that oxView will receive and use to set up
+  // the bridge object on its side. oxView's handleMessage already handles unknown
+  // message types gracefully; we use a custom type that the integration JS below
+  // in oxview's index.html (which we can't inject) would handle.
+  //
+  // PRACTICAL APPROACH: We set up window.__NC_BRIDGE__ in the integration page
+  // itself so that when the oxView LLM code runs via new Function() it captures
+  // the integration page's window if the oxView js calls window.parent.__NC_BRIDGE__
+  // However since oxView code calls window.__NC_BRIDGE__, we instead inject
+  // a small JS blob via iframe src message where possible.
+  //
+  // The cleanest web-deployable solution: teach users to use window.parent.__NC_BRIDGE__
+  // and expose it from this integration page.
+  window.__NC_BRIDGE__ = {
+    runMethod: (method, ...args) => {
+      ncFrame.contentWindow.postMessage({ type: 'run_api', method, args }, '*');
+    },
+    runCode: (code) => {
+      ncFrame.contentWindow.postMessage({ type: 'run_api', code }, '*');
+    },
+    syncToOxView: () => syncNanoToOx(),
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// WebSocket to NanoCanvas backend (optional — for persistent session sync)
+// ════════════════════════════════════════════════════════════════════════════
+function connectWS() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
+  try {
+    ws = new WebSocket(WS_URL);
+    ws.onopen = () => {
+      setSyncState('connected');
+      document.getElementById('wsStatus').textContent = 'WS: ●';
+      toast('Connected to NanoCanvas backend', 'success');
+    };
+    ws.onmessage = e => {
+      try {
+        const msg = JSON.parse(e.data);
+        handleWSMessage(msg);
+      } catch {}
+    };
+    ws.onerror = () => setSyncState('error');
+    ws.onclose = () => {
+      setSyncState('disconnected');
+      document.getElementById('wsStatus').textContent = 'WS: off';
+      if (liveSyncEnabled) setTimeout(connectWS, 3000);
+    };
+  } catch (err) {
+    setSyncState('error');
+    toast('WebSocket unavailable — using postMessage only', 'info');
+  }
+}
+
+function handleWSMessage(msg) {
+  if (msg.type === 'state_response') {
+    // Got full state from NC — push to oxView
+    loadDesignIntoOxView(msg.data);
+  } else if (msg.source !== 'integration') {
+    // Relay to oxView
+    oxFrame.contentWindow.postMessage(msg, '*');
+  }
+}
+
+function sendWS(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ ...obj, source: 'integration', timestamp: Date.now() }));
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Sync state indicator
+// ════════════════════════════════════════════════════════════════════════════
+function setSyncState(state) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  dot.className = 'sync-dot ' + (state === 'disconnected' ? '' : state);
+  lbl.textContent = {
+    connected:    'Live Sync ON',
+    disconnected: 'Disconnected',
+    syncing:      'Syncing…',
+    error:        'Error',
+  }[state] || state;
+}
+
+function toggleLiveSync() {
+  if (liveSyncEnabled) {
+    liveSyncEnabled = false;
+    if (ws) { ws.close(); ws = null; }
+    setSyncState('disconnected');
+    toast('Live sync stopped');
+  } else {
+    liveSyncEnabled = true;
+    connectWS();
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Core sync — NanoCanvas → oxView (via backend convert endpoint)
+// ════════════════════════════════════════════════════════════════════════════
+async function syncNanoToOx() {
+  setSyncState('syncing');
+  toast('Sending design to 3D viewer…', 'info');
+  try {
+    // Ask NC frame for its current v2 JSON
+    // We poll the backend's current session state as a simpler mechanism
+    const resp = await fetch(`${BACKEND}/preview/cadnano-to-oxdna`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ design: await getNCDesign(), lattice: 'he' }),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    const { top_url, dat_url, oxview_url } = await resp.json();
+    loadDesignIntoOxView({ top_url, dat_url, oxview_url });
+    setSyncState(liveSyncEnabled ? 'connected' : 'disconnected');
+    toast('3D view updated ✓', 'success');
+  } catch (err) {
+    setSyncState('error');
+    toast('Sync failed: ' + err.message, 'error');
+  }
+}
+
+function loadDesignIntoOxView({ top_url, dat_url, oxview_url }) {
+  const paths = oxview_url ? [oxview_url] : [top_url, dat_url];
+  oxFrame.contentWindow.postMessage({ type: 'load-oxdna-paths', paths }, '*');
+}
+
+// Get the design JSON from NanoCanvas iframe via a shared CADNANO_AI api
+async function getNCDesign() {
+  // Try postMessage roundtrip with 1s timeout; fall back to a blank placeholder
+  return new Promise(resolve => {
+    const ch = new MessageChannel();
+    const timeout = setTimeout(() => {
+      resolve(null);
+    }, 1500);
+    ch.port1.onmessage = e => {
+      clearTimeout(timeout);
+      resolve(e.data?.design || null);
+    };
+    try {
+      ncFrame.contentWindow.postMessage({ type: 'request_design' }, '*', [ch.port2]);
+    } catch {
+      clearTimeout(timeout);
+      resolve(null);
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Sync — oxView → NanoCanvas (request state export from oxView)
+// ════════════════════════════════════════════════════════════════════════════
+function syncOxToNano() {
+  toast('Export from 3D → 2D is available via File > Download in oxView.', 'info');
+  oxFrame.contentWindow.postMessage({ action: 'download' }, '*');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Design actions — delegate to NanoCanvas via postMessage
+// ════════════════════════════════════════════════════════════════════════════
+function callNC(code) {
+  ncFrame.contentWindow.postMessage({ type: 'run_api', code }, '*');
+}
+
+function runWiggleTest() {
+  callNC(`const r = api.evaluateWiggleTest(); return JSON.stringify({score: r.stiffnessScore, rating: r.rigidityRating, aligned: r.alignedNickCount});`);
+  toast('Wiggle Test running in NanoCanvas…', 'info');
+}
+function fixWeakRegions() {
+  callNC(`const r = api.fixWeakRegions(); return JSON.stringify({ok: r.ok});`);
+  toast('Fixing weak regions in NanoCanvas…', 'info');
+}
+function autostaple() {
+  callNC(`const r = api.autoStaple(); return JSON.stringify({ok: r.ok});`);
+  toast('AutoStaple running in NanoCanvas…', 'info');
+}
+function buildStar() {
+  callNC(`const r = api.buildComplexShape({shape:'star', arms:5, radius:40, helicesCount:6}); return JSON.stringify({ok:r.ok});`);
+  setTimeout(syncNanoToOx, 2000);
+  toast('Building star origami…', 'info');
+}
+function buildSphere() {
+  callNC(`const r = api.buildComplexShape({shape:'sphere', helicesCount:6}); return JSON.stringify({ok:r.ok});`);
+  setTimeout(syncNanoToOx, 2000);
+  toast('Building spherical cage…', 'info');
+}
+function exportCadnano() {
+  callNC(`const d = api.exportV2(); const b = new Blob([JSON.stringify(d,null,2)],{type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'design.json'; a.click();`);
+}
+function exportOxDNA() {
+  syncNanoToOx();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// LLM Bridge — Unified AI across both tools
+// ════════════════════════════════════════════════════════════════════════════
+function loadLLMConfig() {
+  const defaultUrl   = 'https://nano-gpt.com/api/v1';
+  const defaultModel = 'zai-org/glm-5.2:thinking';
+  const defaultKey   = 'sk-nano-67e8180b-57dc-444d-9c01-2d0f453d37ce';
+
+  document.getElementById('llmUrl').value   = localStorage.getItem('nc_llm_url')   || defaultUrl;
+  document.getElementById('llmModel').value = localStorage.getItem('nc_llm_model') || defaultModel;
+  document.getElementById('llmKey').value   = localStorage.getItem('nc_llm_key')   || defaultKey;
+}
+
+function saveLLMConfig() {
+  localStorage.setItem('nc_llm_url',   document.getElementById('llmUrl').value.trim());
+  localStorage.setItem('nc_llm_model', document.getElementById('llmModel').value.trim());
+  localStorage.setItem('nc_llm_key',   document.getElementById('llmKey').value.trim());
+}
+
+function openLLMBridge()  { loadLLMConfig(); document.getElementById('llmBridge').classList.add('open'); }
+function closeLLMBridge() { saveLLMConfig(); document.getElementById('llmBridge').classList.remove('open'); }
+
+function llmKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); llmSend(); }
+}
+
+function addLLMMsg(role, content) {
+  const log = document.getElementById('llmLog');
+  const div = document.createElement('div');
+  div.className = 'llm-msg ' + role;
+  div.textContent = content;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  return div;
+}
+
+// System prompt: knows about BOTH NanoCanvas (window.__CADNANO_AI__) and oxView (edit.*, api.*)
+const UNIFIED_SYSTEM = `You are a unified AI assistant controlling two linked tools:
+
+1. **NanoCanvas** (2D CAD editor, left panel) — accessed via \`ncAPI.*\` methods:
+   - ncAPI.reset({latticeType}), ncAPI.addHelix({row,col}), ncAPI.joinScaffoldRows({helixIdA,helixIdB})
+   - ncAPI.autoStaple(), ncAPI.optimizeStapleBreaks({minLength:15, maxLength:50, minDomainLength:7})
+   - ncAPI.evaluateWiggleTest(), ncAPI.fixWeakRegions()
+   - ncAPI.createSketchNode({x,y,z}), ncAPI.createSketchEdge({nodeA,nodeB,helixCount})
+   - ncAPI.routeScaffoldMST({mode:'heuristic', ensureBranchCoverage:true})
+   - ncAPI.buildComplexShape({shape:'star'|'sphere', arms?, radius?, helicesCount?})
+   - ncAPI.pushToOxView()  → sends current design to 3D viewer
+
+2. **oxDNA-Viewer** (3D molecular viewer, right panel) — accessed via \`oxAPI.*\` methods:
+   - oxAPI.runCode(jsString)  → runs arbitrary JS in oxView context (use edit.*, api.*, render())
+   - oxAPI.selectAll(), oxAPI.clearScene()
+   - oxAPI.setBackgroundColor('#000000')
+   - Any oxView JS: edit.createStrand(seq, true), translateElements(set, vec), api.setBackgroundColor(c), etc.
+
+3. **Sync actions** via \`integration.*\`:
+   - integration.syncNanoToOx()  → convert NC design → oxDNA and load in 3D viewer
+   - integration.syncOxToNano()  → export 3D state for download
+
+RESPONSE FORMAT: Reply with ONLY executable JS — no markdown fences, no explanation.
+The code runs in the integration page context with \`ncAPI\`, \`oxAPI\`, \`integration\` available.
+
+EXAMPLE:
+// Build a 90nm rigid rod in NanoCanvas and show it in 3D
+ncAPI.reset({latticeType: 'honeycomb'});
+for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) ncAPI.addHelix({row: r, col: c});
+ncAPI.autoStaple();
+ncAPI.fixWeakRegions();
+await integration.syncNanoToOx();
+oxAPI.runCode("api.setBackgroundColor('#0a0a1a'); render();");
+return 'Built 24-helix honeycomb bundle and loaded into 3D viewer';
+`;
+
+// Proxy objects the LLM code can call
+const ncAPI = new Proxy({}, {
+  get(_, method) {
+    return (...args) => {
+      // Fire into NanoCanvas iframe
+      ncFrame.contentWindow.postMessage({ type: 'run_api', method, args }, '*');
+      return Promise.resolve({ ok: true });
+    };
+  }
+});
+const oxAPI = {
+  runCode: (code) => {
+    oxFrame.contentWindow.postMessage({ message: 'drop', files: [] }, '*');
+    // Use eval path via known message type
+    oxFrame.contentWindow.postMessage({ type: 'run_js', code }, '*');
+  },
+  setBackgroundColor: (c) => oxAPI.runCode(`api.setBackgroundColor('${c}'); render();`),
+  clearScene: () => oxAPI.runCode(`systems.forEach(s => { s.strands.forEach(st => { var elems = []; st.forEach(e => elems.push(e)); edit.deleteElements(elems); }); }); render();`),
+};
+const integration = {
+  syncNanoToOx: () => syncNanoToOx(),
+  syncOxToNano: () => syncOxToNano(),
+};
+
+async function llmSend() {
+  const input = document.getElementById('llmInput');
+  const query = input.value.trim();
+  if (!query) return;
+
+  const url   = document.getElementById('llmUrl').value.trim();
+  const model = document.getElementById('llmModel').value.trim();
+  const key   = document.getElementById('llmKey').value.trim();
+
+  if (!url || !model || !key) {
+    addLLMMsg('error', '⚠ Please fill in API URL, Model, and API Key in the config above.');
+    return;
+  }
+
+  saveLLMConfig();
+  input.value = '';
+  addLLMMsg('user', query);
+  llmHistory.push({ role: 'user', content: query });
+
+  const thinking = addLLMMsg('system', '⏳ Thinking…');
+
+  try {
+    const resp = await fetch(url.replace(/\/?$/, '/chat/completions'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: UNIFIED_SYSTEM },
+          ...llmHistory
+        ],
+        temperature: 0.1,
+        max_tokens: 2000,
+      })
+    });
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+    const data = await resp.json();
+    const raw  = data.choices[0].message.content || '';
+
+    llmHistory.push({ role: 'assistant', content: raw });
+    thinking.remove();
+
+    // Strip fences if present
+    let code = raw.trim();
+    const fence = code.match(/```(?:javascript|js)?\n?([\s\S]*?)```/);
+    if (fence) code = fence[1].trim();
+
+    addLLMMsg('code', code);
+
+    // Execute with proxy objects available
+    try {
+      const fn = new Function('ncAPI', 'oxAPI', 'integration', 'syncNanoToOx', 'syncOxToNano', code);
+      const result = await fn(ncAPI, oxAPI, integration, syncNanoToOx, syncOxToNano);
+      if (result) addLLMMsg('action', '✓ ' + result);
+    } catch (execErr) {
+      addLLMMsg('error', 'Execution error: ' + execErr.message);
+    }
+
+  } catch (err) {
+    thinking.remove();
+    addLLMMsg('error', 'Error: ' + err.message);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Message router — handles messages from BOTH iframes
+// ════════════════════════════════════════════════════════════════════════════
+window.addEventListener('message', e => {
+  if (!e.data) return;
+  const d = e.data;
+
+  // NC API result — log it
+  if (d.type === 'api_result') {
+    console.log('[NC API result]', d.result || d.error);
+    return;
+  }
+
+  // oxView bridge: forward run_api messages to NanoCanvas
+  if (d.type === 'run_api' && e.source === oxFrame.contentWindow) {
+    ncFrame.contentWindow.postMessage(d, '*');
+    return;
+  }
+
+  // oxView bridge: __NC_BRIDGE__.syncToOxView() triggered
+  if (d.type === 'integration_sync_request') {
+    syncNanoToOx();
+    return;
+  }
+
+  // NC design export response
+  if (d.type === 'design_response') {
+    console.log('[NC design]', d.design);
+    return;
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Init
+// ════════════════════════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  loadLLMConfig();
+  toast('Integration page ready — start NanoCanvas on :5173 and oxView on :8766', 'info');
+});
+</script>
+</body>
+</html>

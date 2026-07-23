@@ -4,9 +4,9 @@
  */
 
 const LLM_CONFIG = {
-    baseURL: (window.OXVIEW_CONFIG || {}).llmBaseURL || "https://floodgate.g.apple.com/api/openai/v1",
-    model: (window.OXVIEW_CONFIG || {}).llmModel || "aws:anthropic.claude-3-5-haiku-20241022-v1:0",
-    apiKey: (window.OXVIEW_CONFIG || {}).llmApiKey || ""
+    baseURL: (window.OXVIEW_CONFIG || {}).llmBaseURL || "https://nano-gpt.com/api/v1",
+    model: (window.OXVIEW_CONFIG || {}).llmModel || "zai-org/glm-5.2:thinking",
+    apiKey: (window.OXVIEW_CONFIG || {}).llmApiKey || "sk-nano-67e8180b-57dc-444d-9c01-2d0f453d37ce"
 };
 
 const SYSTEM_PROMPT = `You are an AI assistant for oxDNA viewer (oxView), a 3D molecular visualization and editing tool for DNA/RNA nanostructures.
@@ -497,7 +497,43 @@ render();
 
 // Show notification:
 notify('Hello from AI!', 'success');
+
+════════════════════════════════════════
+NANOCANVAS INTEGRATION (when embedded in integration page)
+════════════════════════════════════════
+If the user asks to design a structure, build helices, create staples, run wiggle test,
+or do anything requiring 2D CAD design, delegate to NanoCanvas via the bridge:
+
+window.__NC_BRIDGE__ functions (available when embedded in integration/nanocanvas_embed.html):
+  window.__NC_BRIDGE__.runMethod(method, ...args)   → calls api[method](...args) in NanoCanvas
+  window.__NC_BRIDGE__.runCode(jsCode)               → runs arbitrary api.* code in NanoCanvas
+  window.__NC_BRIDGE__.syncToOxView()                → converts current NC design → oxDNA → loads here
+
+Examples of delegating to NanoCanvas:
+  // Build a star origami in NanoCanvas and load it here:
+  if (window.__NC_BRIDGE__) {
+    window.__NC_BRIDGE__.runMethod('buildComplexShape', {shape:'star', arms:5});
+    setTimeout(() => window.__NC_BRIDGE__.syncToOxView(), 2000);
+  }
+  render();
+
+  // Run wiggle test and show result:
+  if (window.__NC_BRIDGE__) {
+    window.__NC_BRIDGE__.runCode('const r = api.evaluateWiggleTest(); notify("Stiffness: " + r.stiffnessScore + "/100 — " + r.rigidityRating, "info"); return r;');
+  }
+  render();
+
+  // Fix weak regions in NanoCanvas then sync:
+  if (window.__NC_BRIDGE__) {
+    window.__NC_BRIDGE__.runMethod('fixWeakRegions');
+    setTimeout(() => window.__NC_BRIDGE__.syncToOxView(), 1500);
+  }
+  render();
+
+NOTE: If window.__NC_BRIDGE__ is undefined, the viewer is running standalone (not embedded).
+In that case, inform the user they need to open the integration page at integration/nanocanvas_embed.html.
 `;
+
 
 const llmChat = {
     isOpen: false,

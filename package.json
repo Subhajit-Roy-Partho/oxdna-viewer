@@ -10,7 +10,9 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "echo \"No linting configured\"",
-    "load": "tsc -w & reload -b"
+    "load": "tsc -w & reload -b",
+    "serve": "npx -y serve . -p 8766 --cors",
+    "dev": "npx -y serve . -p 8766 --cors"
   },
   "repository": {
     "type": "git",
