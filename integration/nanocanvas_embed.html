@@ -718,7 +718,7 @@ const UNIFIED_SYSTEM = `You are a unified AI assistant controlling two linked to
    - ncAPI.evaluateWiggleTest(), ncAPI.fixWeakRegions()
    - ncAPI.createSketchNode({x,y,z}), ncAPI.createSketchEdge({nodeA,nodeB,helixCount})
    - ncAPI.routeScaffoldMST({mode:'heuristic', ensureBranchCoverage:true})
-   - ncAPI.buildComplexShape({shape:'star'|'sphere', arms?, radius?, helicesCount?})
+   - ncAPI.buildComplexShape({shape:'star'|'sphere'|'triangle'|'polygon'|'rectangle', arms?, radius?, helicesCount?, sides?})
    - ncAPI.pushToOxView()  → sends current design to 3D viewer
 
 2. **oxDNA-Viewer** (3D molecular viewer, right panel) — accessed via \`oxAPI.*\` methods:
