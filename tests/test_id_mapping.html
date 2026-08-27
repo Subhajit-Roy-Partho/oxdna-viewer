@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Mapping System Tests</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #4ec9b0;
+            border-bottom: 2px solid #4ec9b0;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #dcdcaa;
+            margin-top: 30px;
+        }
+
+        .test-section {
+            background: #252526;
+            border-left: 4px solid #007acc;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .test-result.pass {
+            background: #1e4620;
+            border-left: 4px solid #4ec9b0;
+        }
+
+        .test-result.fail {
+            background: #4e1e20;
+            border-left: 4px solid #f48771;
+        }
+
+        .test-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .test-details {
+            font-size: 12px;
+            color: #858585;
+            margin-left: 20px;
+        }
+
+        .summary {
+            background: #2d2d30;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .stat-value.pass { color: #4ec9b0; }
+        .stat-value.fail { color: #f48771; }
+        .stat-value.total { color: #dcdcaa; }
+
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 5px;
+        }
+
+        button:hover {
+            background: #0098ff;
+        }
+
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 ID Mapping System Test Suite</h1>
+
+    <div>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="testResults"></div>
+
+    <div class="summary" id="summary" style="display: none;">
+        <h2>Test Summary</h2>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value total" id="totalTests">0</div>
+                <div>Total Tests</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value pass" id="passedTests">0</div>
+                <div>Passed</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value fail" id="failedTests">0</div>
+                <div>Failed</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../dist/ts/api/id_mapping.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // Mock THREE.js Vector3 if not loaded
+        if (typeof THREE === 'undefined') {
+            window.THREE = {
+                Vector3: class Vector3 {
+                    constructor(x = 0, y = 0, z = 0) {
+                        this.x = x;
+                        this.y = y;
+                        this.z = z;
+                    }
+                }
+            };
+        }
+
+        // Test results storage
+        let testResults = [];
+
+        // Test framework
+        class TestRunner {
+            constructor() {
+                this.tests = [];
+                this.results = [];
+            }
+
+            test(name, fn) {
+                this.tests.push({ name, fn });
+            }
+
+            async run() {
+                this.results = [];
+                for (const test of this.tests) {
+                    try {
+                        await test.fn();
+                        this.results.push({ name: test.name, passed: true });
+                        this.renderTestResult(test.name, true);
+                    } catch (error) {
+                        this.results.push({ name: test.name, passed: false, error: error.message });
+                        this.renderTestResult(test.name, false, error.message);
+                    }
+                }
+                this.renderSummary();
+            }
+
+            renderTestResult(name, passed, error = null) {
+                const resultsDiv = document.getElementById('testResults');
+                const resultDiv = document.createElement('div');
+                resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'test-name';
+                nameDiv.textContent = `${passed ? '✓' : '✗'} ${name}`;
+
+                resultDiv.appendChild(nameDiv);
+
+                if (error) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'test-details';
+                    errorDiv.textContent = `Error: ${error}`;
+                    resultDiv.appendChild(errorDiv);
+                }
+
+                resultsDiv.appendChild(resultDiv);
+            }
+
+            renderSummary() {
+                const summary = document.getElementById('summary');
+                summary.style.display = 'block';
+
+                const total = this.results.length;
+                const passed = this.results.filter(r => r.passed).length;
+                const failed = total - passed;
+
+                document.getElementById('totalTests').textContent = total;
+                document.getElementById('passedTests').textContent = passed;
+                document.getElementById('failedTests').textContent = failed;
+            }
+        }
+
+        // Create test runner
+        const runner = new TestRunner();
+
+        // Helper function for assertions
+        function assert(condition, message) {
+            if (!condition) {
+                throw new Error(message || 'Assertion failed');
+            }
+        }
+
+        function assertEquals(actual, expected, message) {
+            if (actual !== expected) {
+                throw new Error(message || `Expected ${expected}, got ${actual}`);
+            }
+        }
+
+        function assertNotNull(value, message) {
+            if (value === null || value === undefined) {
+                throw new Error(message || 'Value is null or undefined');
+            }
+        }
+
+        // Define tests
+        runner.test('IDMapper construction', () => {
+            const mapper = new IDMapper('honeycomb');
+            assertNotNull(mapper, 'Mapper should be created');
+        });
+
+        runner.test('Lattice to position conversion (honeycomb)', () => {
+            const mapper = new IDMapper('honeycomb');
+            const pos = mapper.latticeToPosition(0, 0);
+            assertNotNull(pos, 'Position should not be null');
+            assertEquals(pos.x, 0, 'X coordinate should be 0');
+            assertEquals(pos.y, 0, 'Y coordinate should be 0');
+            assertEquals(pos.z, 0, 'Z coordinate should be 0');
+        });
+
+        runner.test('Lattice to position conversion (square)', () => {
+            const mapper = new IDMapper('square');
+            const pos = mapper.latticeToPosition(2, 3);
+            assertEquals(pos.x, 3 * 2.5, 'X should be col * spacing');
+            assertEquals(pos.y, 2 * 2.5, 'Y should be row * spacing');
+        });
+
+        runner.test('Position to lattice conversion (round-trip)', () => {
+            const mapper = new IDMapper('honeycomb');
+            const originalRow = 5;
+            const originalCol = 7;
+
+            const pos = mapper.latticeToPosition(originalRow, originalCol);
+            const lattice = mapper.positionToLattice(pos);
+
+            assertEquals(lattice.row, originalRow, 'Row should match');
+            assertEquals(lattice.col, originalCol, 'Col should match');
+            assertEquals(lattice.lattice_type, 'honeycomb', 'Lattice type should match');
+        });
+
+        runner.test('Add mapping entry', () => {
+            const mapper = new IDMapper('honeycomb');
+            const pos = new THREE.Vector3(1, 2, 3);
+
+            mapper.addMapping(100, 1, 0, 5, 1, 10, 2, 3, pos);
+
+            const ncCoord = mapper.getNCCoord(100);
+            assertNotNull(ncCoord, 'NC coordinate should exist');
+            assertEquals(ncCoord.helix_id, 5, 'Helix ID should match');
+            assertEquals(ncCoord.direction, 1, 'Direction should match');
+            assertEquals(ncCoord.index, 10, 'Index should match');
+        });
+
+        runner.test('Bidirectional mapping lookup', () => {
+            const mapper = new IDMapper('honeycomb');
+            const pos = new THREE.Vector3(1, 2, 3);
+
+            mapper.addMapping(200, 2, 0, 10, -1, 15, 4, 5, pos);
+
+            // oxView → NanoCanvas
+            const ncCoord = mapper.getNCCoord(200);
+            assertEquals(ncCoord.helix_id, 10);
+
+            // NanoCanvas → oxView
+            const oxId = mapper.getOxViewId(10, -1, 15);
+            assertNotNull(oxId);
+            assertEquals(oxId.element_id, 200);
+            assertEquals(oxId.strand_id, 2);
+        });
+
+        runner.test('Helix-strand mappings', () => {
+            const mapper = new IDMapper('honeycomb');
+            const pos = new THREE.Vector3(0, 0, 0);
+
+            mapper.addMapping(301, 3, 0, 20, 1, 0, 0, 0, pos);
+            mapper.addMapping(302, 4, 0, 20, -1, 0, 0, 0, pos);
+
+            const strands = mapper.getStrandsForHelix(20);
+            assert(strands.includes(3), 'Should include strand 3');
+            assert(strands.includes(4), 'Should include strand 4');
+
+            const helixId = mapper.getHelixForStrand(3);
+            assertEquals(helixId, 20, 'Strand 3 should map to helix 20');
+        });
+
+        runner.test('Lattice-helix mappings', () => {
+            const mapper = new IDMapper('honeycomb');
+            const pos = new THREE.Vector3(0, 0, 0);
+
+            mapper.addMapping(400, 5, 0, 30, 1, 0, 8, 9, pos);
+
+            const helixId = mapper.getHelixAtLattice(8, 9);
+            assertEquals(helixId, 30, 'Helix at (8,9) should be 30');
+
+            const lattice = mapper.getLatticeForHelix(30);
+            assertNotNull(lattice);
+            assertEquals(lattice.row, 8);
+            assertEquals(lattice.col, 9);
+        });
+
+        runner.test('Remove mapping', () => {
+            const mapper = new IDMapper('honeycomb');
+            const pos = new THREE.Vector3(0, 0, 0);
+
+            mapper.addMapping(500, 6, 0, 40, 1, 0, 0, 0, pos);
+
+            let ncCoord = mapper.getNCCoord(500);
+            assertNotNull(ncCoord);
+
+            mapper.removeMapping(500);
+
+            ncCoord = mapper.getNCCoord(500);
+            assert(ncCoord === null, 'Mapping should be removed');
+        });
+
+        runner.test('Helix index to position', () => {
+            const mapper = new IDMapper('honeycomb');
+            const pos = mapper.helixIndexToPosition(0, 0, 10);
+
+            assertEquals(pos.x, 0);
+            assertEquals(pos.y, 0);
+            assertEquals(pos.z, 10 * 0.34, 'Z should be index * nm_per_base');
+        });
+
+        runner.test('Export and import mappings', () => {
+            const mapper1 = new IDMapper('honeycomb');
+            const pos = new THREE.Vector3(1, 2, 3);
+
+            mapper1.addMapping(600, 7, 0, 50, 1, 5, 1, 2, pos);
+
+            const json = mapper1.exportMappings();
+            assertNotNull(json);
+
+            const mapper2 = new IDMapper('square');
+            mapper2.importMappings(json);
+
+            assertEquals(mapper2.latticeType, 'honeycomb', 'Lattice type should be imported');
+
+            const ncCoord = mapper2.getNCCoord(600);
+            assertNotNull(ncCoord);
+            assertEquals(ncCoord.helix_id, 50);
+        });
+
+        runner.test('Get statistics', () => {
+            const mapper = new IDMapper('honeycomb');
+            const pos = new THREE.Vector3(0, 0, 0);
+
+            mapper.addMapping(700, 8, 0, 60, 1, 0, 0, 0, pos);
+            mapper.addMapping(701, 8, 0, 60, 1, 1, 0, 0, pos);
+            mapper.addMapping(702, 9, 0, 61, -1, 0, 0, 1, pos);
+
+            const stats = mapper.getStats();
+            assertEquals(stats.total_mappings, 3);
+            assertEquals(stats.unique_helices, 2);
+            assertEquals(stats.lattice_type, 'honeycomb');
+        });
+
+        runner.test('Clear all mappings', () => {
+            const mapper = new IDMapper('honeycomb');
+            const pos = new THREE.Vector3(0, 0, 0);
+
+            mapper.addMapping(800, 10, 0, 70, 1, 0, 0, 0, pos);
+            mapper.addMapping(801, 10, 0, 70, 1, 1, 0, 0, pos);
+
+            mapper.clear();
+
+            const stats = mapper.getStats();
+            assertEquals(stats.total_mappings, 0);
+
+            const ncCoord = mapper.getNCCoord(800);
+            assert(ncCoord === null, 'All mappings should be cleared');
+        });
+
+        // Global functions
+        function runAllTests() {
+            clearResults();
+            runner.run();
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('summary').style.display = 'none';
+            runner.results = [];
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            console.log('Test suite loaded. Click "Run All Tests" to begin.');
+        });
+    </script>
+</body>
+</html>
