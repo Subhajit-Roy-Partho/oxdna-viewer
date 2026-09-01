@@ -5,9 +5,9 @@
 
 ## Current Status
 
-**Last Updated:** 2026-07-23
-**Last Session Summary:** _Made oxdna-viewer fully web-deployable (`npm run serve` / `web-serve.sh` on port 8766). Integrated with NanoCanvas via non-root Tailscale userspace proxy daemon (`~/.local/bin/tailscaled`) forwarding `https://nanocanvas-server-1.rohu-hexatonic.ts.net:8766` and port 8765 WebSocket/REST endpoints. Built unified `integration/nanocanvas_embed.html` with dynamic origin resolution, postMessage bridge, LLM cross-tool awareness, and automated 3D shape synthesis._
-**Resume From:** _Ready for local and remote browser access — open `http://localhost:8766/integration/nanocanvas_embed.html` or `https://nanocanvas-server-1.rohu-hexatonic.ts.net:8766/integration/nanocanvas_embed.html`._
+**Last Updated:** 2026-09-01
+**Last Session Summary:** _Fixed the in-browser AI (LLM Chat 💬 + Agent Chat 🤖) which was erroring on shape requests: dead nano-gpt key in `web-config.js` + `ts/config.js` template **replacing** `OXVIEW_CONFIG` instead of merging (wiped model/key, left Agent Chat pointed at Apple floodgate). Now: keys only in gitignored `ts/config.js`, `web-config.js`/`config.example.js` carry none and use `Object.assign` merge, default model `z-ai/glm-5.3:thinking`, agent baseURL → nano-gpt, `max_tokens` 16000, empty-`content`→`reasoning` salvage. Added `shapes.star()`. New `ts/api/spatial_api.js` (`window.space`): live scene digest injected into both AI prompts, object-addressed transforms by name (`moveTo/moveBy/rotate/align/place/gap/overlaps`), reference grid + XYZ axes (`space.grid()`), inline snapshot images in chat (`space.show()`). Both AI prompts now document `shapes.*` + `space.*`. All changes mirrored to the NanoCanvas vendored copy._
+**Resume From:** _AI works end-to-end (Playwright-verified: "draw a 3d star and show the output" → `shapes.star(...); space.show()` runs clean, image rendered). Open `http://localhost:8766/` (grid appears when a chat panel opens) or the embed at `/integration/nanocanvas_embed.html`. `ts/config.js` holds the live key and is gitignored — recreate it from `ts/config.example.js` on a fresh clone._
 
 ---
 
@@ -36,6 +36,58 @@
 ---
 
 ## Session Log
+
+### 2026-09-01 — AI fix + spatial API
+
+**Problem reported:** "draw a 3d star and show the final output" in the AI chat
+returned an error. (The chat persists no logs — only browser console + the chat
+DOM — so the failure was reproduced by testing the API directly.)
+
+**Root causes**
+1. `web-config.js` shipped nano-gpt key `sk-nano-67e8180b…` → now `401`.
+2. `index.html` loads `web-config.js` then `ts/config.js`; the committed
+   `ts/config.js` was the unfilled template and did `window.OXVIEW_CONFIG = {…}`
+   — **replacing** the object: killed `llmApiKey`/`llmModel`, and Agent Chat fell
+   back to `floodgate.g.apple.com` (Apple-internal) + empty key.
+3. No `shapes.star()` — `shapes_api.js` had a `// SPIRAL / STAR` header only.
+4. `llm_chat.js` `SYSTEM_PROMPT` never mentioned `shapes.*` / `llmTracker.*`
+   (only `agent_chat.js` did) → 💬 chat hand-rolled from `edit.createStrand`.
+5. `glm-5.2:thinking` puts the answer in `message.reasoning`, leaving `content`
+   empty/truncated.
+
+**Changes**
+- **Config**: `web-config.js` + `ts/config.example.js` — no keys, `Object.assign`
+  merge, `llmModel`/`agentModel` = `z-ai/glm-5.3:thinking`, `agentBaseURL` =
+  nano-gpt. Live key lives ONLY in gitignored `ts/config.js` (merge form).
+- **`ts/llm_chat.js` / `ts/agent_chat.js`**: config as getters (not frozen at
+  load), missing-key guard, `max_tokens` → 16000, empty-`content`→`reasoning`
+  salvage, `<think>` strip, `finish_reason:'length'` surfaced. `window.llmChat`
+  / `window.agentChat` exported. Grid auto-on when a panel opens. `llm_chat.js`
+  renders `space` snapshots inline and shows the scene digest after each run.
+- **`ts/api/shapes_api.js`**: new `shapes.star(center, normal, outerR, innerR,
+  numPoints, basesPerEdge, seq?, isRNA?, tag?)`.
+- **`ts/api/spatial_api.js`** (new, `window.space`): `digest()`/`describe()`
+  (centroid, bbox, size, PCA axis, colour per `llmTracker` tag / selection /
+  untagged system), injected as a live `CURRENT SCENE` block into both AI
+  prompts every turn; `get/centroid/bbox/size`, `moveTo/moveBy`,
+  `rotate(name,axis,deg,pivot)`, `align(name,whichAxis,worldDir)`,
+  `place(name,{near,dir,gap})`, `distance/gap/overlaps`, `snapshotImage()`,
+  `show()`, `grid(on?)`/`toggleGrid()` (GridHelper + AxesHelper + sprite labels).
+  All addressed by **name** so they survive the per-block `new Function()` scope
+  reset. Loaded as a classic script after `shapes_api.js` (both `index.html`).
+- **`integration/nanocanvas_embed.html`**: removed hardcoded key; Unified-AI
+  config borrows key/model from the same-origin oxView iframe's `OXVIEW_CONFIG`.
+- Both AI `SYSTEM_PROMPT`s now document `shapes.*` and `space.*` with examples.
+
+**Verified** (Playwright, `:8766` and NanoCanvas `:5173/oxview/`): `window.space`
++ 18 methods, model = `z-ai/glm-5.3:thinking`, key present, grid toggles,
+`shapes.star`/`place`/`gap`/`overlaps`/`snapshotImage` work, 0 JS errors.
+End-to-end: the reported prompt now yields `shapes.star(...); space.show();`,
+runs clean, star (60 nt) created, snapshot shown in chat.
+
+**Note:** `ts/config.js` is gitignored — recreate from `ts/config.example.js`
+(add your key) on a fresh clone. All edits mirrored to the NanoCanvas vendored
+copy `cadnano-app/public/oxview/`.
 
 ### 2026-06-12
 

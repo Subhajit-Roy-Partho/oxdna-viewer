@@ -14,10 +14,13 @@
  */
 
 const AGENT_CONFIG = {
-    baseURL: (window.OXVIEW_CONFIG || {}).agentBaseURL || "https://floodgate.g.apple.com/api/openai/v1",
-    model: (window.OXVIEW_CONFIG || {}).agentModel || "aws:anthropic.claude-3-5-haiku-20241022-v1:0",
+    get baseURL() { return (window.OXVIEW_CONFIG || {}).agentBaseURL || (window.OXVIEW_CONFIG || {}).llmBaseURL || "https://nano-gpt.com/api/v1"; },
+    get model()   { return (window.OXVIEW_CONFIG || {}).agentModel   || (window.OXVIEW_CONFIG || {}).llmModel   || "z-ai/glm-5.3:thinking"; },
     get apiKey() {
-        return localStorage.getItem('oxview_agent_api_key') || (window.OXVIEW_CONFIG || {}).llmApiKey || '';
+        return localStorage.getItem('oxview_agent_api_key')
+            || (window.OXVIEW_CONFIG || {}).agentApiKey
+            || (window.OXVIEW_CONFIG || {}).llmApiKey
+            || '';
     }
 };
 
@@ -187,6 +190,10 @@ shapes.triangle(center, normal, sideLength, basesPerSide, seq?, isRNA?, tagName?
 shapes.square(center, normal, sideLength, basesPerSide, seq?, isRNA?, tagName?)
     Example: shapes.square(new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0), 10, 8, null, false, 'sq');
 
+shapes.star(center, normal, outerRadius, innerRadius, numPoints, basesPerEdge, seq?, isRNA?, tagName?)
+    N-pointed star outline (zig-zag between outer and inner vertices). 2*numPoints edges.
+    Example (5-point star in XY plane): shapes.star(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1), 10, 4, 5, 6, null, false, 'star1');
+
 shapes.cube(center, sideLength, basesPerEdge, seq?, isRNA?, tagName?)
     Nucleotides along all 12 edges of a cube.
     Example: shapes.cube(new THREE.Vector3(0,0,0), 10, 5, null, false, 'myCube');
@@ -211,6 +218,32 @@ shapes.pointCloud(points: THREE.Vector3[], seq?, isRNA?, tagName?)
     Example:
       var pts = [new THREE.Vector3(0,0,0), new THREE.Vector3(2,0,0), new THREE.Vector3(1,2,0)];
       shapes.pointCloud(pts, null, false, 'cloud');
+
+════════════════════════════════════════
+space.* — SPATIAL AWARENESS & OBJECT-ADDRESSED TRANSFORMS (spatial_api.js)
+════════════════════════════════════════
+An "object" is a named group: a shapes.* / llmTracker tag, a clusterId number,
+'selection', or 'system0'/'system1'. Names are global — they survive the per-step
+scope reset, so ALWAYS transform by name, never by re-capturing element arrays.
+The CURRENT SCENE block above is space.describe() — trust it for positions.
+
+space.describe()                       → text digest of every object
+space.digest()                         → {objects:[{name,count,centroid,bbox,size,axis,color}], box}
+space.get(name) / space.centroid(name) / space.bbox(name) / space.size(name)
+space.moveTo(name, x, y, z)            → centroid → (x,y,z)
+space.moveBy(name, dx, dy, dz)
+space.rotate(name, axis, deg, pivot?)  → axis [x,y,z] or 'x'|'y'|'z'; pivot undefined(centroid)|'origin'|[x,y,z]|otherName
+space.align(name, localAxis, worldDir) → point the object's principal axis along worldDir
+space.place(name, {near, dir, gap})    → move so its bbox is 'gap' units from object 'near' along dir ('x'|'-x'|[x,y,z])
+space.distance(a,b) / space.gap(a,b)   → centroid distance / min bbox gap (negative = overlap)
+space.overlaps(a,b)                    → bool  (check before/after placing multiple shapes)
+space.snapshotImage(scale?)           → PNG dataURL ;  space.grid(on?) / space.toggleGrid()
+
+// Place two shapes side by side without overlap, then verify:
+shapes.star(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1), 10, 4, 5, 6, null, false, 'starA');
+shapes.cube(new THREE.Vector3(0,0,0), 8, 5, null, false, 'cubeB');
+space.place('cubeB', {near:'starA', dir:'x', gap:3});
+notify('overlap? ' + space.overlaps('starA','cubeB'));
 
 ════════════════════════════════════════
 SYSTEM & ELEMENT METHODS
@@ -522,7 +555,7 @@ async function agentApiCall(systemPrompt, userMessage) {
         },
         body: JSON.stringify({
             model: AGENT_CONFIG.model,
-            max_tokens: 4096,
+            max_tokens: 16000,
             temperature: 0.1,
             messages: [
                 { role: 'system', content: systemPrompt },
@@ -546,9 +579,17 @@ async function agentApiCall(systemPrompt, userMessage) {
     }
 
     const data = await response.json();
-    const text = data.choices?.[0]?.message?.content;
-    if (!text) throw new Error('Empty response from API');
-    return text;
+    const choice = data.choices?.[0];
+    let text = choice?.message?.content;
+    // Thinking models occasionally leave content empty; salvage from reasoning.
+    if (!text && choice?.message?.reasoning) text = choice.message.reasoning;
+    if (!text) {
+        if (choice?.finish_reason === 'length') {
+            throw new Error('Model ran out of tokens before answering (finish_reason=length).');
+        }
+        throw new Error('Empty response from API');
+    }
+    return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -561,10 +602,19 @@ async function agentPlanner(task) {
     return JSON.parse(match[0]);
 }
 
+function _sceneBlock() {
+    try {
+        if (window.space && typeof space.describe === 'function') {
+            return `\n\nCURRENT SCENE (live):\n${space.describe()}`;
+        }
+    } catch (_) {}
+    return '';
+}
+
 async function agentExecutor(step, retryContext) {
-    const userMsg = retryContext
+    const userMsg = (retryContext
         ? `Step to execute: ${step}\n\nPrevious attempt failed — fix guidance:\n${retryContext}`
-        : `Step to execute: ${step}`;
+        : `Step to execute: ${step}`) + _sceneBlock();
     const raw = await agentApiCall(EXECUTOR_SYSTEM, userMsg);
     // Strip markdown code fences if the model wrapped them
     const fenceMatch = raw.match(/```(?:javascript|js)?\n?([\s\S]*?)```/);
@@ -572,7 +622,7 @@ async function agentExecutor(step, retryContext) {
 }
 
 async function agentObserver(step, code, execResult) {
-    const userMsg = `Step: ${step}\n\nCode:\n${code}\n\nResult: ${execResult}`;
+    const userMsg = `Step: ${step}\n\nCode:\n${code}\n\nResult: ${execResult}${_sceneBlock()}`;
     const raw = await agentApiCall(OBSERVER_SYSTEM, userMsg);
     const jsonMatch = raw.match(/\{[\s\S]*?\}/);
     if (jsonMatch) {
@@ -610,7 +660,22 @@ const agentChat = {
         if (this.isOpen) {
             document.getElementById('agent-chat-input').focus();
             this._updateKeyStatus();
+            try { if (window.space) space.grid(true); } catch (_) {}
         }
+    },
+
+    renderImage(dataUrl) {
+        if (!dataUrl) return;
+        const log = document.getElementById('agent-chat-log');
+        if (!log) return;
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '4px';
+        img.style.cursor = 'zoom-in';
+        img.onclick = () => { const w = window.open(); if (w) w.document.write('<img src="' + dataUrl + '">'); };
+        log.appendChild(img);
+        log.scrollTop = log.scrollHeight;
     },
 
     _updateKeyStatus() {
@@ -814,3 +879,5 @@ const agentChat = {
         }
     }
 };
+
+try { window.agentChat = agentChat; } catch (e) {}

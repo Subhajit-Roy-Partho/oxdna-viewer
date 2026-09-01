@@ -22,6 +22,7 @@
  *   shapes.polygon(nSides, center, normal, radius, bps, ...)  → elems
  *   shapes.triangle(center, normal, sideLen, bps, ...)        → elems
  *   shapes.square(center, normal, sideLen, bps, ...)          → elems
+ *   shapes.star(center, normal, outerR, innerR, nPts, bpe, ...) → elems
  *   shapes.cube(center, sideLen, bpe, seq?, isRNA?, tagName?) → elems
  *   shapes.tetrahedron(center, sideLen, bpe, ...)             → elems
  *   shapes.sphere(center, radius, nBases, ...)                → elems
@@ -335,6 +336,83 @@ window.shapes = (function() {
         var radius = sideLength * Math.sqrt(2) / 2;
         return shapes.polygon(4, center, normal, radius, basesPerSide, seq, isRNA,
                               tagName != null ? tagName : 'square');
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // STAR (n-pointed star outline)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Place nucleotides along the outline of an n-pointed star: a closed
+     * zig-zag alternating between `numPoints` outer vertices (on outerRadius)
+     * and `numPoints` inner vertices (on innerRadius). Produces 2*numPoints
+     * edges, each a separate strand.
+     *
+     * @param {THREE.Vector3} center
+     * @param {THREE.Vector3} normal        Plane normal (e.g. new THREE.Vector3(0,0,1) for XY plane).
+     * @param {number}  outerRadius
+     * @param {number}  innerRadius         Typically 0.35–0.5 * outerRadius.
+     * @param {number}  numPoints           Number of star points (>= 2).
+     * @param {number}  basesPerEdge
+     * @param {string}  [seq]               Cycled across all edges.
+     * @param {boolean} [isRNA]
+     * @param {string}  [tagName]
+     * @returns {BasicElement[]}
+     *
+     * Example — 5-point star in the XY plane:
+     *   shapes.star(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1), 10, 4, 5, 6, null, false, 'star1');
+     */
+    shapes.star = function(center, normal, outerRadius, innerRadius, numPoints, basesPerEdge, seq, isRNA, tagName) {
+        numPoints    = Math.max(2, numPoints || 5);
+        outerRadius  = outerRadius || 10;
+        innerRadius  = innerRadius || (outerRadius * 0.4);
+        basesPerEdge = basesPerEdge || 6;
+        normal = normal ? normal.clone().normalize() : new THREE.Vector3(0, 0, 1);
+
+        var upGuess = (Math.abs(normal.y) < 0.9) ? new THREE.Vector3(0, 1, 0)
+                                                  : new THREE.Vector3(1, 0, 0);
+        var u = new THREE.Vector3().crossVectors(normal, upGuess).normalize();
+        var v = new THREE.Vector3().crossVectors(normal, u).normalize();
+
+        // 2*numPoints vertices, alternating outer / inner
+        var nVerts = numPoints * 2;
+        var verts = [];
+        for (var k = 0; k < nVerts; k++) {
+            var r = (k % 2 === 0) ? outerRadius : innerRadius;
+            var theta = (Math.PI * k) / numPoints;   // 2π / nVerts
+            verts.push(center.clone()
+                .addScaledVector(u, Math.cos(theta) * r)
+                .addScaledVector(v, Math.sin(theta) * r));
+        }
+
+        var totalBases = nVerts * basesPerEdge;
+        var fullSeq = (seq && seq.length >= totalBases) ? seq : _randomSeq(totalBases, isRNA);
+        var seqOffset = 0;
+        var allElems = [];
+
+        for (var e = 0; e < nVerts; e++) {
+            var p0 = verts[e], p1 = verts[(e + 1) % nVerts];
+            var edgeDir = p1.clone().sub(p0).normalize();
+            var mid = p0.clone().lerp(p1, 0.5);
+            var toCenter = center.clone().sub(mid);
+            var a1 = toCenter.lengthSq() > 1e-6 ? toCenter.normalize() : u.clone();
+
+            var points = [], a1s = [], a3s = [];
+            for (var j = 0; j < basesPerEdge; j++) {
+                var t = basesPerEdge > 1 ? j / (basesPerEdge - 1) : 0;
+                points.push(p0.clone().lerp(p1, t));
+                a1s.push(a1.clone());
+                a3s.push(edgeDir.clone());
+            }
+            var edgeSeq = fullSeq.slice(seqOffset, seqOffset + basesPerEdge);
+            seqOffset += basesPerEdge;
+            allElems = allElems.concat(_place(points, a1s, a3s, edgeSeq, isRNA, null));
+        }
+
+        var tName = tagName != null ? tagName : ('star' + numPoints);
+        if (tName) llmTracker.tag(allElems, tName);
+        render();
+        return allElems;
     };
 
     // ─────────────────────────────────────────────────────────────────────────

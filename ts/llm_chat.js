@@ -4,9 +4,14 @@
  */
 
 const LLM_CONFIG = {
-    baseURL: (window.OXVIEW_CONFIG || {}).llmBaseURL || "https://nano-gpt.com/api/v1",
-    model: (window.OXVIEW_CONFIG || {}).llmModel || "zai-org/glm-5.2:thinking",
-    apiKey: (window.OXVIEW_CONFIG || {}).llmApiKey || "sk-nano-67e8180b-57dc-444d-9c01-2d0f453d37ce"
+    get baseURL() { return (window.OXVIEW_CONFIG || {}).llmBaseURL || "https://nano-gpt.com/api/v1"; },
+    get model()   { return (window.OXVIEW_CONFIG || {}).llmModel   || "z-ai/glm-5.3:thinking"; },
+    // Key comes from ts/config.js (gitignored), the 🔑 button (localStorage), or web-config.js.
+    get apiKey()  {
+        return localStorage.getItem('oxview_llm_api_key')
+            || (window.OXVIEW_CONFIG || {}).llmApiKey
+            || '';
+    }
 };
 
 const SYSTEM_PROMPT = `You are an AI assistant for oxDNA viewer (oxView), a 3D molecular visualization and editing tool for DNA/RNA nanostructures.
@@ -499,6 +504,60 @@ render();
 notify('Hello from AI!', 'success');
 
 ════════════════════════════════════════
+shapes.* — DRAW DNA/RNA ALONG GEOMETRIC SHAPES  (prefer these over hand-rolling from edit.createStrand)
+════════════════════════════════════════
+Every shapes.* call places nucleotides at geometric positions, auto-tags the result
+via llmTracker (so space.* can address it by name later), and returns BasicElement[].
+Positions are in oxDNA units (1 unit ≈ 0.85 nm). normal is the plane normal.
+
+shapes.line(p1, p2, nBases, seq?, isRNA?, tag?)
+shapes.circle(center, normal, radius, nBases, seq?, isRNA?, tag?)
+shapes.polygon(nSides, center, normal, radius, basesPerSide, seq?, isRNA?, tag?)
+shapes.triangle(center, normal, sideLen, basesPerSide, seq?, isRNA?, tag?)
+shapes.square(center, normal, sideLen, basesPerSide, seq?, isRNA?, tag?)
+shapes.star(center, normal, outerR, innerR, numPoints, basesPerEdge, seq?, isRNA?, tag?)
+shapes.cube(center, sideLen, basesPerEdge, seq?, isRNA?, tag?)
+shapes.tetrahedron(center, sideLen, basesPerEdge, seq?, isRNA?, tag?)
+shapes.sphere(center, radius, nBases, seq?, isRNA?, tag?)
+shapes.helix(center, axis, radius, risePerBase, turns, nBases, seq?, isRNA?, tag?)
+shapes.spiral(center, normal, startR, endR, turns, nBases, seq?, isRNA?, tag?)
+shapes.pointCloud(points: THREE.Vector3[], seq?, isRNA?, tag?)
+shapes.basesForLength(len, spacing?=1) → recommended base count
+
+// A 3D star with 5 points in the XY plane, named 'star1':
+shapes.star(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1), 10, 4, 5, 6, null, false, 'star1');
+render();
+
+════════════════════════════════════════
+space.* — SPATIAL AWARENESS & OBJECT-ADDRESSED TRANSFORMS
+════════════════════════════════════════
+Objects are named groups (from a shapes.* tag, llmTracker.tag, a clusterId number,
+'selection', or 'system0'/'system1'…). space.* survives the per-block scope reset
+because names are global — ALWAYS move/rotate by name, never by re-capturing arrays.
+
+space.describe()                         → text digest of every object (also auto-shown each turn)
+space.digest()                           → structured {objects:[{name,count,centroid,bbox,size,axis,color}], box}
+space.get(name)                          → BasicElement[]
+space.centroid(name) / space.bbox(name) / space.size(name)
+space.moveTo(name, x, y, z)              → put object's centroid at (x,y,z)
+space.moveBy(name, dx, dy, dz)
+space.rotate(name, axis, deg, pivot?)    → axis: [x,y,z] or 'x'|'y'|'z'; pivot: undefined(centroid) | 'origin' | [x,y,z] | otherName
+space.align(name, localAxis, worldDir)   → rotate so the object's principal axis points along worldDir
+space.place(name, {near, dir, gap})      → move so its bbox sits 'gap' units from object 'near' along dir ([x,y,z] or 'x'|'-x')
+space.distance(a, b) / space.gap(a, b)   → centroid distance / min bbox gap (negative = overlapping)
+space.overlaps(a, b)                     → bool
+space.snapshotImage(scale?)             → PNG dataURL of the viewport
+space.show()                             → snapshot + display it in this chat
+space.grid(on?) / space.toggleGrid()     → reference grid + XYZ axes
+
+// Build two stars and stand them side by side, 3 units apart, then show it:
+shapes.star(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1), 10, 4, 5, 6, null, false, 'starA');
+shapes.star(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1), 10, 4, 6, 6, null, false, 'starB');
+space.place('starB', {near:'starA', dir:'x', gap:3});
+space.rotate('starB', 'y', 90);
+space.show();
+
+════════════════════════════════════════
 NANOCANVAS INTEGRATION (when embedded in integration page)
 ════════════════════════════════════════
 If the user asks to design a structure, build helices, create staples, run wiggle test,
@@ -545,6 +604,8 @@ const llmChat = {
         panel.style.display = this.isOpen ? 'flex' : 'none';
         if (this.isOpen) {
             document.getElementById('llm-chat-input').focus();
+            // Show the reference grid + axes so positions are legible.
+            try { if (window.space) space.grid(true); } catch (_) {}
         }
     },
 
@@ -571,6 +632,23 @@ const llmChat = {
         log.scrollTop = log.scrollHeight;
     },
 
+    renderImage(dataUrl) {
+        if (!dataUrl) return;
+        const log = document.getElementById('llm-chat-log');
+        const msg = document.createElement('div');
+        msg.className = 'llm-msg llm-msg-system';
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '4px';
+        img.style.cursor = 'zoom-in';
+        img.title = 'click to open full size';
+        img.onclick = () => { const w = window.open(); if (w) w.document.write('<img src="' + dataUrl + '">'); };
+        msg.appendChild(img);
+        log.appendChild(msg);
+        log.scrollTop = log.scrollHeight;
+    },
+
     async sendMessage() {
         const input = document.getElementById('llm-chat-input');
         const sendBtn = document.getElementById('llm-chat-send');
@@ -583,8 +661,23 @@ const llmChat = {
 
         this.addMessage('user', userText);
 
+        if (!LLM_CONFIG.apiKey) {
+            this.renderMessage('error', 'No API key. Add one with the 🔑 button, or set llmApiKey in ts/config.js.');
+            input.disabled = false; sendBtn.disabled = false; input.focus();
+            return;
+        }
+
+        // Live scene digest so the model always knows what exists and where.
+        let sceneBlock = '';
+        try {
+            if (window.space && typeof space.describe === 'function') {
+                sceneBlock = space.describe();
+            }
+        } catch (_) {}
+
         const messages = [
             { role: 'system', content: SYSTEM_PROMPT },
+            ...(sceneBlock ? [{ role: 'system', content: 'CURRENT SCENE (live):\n' + sceneBlock }] : []),
             ...this.history
         ];
 
@@ -603,7 +696,7 @@ const llmChat = {
                     model: LLM_CONFIG.model,
                     messages: messages,
                     temperature: 0.1,
-                    max_tokens: 10000
+                    max_tokens: 16000
                 })
             });
 
@@ -613,8 +706,17 @@ const llmChat = {
             }
 
             const data = await response.json();
-            const msg = data.choices[0].message;
-            const rawContent = msg.content || '';
+            const msg = (data.choices && data.choices[0] && data.choices[0].message) || {};
+            // Thinking models sometimes leave content empty and put everything in
+            // reasoning; salvage a fenced code block from reasoning if so.
+            let rawContent = msg.content || '';
+            if (!rawContent.trim() && msg.reasoning) {
+                const rc = msg.reasoning.match(/```(?:javascript|js)?\n?([\s\S]*?)```/);
+                if (rc) rawContent = rc[0];
+            }
+            if (!rawContent.trim() && data.choices && data.choices[0] && data.choices[0].finish_reason === 'length') {
+                throw new Error('Model ran out of tokens before answering (finish_reason=length). Try a shorter request.');
+            }
 
             // Extract code — find the first code fence block anywhere in the response,
             // then fall back to the raw content if no fences are present.
@@ -623,6 +725,8 @@ const llmChat = {
             if (fenceMatch) {
                 code = fenceMatch[1].trim();
             }
+            // Strip stray <think>…</think> blocks some models emit inline
+            code = code.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
             thinking.remove();
 
@@ -639,7 +743,7 @@ const llmChat = {
             // Safety check — if the extracted text has no JS-like tokens the model
             // returned prose instead of code; show a friendly error instead of a
             // cryptic syntax error from new Function().
-            const looksLikeJs = /\b(var|let|const|function|edit\.|api\.|systems|render\(|notify\(|THREE\.|colorElements|translateElements|rotateElements)\b/.test(code);
+            const looksLikeJs = /\b(var|let|const|function|edit\.|api\.|shapes\.|space\.|llmTracker\.|systems|render\(|notify\(|THREE\.|colorElements|translateElements|rotateElements)\b/.test(code);
             if (!looksLikeJs) {
                 this.renderMessage('error', '⚠ Model returned an explanation instead of code. Try rephrasing your command more specifically.');
                 console.warn('LLM returned prose instead of JS:', rawContent);
@@ -653,6 +757,18 @@ const llmChat = {
                     this.renderMessage('error', 'Execution error: ' + execErr.message);
                     console.error('LLM eval error:', execErr, '\nCode:', code);
                 }
+                // Post-execution: show the updated scene digest, and a snapshot
+                // image when the user asked to "show"/"see"/"render" the result.
+                try {
+                    if (window.space && typeof space.describe === 'function') {
+                        this.renderMessage('system', '🧭 ' + space.describe());
+                    }
+                    if (/\b(show|see|render|screenshot|picture|image|output|look)\b/i.test(userText)
+                        && !/space\.show\s*\(/.test(code)
+                        && window.space && typeof space.snapshotImage === 'function') {
+                        this.renderImage(space.snapshotImage());
+                    }
+                } catch (_) {}
             }
 
         } catch (err) {
@@ -682,3 +798,7 @@ const llmChat = {
         }
     }
 };
+
+// Expose for spatial_api's space.show() and other modules (top-level const is
+// not automatically a window property in classic scripts).
+try { window.llmChat = llmChat; } catch (e) {}
