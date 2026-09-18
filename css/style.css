@@ -1,0 +1,186 @@
+body {
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+}
+canvas {
+    position: absolute;
+    height: 100%;
+    z-index: 1;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+.selectBox {
+    border: 1px solid #55aaff;
+    background-color: rgba(75, 160, 255, 0.15);
+    position: fixed;
+    z-index: 1;
+}
+
+.flexBetween {
+    justify-content: space-between;
+    display: flex;
+}
+
+#hoverInfo {
+    background-color: #ffffffa4;
+	position: absolute;
+	text-align: center;
+	z-index: 100;
+	display:block;
+}
+
+#container {
+    position: relative;
+}
+#colorbarCanvas{
+    position: fixed;
+    pointer-events: none;
+    z-index: 2;
+    width: 450px;
+    height: 150px;
+    bottom: 0;
+    right: 200px;
+}
+
+#menu {
+    position: absolute;
+    z-index: 2;
+    width: 100%;
+    opacity: 0.95;
+    background: white;
+}
+
+#baseList {
+    width: auto;
+    max-width: 350px;
+    overflow-y: auto;
+    font-size: 12px;
+}
+
+.toggleGroup_w2 {
+    width: 175px !important;
+}
+
+.toggleGroup_w1 {
+    width: 90px !important;
+}
+
+.tight {
+    padding-bottom: 0 !important;
+}
+
+.window {
+    z-index: 999;
+    max-height: 90%;
+}
+
+
+/* 96 well plate table definitions */
+table.plate96{
+    width: 390px;   /* needs to be number of colls multiplied by cell width */
+    height:270px;   /* needs to be number or rows multiplied by cell height */
+    table-layout: fixed;
+    border-collapse: expand;
+    /*border: 1px solid black;*/
+
+}
+
+/* make table with fixed cell size */
+table.plate96 td tr th {
+    width: 30px;
+    height:30px;
+    overflow: hidden;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+/* filled wells color*/
+td.full {
+    background : #00FF00;
+    border-radius: 15px;
+}
+/* empty wells color */
+td.empty {
+    background : lightgrey;
+    border-radius: 15px;
+}
+
+/* floating selection menu */
+.metro-round-rect {
+    height: 56px;
+    min-width: 356px;
+    position: fixed;
+    bottom: 1%;
+    left: 50%;
+    margin-left: -178px;
+    z-index: 999;
+    background-color: #dcddde;
+    opacity: 0.95;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .button.cycle.active {
+    background-color: #61AFEF;
+  }
+
+  .button.cycle.active * {
+    color: #FFFFFF;
+    filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(140deg) brightness(106%) contrast(103%);
+  }
+
+  /*Red hover for delete buttons*/
+  .button.delete{
+    background-color:lightcoral;
+  }
+  .button.delete:hover{
+    background-color:red;
+  }
+
+  table-search-block{
+    width:100%;
+  }
+
+  .selection.modes{
+    display: flex;
+    height: 36px;
+    max-width: 266px;
+    z-index: 9999;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .divider{
+    display: block;
+    background-color: #b6b7b8;
+    height: 40px;
+    width: 2px;
+  }
+
+  .selection-options-drop{
+    display: none;
+  }
+
+  .selection-options-drop.show{
+    display: flex;
+    min-height: 148px;
+    min-width: 194px;
+    position: absolute;
+    left: -79px;
+    bottom: 58px;
+    z-index: 9999;
+    border-radius: 10px;
+    background-color: #dcddde;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+    align-items: left;
+    padding: 10px;
+  }
+

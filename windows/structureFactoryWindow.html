@@ -1,0 +1,131 @@
+<div class="p-2">
+    <h6 class="text-light">Specialized DNA Nanostructures</h6>
+    <p class="text-small text-muted">Create Holliday junctions, crossover tiles, and other DNA nanotechnology motifs. Structures are placed as ideal B-DNA &mdash; run an oxDNA simulation to relax.</p>
+
+    <div class="accordion" data-role="accordion" data-one-frame="false">
+        
+        <!-- Holliday Junction -->
+        <div class="frame">
+            <div class="heading">Holliday Junction (4-way)</div>
+            <div class="content">
+                <div class="form-group">
+                    <label>Arm length (bp)</label>
+                    <input id="hjArmLength" type="number" data-role="input" data-clear-button="false" value="8" min="2" max="100">
+                </div>
+                <div class="form-group">
+                    <label>Sequences (4 lines, optional)</label>
+                    <textarea id="hjSequences" rows="4" placeholder="Leave blank for auto poly-G&#10;Arm1: GGGGGGGG&#10;Arm2: GGGGGGGG&#10;Arm3: GGGGGGGG&#10;Arm4: GGGGGGGG"></textarea>
+                </div>
+                <button class="button primary" onclick="createHollidayJunctionWrapper()">
+                    <span class="mif-plus"></span> Create Holliday Junction
+                </button>
+            </div>
+        </div>
+
+        <!-- Three-Way Junction -->
+        <div class="frame">
+            <div class="heading">Three-Way Junction</div>
+            <div class="content">
+                <div class="form-group">
+                    <label>Arm length (bp)</label>
+                    <input id="twjArmLength" type="number" data-role="input" data-clear-button="false" value="8" min="2" max="100">
+                </div>
+                <button class="button primary" onclick="createThreeWayJunctionWrapper()">
+                    <span class="mif-plus"></span> Create 3-Way Junction
+                </button>
+            </div>
+        </div>
+
+        <!-- DX Tile -->
+        <div class="frame">
+            <div class="heading">Double Crossover (DX) Tile</div>
+            <div class="content">
+                <div class="form-group">
+                    <label>Tile length (bp)</label>
+                    <input id="dxLength" type="number" data-role="input" data-clear-button="false" value="16" min="4" max="200">
+                </div>
+                <div class="form-group">
+                    <label>Crossover spacing (bp)</label>
+                    <input id="dxSpacing" type="number" data-role="input" data-clear-button="false" value="8" min="2" max="100">
+                </div>
+                <button class="button primary" onclick="createDXTileWrapper()">
+                    <span class="mif-plus"></span> Create DX Tile
+                </button>
+            </div>
+        </div>
+
+        <!-- Single Crossover Tile -->
+        <div class="frame">
+            <div class="heading">Single Crossover Tile</div>
+            <div class="content">
+                <div class="form-group">
+                    <label>Tile length (bp)</label>
+                    <input id="scLength" type="number" data-role="input" data-clear-button="false" value="16" min="4" max="200">
+                </div>
+                <button class="button primary" onclick="createSingleCrossoverTileWrapper()">
+                    <span class="mif-plus"></span> Create SC Tile
+                </button>
+            </div>
+        </div>
+
+        <!-- DX Lattice -->
+        <div class="frame">
+            <div class="heading">DX Tile Lattice</div>
+            <div class="content">
+                <div class="form-group">
+                    <label>Rows</label>
+                    <input id="dxlRows" type="number" data-role="input" data-clear-button="false" value="2" min="1" max="20">
+                </div>
+                <div class="form-group">
+                    <label>Columns</label>
+                    <input id="dxlCols" type="number" data-role="input" data-clear-button="false" value="2" min="1" max="20">
+                </div>
+                <div class="form-group">
+                    <label>Tile length (bp)</label>
+                    <input id="dxlTileLength" type="number" data-role="input" data-clear-button="false" value="16" min="4" max="200">
+                </div>
+                <button class="button primary" onclick="createDXLatticeWrapper()">
+                    <span class="mif-plus"></span> Create Lattice
+                </button>
+            </div>
+        </div>
+
+        <!-- Tensegrity Triangle -->
+        <div class="frame">
+            <div class="heading">Tensegrity Triangle</div>
+            <div class="content">
+                <div class="form-group">
+                    <label>Edge length (bp)</label>
+                    <input id="ttEdgeLength" type="number" data-role="input" data-clear-button="false" value="10" min="2" max="100">
+                </div>
+                <button class="button primary" onclick="createTensegrityTriangleWrapper()">
+                    <span class="mif-plus"></span> Create Triangle
+                </button>
+            </div>
+        </div>
+
+        <!-- Staple Connector -->
+        <div class="frame">
+            <div class="heading">Staple Connector</div>
+            <div class="content">
+                <div class="form-group">
+                    <label>Sequence (A,T,C,G)</label>
+                    <input id="scSequence" type="text" data-role="input" data-clear-button="true" value="GGGGGGGG">
+                </div>
+                <button class="button primary" onclick="createStapleConnectorWrapper()">
+                    <span class="mif-plus"></span> Create Connector
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="mt-2 p-2 bg-light">
+        <p class="text-small text-muted">
+            <strong>Tip:</strong> All structures are created with ideal B-DNA geometry. Use <em>File &rarr; Save</em> to export .top/.conf, then run <code>oxDNA input</code> to relax into realistic conformations.
+        </p>
+        <p class="text-small text-muted">
+            Based on: Seeman (1982), Winfree &amp; Seeman (1998), Rothemund (2006).
+        </p>
+    </div>
+</div>

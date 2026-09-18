@@ -1,0 +1,80 @@
+<p class="text-muted mb-2">
+    Relaxes a flat/planar caDNAno-style structure into something foldable, entirely in your
+    browser (WebAssembly) -- no server round-trip. Groups particles into rigid clusters, then
+    simulates spring + repulsion forces between them. Pick how clusters are chosen below, then
+    run the relaxation.
+</p>
+
+<h2>1. Choose clusters</h2>
+
+<h4>Auto -- rigidDNA (helix geometry)</h4>
+<div class="group">
+    <label>Angle threshold (deg): </label>
+    <input type="number" value="10" id="rigidDnaAngleDeg" title="Max angle between two bonded helix axes to count as 'same direction'" min="0">
+</div>
+<div class="group">
+    <label>Granularity: </label>
+    <select id="rigidDnaClusterMode" data-role="select">
+        <option value="auto">Auto (merge coaxial helices)</option>
+        <option value="helix">One cluster per helix</option>
+        <option value="bundle">Bundle (nearest-neighbor groups)</option>
+    </select>
+</div>
+<button class="button primary" onclick="runRigidDnaAutoCluster()" title="Detect base pairs and helix bundles from geometry">
+    Auto-cluster (rigidDNA)
+</button>
+
+<h4>Auto -- oxView (DBSCAN)</h4>
+<div class="group">
+    <label>Min points: </label>
+    <input type="number" value="6" id="rigidDnaMinPts" title="Minimum number of nucleotides in a cluster" min="1">
+</div>
+<div class="group">
+    <label>Max dist (ε): </label>
+    <input type="number" value="3" id="rigidDnaEpsilon" title="Max distance between cluster neighbours" min="0">
+</div>
+<button class="button" onclick="runRigidDnaOxViewCluster()" title="oxView's built-in density-based clusterer">
+    Auto-cluster (oxView DBSCAN)
+</button>
+
+<h4>Manual</h4>
+<div class="group">
+    <button class="button" onclick="runRigidDnaManualCluster()" title="Add all currently-selected elements to a new cluster">
+        Selection to cluster
+    </button>
+    <button class="button" onclick="runRigidDnaClearClusters()" title="Remove all clusters">
+        Clear clusters
+    </button>
+</div>
+
+<p id="rigidDnaClusterStatus" class="text-muted mt-1 mb-2">No clusters yet.</p>
+
+<h2>2. Relax</h2>
+<div class="row">
+    <div class="cell-3">
+        <label>Steps</label>
+        <input type="number" value="2000" id="rigidDnaSteps" min="1">
+    </div>
+    <div class="cell-3">
+        <label>dt</label>
+        <input type="number" value="0.01" id="rigidDnaDt" step="0.001" min="0">
+    </div>
+    <div class="cell-3">
+        <label>k (spring)</label>
+        <input type="number" value="10" id="rigidDnaK" min="0">
+    </div>
+    <div class="cell-3">
+        <label>b (damping)</label>
+        <input type="number" value="0.2" id="rigidDnaB" step="0.01" min="0">
+    </div>
+</div>
+<div class="group">
+    <label>Repulsion</label>
+    <input type="number" value="1500" id="rigidDnaRepulsion" min="0">
+</div>
+<button class="button primary" onclick="runRigidDnaRelax()" title="Run the rigid-body relaxation and apply the result to the scene">
+    Run rigidDNA Relaxation
+</button>
+
+<h2>Log</h2>
+<pre id="rigidDnaLog" style="max-height: 150px; overflow-y: auto; font-size: 11px; background: #1e1e1e; color: #ddd; padding: 6px; white-space: pre-wrap;"></pre>

@@ -1,0 +1,11 @@
+{
+    "resizable": true,
+    "place": "bottom-right",
+    "title": "Fluctuation Window",
+    "width": 600,
+    "height": 500,
+    "btnClose": false,
+    "data-role": "window",
+    "clsCaption": "bg-gray fg-red",
+    "clsContent": "bg-white fg-red"
+}

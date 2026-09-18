@@ -1,0 +1,1061 @@
+{"instruction": "Join strand 1841 and strand 582 (ligate 3' of 1841 to 5' of 582).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1841); var s2 = systems[0].strands.find(s => s.id == 582); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 338.", "input": "", "output": "api.selectElementIDs([338]); edit.splitStrand(api.getElements([338])[0]);"}
+{"instruction": "Set the color map bounds from 3.57 to 7.28", "input": "", "output": "api.setColorBounds(3.57, 7.28)"}
+{"instruction": "Join strand 1080 and strand 261 (ligate 3' of 1080 to 5' of 261).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1080); var s2 = systems[0].strands.find(s => s.id == 261); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CTATGCTGTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CTATGCTGTG'));"}
+{"instruction": "Add 'AUTTACUCUCT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AUTTACUCUCT'));"}
+{"instruction": "Set the color map bounds from 2.75 to 8.99", "input": "", "output": "api.setColorBounds(2.75, 8.99)"}
+{"instruction": "Join strand 341 and strand 613 (ligate 3' of 341 to 5' of 613).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 341); var s2 = systems[0].strands.find(s => s.id == 613); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CCUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCUT'));"}
+{"instruction": "Split the strand at element 79.", "input": "", "output": "api.selectElementIDs([79]); edit.splitStrand(api.getElements([79])[0]);"}
+{"instruction": "Split the strand at element 1432.", "input": "", "output": "api.selectElementIDs([1432]); edit.splitStrand(api.getElements([1432])[0]);"}
+{"instruction": "Set the color map bounds from 4.18 to 8.64", "input": "", "output": "api.setColorBounds(4.18, 8.64)"}
+{"instruction": "Split the strand at element 1169.", "input": "", "output": "api.selectElementIDs([1169]); edit.splitStrand(api.getElements([1169])[0]);"}
+{"instruction": "Add 'AACGTAUACUUATGUGGUCT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AACGTAUACUUATGUGGUCT'));"}
+{"instruction": "Add 'CGCCGTAACGT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGCCGTAACGT'));"}
+{"instruction": "Split the strand at element 351.", "input": "", "output": "api.selectElementIDs([351]); edit.splitStrand(api.getElements([351])[0]);"}
+{"instruction": "Join strand 1942 and strand 1686 (ligate 3' of 1942 to 5' of 1686).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1942); var s2 = systems[0].strands.find(s => s.id == 1686); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'UCTGUGTUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UCTGUGTUA'));"}
+{"instruction": "Add 'CAC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CAC'));"}
+{"instruction": "Split the strand at element 1244.", "input": "", "output": "api.selectElementIDs([1244]); edit.splitStrand(api.getElements([1244])[0]);"}
+{"instruction": "Split the strand at element 1637.", "input": "", "output": "api.selectElementIDs([1637]); edit.splitStrand(api.getElements([1637])[0]);"}
+{"instruction": "Add 'AUTGGACC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AUTGGACC'));"}
+{"instruction": "Add 'AUUCAUTAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AUUCAUTAG'));"}
+{"instruction": "Join strand 1978 and strand 1237 (ligate 3' of 1978 to 5' of 1237).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1978); var s2 = systems[0].strands.find(s => s.id == 1237); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'AGCTT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGCTT'));"}
+{"instruction": "Split the strand at element 1846.", "input": "", "output": "api.selectElementIDs([1846]); edit.splitStrand(api.getElements([1846])[0]);"}
+{"instruction": "Set the color map bounds from 0.01 to 7.84", "input": "", "output": "api.setColorBounds(0.01, 7.84)"}
+{"instruction": "Add 'CATCATTUCCGATUG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CATCATTUCCGATUG'));"}
+{"instruction": "Split the strand at element 147.", "input": "", "output": "api.selectElementIDs([147]); edit.splitStrand(api.getElements([147])[0]);"}
+{"instruction": "Split the strand at element 1580.", "input": "", "output": "api.selectElementIDs([1580]); edit.splitStrand(api.getElements([1580])[0]);"}
+{"instruction": "Join strand 487 and strand 1924 (ligate 3' of 487 to 5' of 1924).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 487); var s2 = systems[0].strands.find(s => s.id == 1924); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 565 and strand 1551 (ligate 3' of 565 to 5' of 1551).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 565); var s2 = systems[0].strands.find(s => s.id == 1551); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CACTT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CACTT'));"}
+{"instruction": "Split the strand at element 617.", "input": "", "output": "api.selectElementIDs([617]); edit.splitStrand(api.getElements([617])[0]);"}
+{"instruction": "Add 'TGAGTCTTUUGTCTUCTGTT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGAGTCTTUUGTCTUCTGTT'));"}
+{"instruction": "Split the strand at element 264.", "input": "", "output": "api.selectElementIDs([264]); edit.splitStrand(api.getElements([264])[0]);"}
+{"instruction": "Add 'CGGCUAAUCGTACUGGTCTU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGGCUAAUCGTACUGGTCTU'));"}
+{"instruction": "Add 'UGTTGTACAGATUU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UGTTGTACAGATUU'));"}
+{"instruction": "Split the strand at element 75.", "input": "", "output": "api.selectElementIDs([75]); edit.splitStrand(api.getElements([75])[0]);"}
+{"instruction": "Set the color map bounds from 3.86 to 9.8", "input": "", "output": "api.setColorBounds(3.86, 9.8)"}
+{"instruction": "Set the color map bounds from 3.31 to 7.52", "input": "", "output": "api.setColorBounds(3.31, 7.52)"}
+{"instruction": "Add 'TCUAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCUAA'));"}
+{"instruction": "Split the strand at element 1750.", "input": "", "output": "api.selectElementIDs([1750]); edit.splitStrand(api.getElements([1750])[0]);"}
+{"instruction": "Set the color map bounds from 0.6 to 7.24", "input": "", "output": "api.setColorBounds(0.6, 7.24)"}
+{"instruction": "Add 'TGCCGUCCUTATU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGCCGUCCUTATU'));"}
+{"instruction": "Add 'ATTT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ATTT'));"}
+{"instruction": "Join strand 1426 and strand 202 (ligate 3' of 1426 to 5' of 202).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1426); var s2 = systems[0].strands.find(s => s.id == 202); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'AUACATUUAAUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AUACATUUAAUA'));"}
+{"instruction": "Split the strand at element 1471.", "input": "", "output": "api.selectElementIDs([1471]); edit.splitStrand(api.getElements([1471])[0]);"}
+{"instruction": "Set the color map bounds from 2.28 to 5.83", "input": "", "output": "api.setColorBounds(2.28, 5.83)"}
+{"instruction": "Set the color map bounds from 2.21 to 7.33", "input": "", "output": "api.setColorBounds(2.21, 7.33)"}
+{"instruction": "Add 'TGCTUGTT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGCTUGTT'));"}
+{"instruction": "Add 'TTAGTTUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TTAGTTUA'));"}
+{"instruction": "Add 'GUUTUTCGACUUCTTCG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUUTUTCGACUUCTTCG'));"}
+{"instruction": "Add 'UTCTCTCUAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTCTCTCUAG'));"}
+{"instruction": "Split the strand at element 263.", "input": "", "output": "api.selectElementIDs([263]); edit.splitStrand(api.getElements([263])[0]);"}
+{"instruction": "Set the color map bounds from 4.89 to 7.14", "input": "", "output": "api.setColorBounds(4.89, 7.14)"}
+{"instruction": "Split the strand at element 1574.", "input": "", "output": "api.selectElementIDs([1574]); edit.splitStrand(api.getElements([1574])[0]);"}
+{"instruction": "Set the color map bounds from 0.49 to 8.58", "input": "", "output": "api.setColorBounds(0.49, 8.58)"}
+{"instruction": "Join strand 189 and strand 495 (ligate 3' of 189 to 5' of 495).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 189); var s2 = systems[0].strands.find(s => s.id == 495); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1221.", "input": "", "output": "api.selectElementIDs([1221]); edit.splitStrand(api.getElements([1221])[0]);"}
+{"instruction": "Join strand 1111 and strand 57 (ligate 3' of 1111 to 5' of 57).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1111); var s2 = systems[0].strands.find(s => s.id == 57); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 12 and strand 1337 (ligate 3' of 12 to 5' of 1337).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 12); var s2 = systems[0].strands.find(s => s.id == 1337); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1225.", "input": "", "output": "api.selectElementIDs([1225]); edit.splitStrand(api.getElements([1225])[0]);"}
+{"instruction": "Join strand 652 and strand 91 (ligate 3' of 652 to 5' of 91).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 652); var s2 = systems[0].strands.find(s => s.id == 91); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.94 to 9.92", "input": "", "output": "api.setColorBounds(0.94, 9.92)"}
+{"instruction": "Add 'TTTAUUUUGCUGUGGUGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TTTAUUUUGCUGUGGUGA'));"}
+{"instruction": "Join strand 1246 and strand 69 (ligate 3' of 1246 to 5' of 69).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1246); var s2 = systems[0].strands.find(s => s.id == 69); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.03 to 5.71", "input": "", "output": "api.setColorBounds(0.03, 5.71)"}
+{"instruction": "Add 'UATUGGTUUCGG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UATUGGTUUCGG'));"}
+{"instruction": "Split the strand at element 737.", "input": "", "output": "api.selectElementIDs([737]); edit.splitStrand(api.getElements([737])[0]);"}
+{"instruction": "Set the color map bounds from 0.12 to 7.42", "input": "", "output": "api.setColorBounds(0.12, 7.42)"}
+{"instruction": "Join strand 916 and strand 352 (ligate 3' of 916 to 5' of 352).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 916); var s2 = systems[0].strands.find(s => s.id == 352); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CGTTAAGUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGTTAAGUA'));"}
+{"instruction": "Add 'GGUCCACUTAUTCCUGGUC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGUCCACUTAUTCCUGGUC'));"}
+{"instruction": "Join strand 1673 and strand 185 (ligate 3' of 1673 to 5' of 185).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1673); var s2 = systems[0].strands.find(s => s.id == 185); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.59 to 8.94", "input": "", "output": "api.setColorBounds(0.59, 8.94)"}
+{"instruction": "Split the strand at element 1405.", "input": "", "output": "api.selectElementIDs([1405]); edit.splitStrand(api.getElements([1405])[0]);"}
+{"instruction": "Join strand 834 and strand 141 (ligate 3' of 834 to 5' of 141).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 834); var s2 = systems[0].strands.find(s => s.id == 141); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'UUTGUGAUACCCAUTGACC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UUTGUGAUACCCAUTGACC'));"}
+{"instruction": "Join strand 176 and strand 1806 (ligate 3' of 176 to 5' of 1806).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 176); var s2 = systems[0].strands.find(s => s.id == 1806); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1335 and strand 1761 (ligate 3' of 1335 to 5' of 1761).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1335); var s2 = systems[0].strands.find(s => s.id == 1761); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TGGTUUTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGGTUUTC'));"}
+{"instruction": "Split the strand at element 1313.", "input": "", "output": "api.selectElementIDs([1313]); edit.splitStrand(api.getElements([1313])[0]);"}
+{"instruction": "Set the color map bounds from 3.55 to 6.11", "input": "", "output": "api.setColorBounds(3.55, 6.11)"}
+{"instruction": "Split the strand at element 1695.", "input": "", "output": "api.selectElementIDs([1695]); edit.splitStrand(api.getElements([1695])[0]);"}
+{"instruction": "Set the color map bounds from 4.98 to 6.11", "input": "", "output": "api.setColorBounds(4.98, 6.11)"}
+{"instruction": "Join strand 1385 and strand 1802 (ligate 3' of 1385 to 5' of 1802).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1385); var s2 = systems[0].strands.find(s => s.id == 1802); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.62 to 6.77", "input": "", "output": "api.setColorBounds(2.62, 6.77)"}
+{"instruction": "Set the color map bounds from 3.58 to 9.98", "input": "", "output": "api.setColorBounds(3.58, 9.98)"}
+{"instruction": "Set the color map bounds from 3.23 to 7.83", "input": "", "output": "api.setColorBounds(3.23, 7.83)"}
+{"instruction": "Set the color map bounds from 3.88 to 9.83", "input": "", "output": "api.setColorBounds(3.88, 9.83)"}
+{"instruction": "Add 'TACCACUUACGU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TACCACUUACGU'));"}
+{"instruction": "Add 'GTGGUACAATUC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GTGGUACAATUC'));"}
+{"instruction": "Set the color map bounds from 4.14 to 9.36", "input": "", "output": "api.setColorBounds(4.14, 9.36)"}
+{"instruction": "Join strand 1873 and strand 676 (ligate 3' of 1873 to 5' of 676).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1873); var s2 = systems[0].strands.find(s => s.id == 676); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CCC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCC'));"}
+{"instruction": "Join strand 347 and strand 560 (ligate 3' of 347 to 5' of 560).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 347); var s2 = systems[0].strands.find(s => s.id == 560); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 638 and strand 1743 (ligate 3' of 638 to 5' of 1743).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 638); var s2 = systems[0].strands.find(s => s.id == 1743); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 4.76 to 8.07", "input": "", "output": "api.setColorBounds(4.76, 8.07)"}
+{"instruction": "Set the color map bounds from 2.29 to 8.0", "input": "", "output": "api.setColorBounds(2.29, 8.0)"}
+{"instruction": "Add 'CGTU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGTU'));"}
+{"instruction": "Set the color map bounds from 3.97 to 7.64", "input": "", "output": "api.setColorBounds(3.97, 7.64)"}
+{"instruction": "Join strand 1006 and strand 701 (ligate 3' of 1006 to 5' of 701).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1006); var s2 = systems[0].strands.find(s => s.id == 701); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.72 to 6.96", "input": "", "output": "api.setColorBounds(2.72, 6.96)"}
+{"instruction": "Join strand 1145 and strand 300 (ligate 3' of 1145 to 5' of 300).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1145); var s2 = systems[0].strands.find(s => s.id == 300); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1315 and strand 1493 (ligate 3' of 1315 to 5' of 1493).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1315); var s2 = systems[0].strands.find(s => s.id == 1493); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.89 to 7.67", "input": "", "output": "api.setColorBounds(2.89, 7.67)"}
+{"instruction": "Set the color map bounds from 2.61 to 9.59", "input": "", "output": "api.setColorBounds(2.61, 9.59)"}
+{"instruction": "Join strand 268 and strand 318 (ligate 3' of 268 to 5' of 318).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 268); var s2 = systems[0].strands.find(s => s.id == 318); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.29 to 8.27", "input": "", "output": "api.setColorBounds(2.29, 8.27)"}
+{"instruction": "Set the color map bounds from 2.13 to 6.13", "input": "", "output": "api.setColorBounds(2.13, 6.13)"}
+{"instruction": "Add 'AGACGCCTTCCTCTCGAUU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGACGCCTTCCTCTCGAUU'));"}
+{"instruction": "Split the strand at element 1701.", "input": "", "output": "api.selectElementIDs([1701]); edit.splitStrand(api.getElements([1701])[0]);"}
+{"instruction": "Join strand 440 and strand 1393 (ligate 3' of 440 to 5' of 1393).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 440); var s2 = systems[0].strands.find(s => s.id == 1393); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TCTCGCUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCTCGCUA'));"}
+{"instruction": "Add 'ACCAACGATTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACCAACGATTG'));"}
+{"instruction": "Add 'ACA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACA'));"}
+{"instruction": "Set the color map bounds from 3.93 to 5.7", "input": "", "output": "api.setColorBounds(3.93, 5.7)"}
+{"instruction": "Set the color map bounds from 1.42 to 8.86", "input": "", "output": "api.setColorBounds(1.42, 8.86)"}
+{"instruction": "Add 'CTGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CTGA'));"}
+{"instruction": "Join strand 1179 and strand 1588 (ligate 3' of 1179 to 5' of 1588).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1179); var s2 = systems[0].strands.find(s => s.id == 1588); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 4.96 to 9.35", "input": "", "output": "api.setColorBounds(4.96, 9.35)"}
+{"instruction": "Set the color map bounds from 3.75 to 9.35", "input": "", "output": "api.setColorBounds(3.75, 9.35)"}
+{"instruction": "Set the color map bounds from 3.67 to 6.31", "input": "", "output": "api.setColorBounds(3.67, 6.31)"}
+{"instruction": "Add 'GGGGCCCAAATTCACAC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGGGCCCAAATTCACAC'));"}
+{"instruction": "Split the strand at element 1210.", "input": "", "output": "api.selectElementIDs([1210]); edit.splitStrand(api.getElements([1210])[0]);"}
+{"instruction": "Add 'GGAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGAG'));"}
+{"instruction": "Add 'UTTTAACUAGTUCUUGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTTTAACUAGTUCUUGA'));"}
+{"instruction": "Set the color map bounds from 4.81 to 8.86", "input": "", "output": "api.setColorBounds(4.81, 8.86)"}
+{"instruction": "Join strand 1366 and strand 942 (ligate 3' of 1366 to 5' of 942).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1366); var s2 = systems[0].strands.find(s => s.id == 942); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'AAU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AAU'));"}
+{"instruction": "Add 'GAT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GAT'));"}
+{"instruction": "Split the strand at element 280.", "input": "", "output": "api.selectElementIDs([280]); edit.splitStrand(api.getElements([280])[0]);"}
+{"instruction": "Add 'ACCGATGACGAUCUCAGAUG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACCGATGACGAUCUCAGAUG'));"}
+{"instruction": "Set the color map bounds from 0.93 to 5.59", "input": "", "output": "api.setColorBounds(0.93, 5.59)"}
+{"instruction": "Split the strand at element 828.", "input": "", "output": "api.selectElementIDs([828]); edit.splitStrand(api.getElements([828])[0]);"}
+{"instruction": "Split the strand at element 1359.", "input": "", "output": "api.selectElementIDs([1359]); edit.splitStrand(api.getElements([1359])[0]);"}
+{"instruction": "Set the color map bounds from 4.31 to 7.12", "input": "", "output": "api.setColorBounds(4.31, 7.12)"}
+{"instruction": "Join strand 739 and strand 158 (ligate 3' of 739 to 5' of 158).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 739); var s2 = systems[0].strands.find(s => s.id == 158); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.35 to 6.71", "input": "", "output": "api.setColorBounds(3.35, 6.71)"}
+{"instruction": "Join strand 311 and strand 1023 (ligate 3' of 311 to 5' of 1023).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 311); var s2 = systems[0].strands.find(s => s.id == 1023); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1128 and strand 1674 (ligate 3' of 1128 to 5' of 1674).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1128); var s2 = systems[0].strands.find(s => s.id == 1674); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.82 to 6.34", "input": "", "output": "api.setColorBounds(3.82, 6.34)"}
+{"instruction": "Join strand 1004 and strand 110 (ligate 3' of 1004 to 5' of 110).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1004); var s2 = systems[0].strands.find(s => s.id == 110); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 10.", "input": "", "output": "api.selectElementIDs([10]); edit.splitStrand(api.getElements([10])[0]);"}
+{"instruction": "Join strand 828 and strand 678 (ligate 3' of 828 to 5' of 678).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 828); var s2 = systems[0].strands.find(s => s.id == 678); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GCCTCCCUCUTGCTU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCCTCCCUCUTGCTU'));"}
+{"instruction": "Split the strand at element 1498.", "input": "", "output": "api.selectElementIDs([1498]); edit.splitStrand(api.getElements([1498])[0]);"}
+{"instruction": "Set the color map bounds from 1.61 to 7.67", "input": "", "output": "api.setColorBounds(1.61, 7.67)"}
+{"instruction": "Set the color map bounds from 4.61 to 8.14", "input": "", "output": "api.setColorBounds(4.61, 8.14)"}
+{"instruction": "Add 'AUAU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AUAU'));"}
+{"instruction": "Split the strand at element 151.", "input": "", "output": "api.selectElementIDs([151]); edit.splitStrand(api.getElements([151])[0]);"}
+{"instruction": "Add 'ACAUUTAGGGTUCTUTUUTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACAUUTAGGGTUCTUTUUTG'));"}
+{"instruction": "Split the strand at element 371.", "input": "", "output": "api.selectElementIDs([371]); edit.splitStrand(api.getElements([371])[0]);"}
+{"instruction": "Join strand 639 and strand 313 (ligate 3' of 639 to 5' of 313).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 639); var s2 = systems[0].strands.find(s => s.id == 313); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GAG'));"}
+{"instruction": "Add 'ACCGUCUTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACCGUCUTC'));"}
+{"instruction": "Add 'GGGCTTCAGGUCUAAAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGGCTTCAGGUCUAAAG'));"}
+{"instruction": "Split the strand at element 78.", "input": "", "output": "api.selectElementIDs([78]); edit.splitStrand(api.getElements([78])[0]);"}
+{"instruction": "Set the color map bounds from 2.22 to 7.13", "input": "", "output": "api.setColorBounds(2.22, 7.13)"}
+{"instruction": "Add 'TGAGUTCAAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGAGUTCAAA'));"}
+{"instruction": "Split the strand at element 378.", "input": "", "output": "api.selectElementIDs([378]); edit.splitStrand(api.getElements([378])[0]);"}
+{"instruction": "Join strand 404 and strand 1418 (ligate 3' of 404 to 5' of 1418).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 404); var s2 = systems[0].strands.find(s => s.id == 1418); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 529 and strand 1726 (ligate 3' of 529 to 5' of 1726).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 529); var s2 = systems[0].strands.find(s => s.id == 1726); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 487.", "input": "", "output": "api.selectElementIDs([487]); edit.splitStrand(api.getElements([487])[0]);"}
+{"instruction": "Join strand 907 and strand 921 (ligate 3' of 907 to 5' of 921).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 907); var s2 = systems[0].strands.find(s => s.id == 921); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CUT'));"}
+{"instruction": "Set the color map bounds from 1.93 to 7.01", "input": "", "output": "api.setColorBounds(1.93, 7.01)"}
+{"instruction": "Set the color map bounds from 3.62 to 6.66", "input": "", "output": "api.setColorBounds(3.62, 6.66)"}
+{"instruction": "Set the color map bounds from 0.61 to 8.92", "input": "", "output": "api.setColorBounds(0.61, 8.92)"}
+{"instruction": "Add 'GCGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCGA'));"}
+{"instruction": "Split the strand at element 922.", "input": "", "output": "api.selectElementIDs([922]); edit.splitStrand(api.getElements([922])[0]);"}
+{"instruction": "Join strand 702 and strand 394 (ligate 3' of 702 to 5' of 394).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 702); var s2 = systems[0].strands.find(s => s.id == 394); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 391.", "input": "", "output": "api.selectElementIDs([391]); edit.splitStrand(api.getElements([391])[0]);"}
+{"instruction": "Join strand 1669 and strand 1313 (ligate 3' of 1669 to 5' of 1313).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1669); var s2 = systems[0].strands.find(s => s.id == 1313); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1303.", "input": "", "output": "api.selectElementIDs([1303]); edit.splitStrand(api.getElements([1303])[0]);"}
+{"instruction": "Set the color map bounds from 4.53 to 6.24", "input": "", "output": "api.setColorBounds(4.53, 6.24)"}
+{"instruction": "Split the strand at element 807.", "input": "", "output": "api.selectElementIDs([807]); edit.splitStrand(api.getElements([807])[0]);"}
+{"instruction": "Split the strand at element 904.", "input": "", "output": "api.selectElementIDs([904]); edit.splitStrand(api.getElements([904])[0]);"}
+{"instruction": "Add 'UTTCUUGC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTTCUUGC'));"}
+{"instruction": "Set the color map bounds from 4.64 to 9.28", "input": "", "output": "api.setColorBounds(4.64, 9.28)"}
+{"instruction": "Set the color map bounds from 1.0 to 7.11", "input": "", "output": "api.setColorBounds(1.0, 7.11)"}
+{"instruction": "Split the strand at element 359.", "input": "", "output": "api.selectElementIDs([359]); edit.splitStrand(api.getElements([359])[0]);"}
+{"instruction": "Set the color map bounds from 0.21 to 7.92", "input": "", "output": "api.setColorBounds(0.21, 7.92)"}
+{"instruction": "Add 'CCTTTTCTGGGACT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCTTTTCTGGGACT'));"}
+{"instruction": "Add 'AGCUUTCCC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGCUUTCCC'));"}
+{"instruction": "Split the strand at element 59.", "input": "", "output": "api.selectElementIDs([59]); edit.splitStrand(api.getElements([59])[0]);"}
+{"instruction": "Set the color map bounds from 2.34 to 9.5", "input": "", "output": "api.setColorBounds(2.34, 9.5)"}
+{"instruction": "Split the strand at element 289.", "input": "", "output": "api.selectElementIDs([289]); edit.splitStrand(api.getElements([289])[0]);"}
+{"instruction": "Split the strand at element 684.", "input": "", "output": "api.selectElementIDs([684]); edit.splitStrand(api.getElements([684])[0]);"}
+{"instruction": "Add 'UCCATUGAUGAT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UCCATUGAUGAT'));"}
+{"instruction": "Add 'ATCCCCAUTCUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ATCCCCAUTCUA'));"}
+{"instruction": "Set the color map bounds from 1.8 to 9.41", "input": "", "output": "api.setColorBounds(1.8, 9.41)"}
+{"instruction": "Join strand 1161 and strand 811 (ligate 3' of 1161 to 5' of 811).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1161); var s2 = systems[0].strands.find(s => s.id == 811); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 234 and strand 516 (ligate 3' of 234 to 5' of 516).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 234); var s2 = systems[0].strands.find(s => s.id == 516); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.33 to 9.56", "input": "", "output": "api.setColorBounds(1.33, 9.56)"}
+{"instruction": "Add 'CAATUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CAATUT'));"}
+{"instruction": "Join strand 1462 and strand 1091 (ligate 3' of 1462 to 5' of 1091).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1462); var s2 = systems[0].strands.find(s => s.id == 1091); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1332 and strand 616 (ligate 3' of 1332 to 5' of 616).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1332); var s2 = systems[0].strands.find(s => s.id == 616); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1573 and strand 1809 (ligate 3' of 1573 to 5' of 1809).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1573); var s2 = systems[0].strands.find(s => s.id == 1809); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 4.01 to 7.21", "input": "", "output": "api.setColorBounds(4.01, 7.21)"}
+{"instruction": "Add 'GAUUGTTUAGACTTGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GAUUGTTUAGACTTGA'));"}
+{"instruction": "Add 'CGTAACUAUUTUCUUG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGTAACUAUUTUCUUG'));"}
+{"instruction": "Add 'GTTTUGAGCUACUTTGUAAT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GTTTUGAGCUACUTTGUAAT'));"}
+{"instruction": "Set the color map bounds from 3.9 to 6.59", "input": "", "output": "api.setColorBounds(3.9, 6.59)"}
+{"instruction": "Join strand 1554 and strand 1315 (ligate 3' of 1554 to 5' of 1315).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1554); var s2 = systems[0].strands.find(s => s.id == 1315); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1622 and strand 1494 (ligate 3' of 1622 to 5' of 1494).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1622); var s2 = systems[0].strands.find(s => s.id == 1494); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.13 to 8.15", "input": "", "output": "api.setColorBounds(3.13, 8.15)"}
+{"instruction": "Split the strand at element 1879.", "input": "", "output": "api.selectElementIDs([1879]); edit.splitStrand(api.getElements([1879])[0]);"}
+{"instruction": "Add 'GCTUGAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCTUGAG'));"}
+{"instruction": "Set the color map bounds from 4.09 to 9.89", "input": "", "output": "api.setColorBounds(4.09, 9.89)"}
+{"instruction": "Split the strand at element 1902.", "input": "", "output": "api.selectElementIDs([1902]); edit.splitStrand(api.getElements([1902])[0]);"}
+{"instruction": "Join strand 1375 and strand 318 (ligate 3' of 1375 to 5' of 318).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1375); var s2 = systems[0].strands.find(s => s.id == 318); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 630 and strand 424 (ligate 3' of 630 to 5' of 424).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 630); var s2 = systems[0].strands.find(s => s.id == 424); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1776.", "input": "", "output": "api.selectElementIDs([1776]); edit.splitStrand(api.getElements([1776])[0]);"}
+{"instruction": "Split the strand at element 599.", "input": "", "output": "api.selectElementIDs([599]); edit.splitStrand(api.getElements([599])[0]);"}
+{"instruction": "Join strand 1415 and strand 1030 (ligate 3' of 1415 to 5' of 1030).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1415); var s2 = systems[0].strands.find(s => s.id == 1030); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 759.", "input": "", "output": "api.selectElementIDs([759]); edit.splitStrand(api.getElements([759])[0]);"}
+{"instruction": "Join strand 508 and strand 916 (ligate 3' of 508 to 5' of 916).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 508); var s2 = systems[0].strands.find(s => s.id == 916); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CUUTTUAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CUUTTUAG'));"}
+{"instruction": "Join strand 16 and strand 1039 (ligate 3' of 16 to 5' of 1039).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 16); var s2 = systems[0].strands.find(s => s.id == 1039); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 4.66 to 6.81", "input": "", "output": "api.setColorBounds(4.66, 6.81)"}
+{"instruction": "Set the color map bounds from 3.99 to 6.32", "input": "", "output": "api.setColorBounds(3.99, 6.32)"}
+{"instruction": "Split the strand at element 472.", "input": "", "output": "api.selectElementIDs([472]); edit.splitStrand(api.getElements([472])[0]);"}
+{"instruction": "Set the color map bounds from 1.2 to 6.95", "input": "", "output": "api.setColorBounds(1.2, 6.95)"}
+{"instruction": "Join strand 908 and strand 808 (ligate 3' of 908 to 5' of 808).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 908); var s2 = systems[0].strands.find(s => s.id == 808); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TCUG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCUG'));"}
+{"instruction": "Join strand 1544 and strand 305 (ligate 3' of 1544 to 5' of 305).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1544); var s2 = systems[0].strands.find(s => s.id == 305); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1364.", "input": "", "output": "api.selectElementIDs([1364]); edit.splitStrand(api.getElements([1364])[0]);"}
+{"instruction": "Set the color map bounds from 0.03 to 6.24", "input": "", "output": "api.setColorBounds(0.03, 6.24)"}
+{"instruction": "Split the strand at element 1582.", "input": "", "output": "api.selectElementIDs([1582]); edit.splitStrand(api.getElements([1582])[0]);"}
+{"instruction": "Add 'GACUCUGCA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GACUCUGCA'));"}
+{"instruction": "Add 'GUACAUC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUACAUC'));"}
+{"instruction": "Split the strand at element 791.", "input": "", "output": "api.selectElementIDs([791]); edit.splitStrand(api.getElements([791])[0]);"}
+{"instruction": "Add 'GACUUAGGACACTGTCG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GACUUAGGACACTGTCG'));"}
+{"instruction": "Set the color map bounds from 4.1 to 9.25", "input": "", "output": "api.setColorBounds(4.1, 9.25)"}
+{"instruction": "Set the color map bounds from 1.89 to 9.16", "input": "", "output": "api.setColorBounds(1.89, 9.16)"}
+{"instruction": "Set the color map bounds from 3.57 to 8.26", "input": "", "output": "api.setColorBounds(3.57, 8.26)"}
+{"instruction": "Join strand 1959 and strand 1037 (ligate 3' of 1959 to 5' of 1037).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1959); var s2 = systems[0].strands.find(s => s.id == 1037); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.92 to 9.68", "input": "", "output": "api.setColorBounds(3.92, 9.68)"}
+{"instruction": "Add 'CAAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CAAG'));"}
+{"instruction": "Split the strand at element 1566.", "input": "", "output": "api.selectElementIDs([1566]); edit.splitStrand(api.getElements([1566])[0]);"}
+{"instruction": "Split the strand at element 587.", "input": "", "output": "api.selectElementIDs([587]); edit.splitStrand(api.getElements([587])[0]);"}
+{"instruction": "Split the strand at element 14.", "input": "", "output": "api.selectElementIDs([14]); edit.splitStrand(api.getElements([14])[0]);"}
+{"instruction": "Add 'GTTGAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GTTGAG'));"}
+{"instruction": "Set the color map bounds from 0.96 to 7.89", "input": "", "output": "api.setColorBounds(0.96, 7.89)"}
+{"instruction": "Add 'GAUUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GAUUA'));"}
+{"instruction": "Join strand 783 and strand 136 (ligate 3' of 783 to 5' of 136).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 783); var s2 = systems[0].strands.find(s => s.id == 136); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 4.13 to 9.43", "input": "", "output": "api.setColorBounds(4.13, 9.43)"}
+{"instruction": "Add 'CAAGTAUCGCAGUUUGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CAAGTAUCGCAGUUUGA'));"}
+{"instruction": "Set the color map bounds from 4.84 to 8.12", "input": "", "output": "api.setColorBounds(4.84, 8.12)"}
+{"instruction": "Add 'GUCGCUTATCGUTAU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUCGCUTATCGUTAU'));"}
+{"instruction": "Set the color map bounds from 1.44 to 5.63", "input": "", "output": "api.setColorBounds(1.44, 5.63)"}
+{"instruction": "Split the strand at element 1926.", "input": "", "output": "api.selectElementIDs([1926]); edit.splitStrand(api.getElements([1926])[0]);"}
+{"instruction": "Add 'GUUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUUA'));"}
+{"instruction": "Add 'TGCAUGATC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGCAUGATC'));"}
+{"instruction": "Split the strand at element 1337.", "input": "", "output": "api.selectElementIDs([1337]); edit.splitStrand(api.getElements([1337])[0]);"}
+{"instruction": "Add 'CCUCTTCGATTUUTUU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCUCTTCGATTUUTUU'));"}
+{"instruction": "Add 'CUTCUTCACTUUU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CUTCUTCACTUUU'));"}
+{"instruction": "Set the color map bounds from 0.81 to 7.46", "input": "", "output": "api.setColorBounds(0.81, 7.46)"}
+{"instruction": "Set the color map bounds from 4.14 to 6.54", "input": "", "output": "api.setColorBounds(4.14, 6.54)"}
+{"instruction": "Join strand 1604 and strand 376 (ligate 3' of 1604 to 5' of 376).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1604); var s2 = systems[0].strands.find(s => s.id == 376); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1052.", "input": "", "output": "api.selectElementIDs([1052]); edit.splitStrand(api.getElements([1052])[0]);"}
+{"instruction": "Set the color map bounds from 1.63 to 8.11", "input": "", "output": "api.setColorBounds(1.63, 8.11)"}
+{"instruction": "Add 'TUTTCUGCTGGTGACAAAGT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TUTTCUGCTGGTGACAAAGT'));"}
+{"instruction": "Set the color map bounds from 1.25 to 8.36", "input": "", "output": "api.setColorBounds(1.25, 8.36)"}
+{"instruction": "Add 'UUTUUAATAGGGGG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UUTUUAATAGGGGG'));"}
+{"instruction": "Join strand 1893 and strand 429 (ligate 3' of 1893 to 5' of 429).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1893); var s2 = systems[0].strands.find(s => s.id == 429); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1735 and strand 415 (ligate 3' of 1735 to 5' of 415).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1735); var s2 = systems[0].strands.find(s => s.id == 415); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1494.", "input": "", "output": "api.selectElementIDs([1494]); edit.splitStrand(api.getElements([1494])[0]);"}
+{"instruction": "Set the color map bounds from 4.68 to 9.75", "input": "", "output": "api.setColorBounds(4.68, 9.75)"}
+{"instruction": "Join strand 230 and strand 1438 (ligate 3' of 230 to 5' of 1438).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 230); var s2 = systems[0].strands.find(s => s.id == 1438); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 22 and strand 264 (ligate 3' of 22 to 5' of 264).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 22); var s2 = systems[0].strands.find(s => s.id == 264); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 4.07 to 9.45", "input": "", "output": "api.setColorBounds(4.07, 9.45)"}
+{"instruction": "Join strand 374 and strand 1441 (ligate 3' of 374 to 5' of 1441).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 374); var s2 = systems[0].strands.find(s => s.id == 1441); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 493.", "input": "", "output": "api.selectElementIDs([493]); edit.splitStrand(api.getElements([493])[0]);"}
+{"instruction": "Split the strand at element 1322.", "input": "", "output": "api.selectElementIDs([1322]); edit.splitStrand(api.getElements([1322])[0]);"}
+{"instruction": "Set the color map bounds from 4.65 to 8.36", "input": "", "output": "api.setColorBounds(4.65, 8.36)"}
+{"instruction": "Split the strand at element 808.", "input": "", "output": "api.selectElementIDs([808]); edit.splitStrand(api.getElements([808])[0]);"}
+{"instruction": "Add 'AGGCTATTUTCU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGGCTATTUTCU'));"}
+{"instruction": "Set the color map bounds from 4.16 to 8.2", "input": "", "output": "api.setColorBounds(4.16, 8.2)"}
+{"instruction": "Set the color map bounds from 4.26 to 8.56", "input": "", "output": "api.setColorBounds(4.26, 8.56)"}
+{"instruction": "Split the strand at element 1012.", "input": "", "output": "api.selectElementIDs([1012]); edit.splitStrand(api.getElements([1012])[0]);"}
+{"instruction": "Join strand 938 and strand 477 (ligate 3' of 938 to 5' of 477).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 938); var s2 = systems[0].strands.find(s => s.id == 477); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1548.", "input": "", "output": "api.selectElementIDs([1548]); edit.splitStrand(api.getElements([1548])[0]);"}
+{"instruction": "Join strand 1502 and strand 1052 (ligate 3' of 1502 to 5' of 1052).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1502); var s2 = systems[0].strands.find(s => s.id == 1052); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'AAACTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AAACTG'));"}
+{"instruction": "Set the color map bounds from 2.17 to 8.33", "input": "", "output": "api.setColorBounds(2.17, 8.33)"}
+{"instruction": "Set the color map bounds from 3.7 to 7.71", "input": "", "output": "api.setColorBounds(3.7, 7.71)"}
+{"instruction": "Split the strand at element 572.", "input": "", "output": "api.selectElementIDs([572]); edit.splitStrand(api.getElements([572])[0]);"}
+{"instruction": "Split the strand at element 479.", "input": "", "output": "api.selectElementIDs([479]); edit.splitStrand(api.getElements([479])[0]);"}
+{"instruction": "Split the strand at element 1991.", "input": "", "output": "api.selectElementIDs([1991]); edit.splitStrand(api.getElements([1991])[0]);"}
+{"instruction": "Split the strand at element 1797.", "input": "", "output": "api.selectElementIDs([1797]); edit.splitStrand(api.getElements([1797])[0]);"}
+{"instruction": "Set the color map bounds from 0.26 to 7.07", "input": "", "output": "api.setColorBounds(0.26, 7.07)"}
+{"instruction": "Set the color map bounds from 3.98 to 9.96", "input": "", "output": "api.setColorBounds(3.98, 9.96)"}
+{"instruction": "Set the color map bounds from 2.91 to 5.54", "input": "", "output": "api.setColorBounds(2.91, 5.54)"}
+{"instruction": "Join strand 1143 and strand 1385 (ligate 3' of 1143 to 5' of 1385).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1143); var s2 = systems[0].strands.find(s => s.id == 1385); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.9 to 7.93", "input": "", "output": "api.setColorBounds(3.9, 7.93)"}
+{"instruction": "Join strand 1669 and strand 1296 (ligate 3' of 1669 to 5' of 1296).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1669); var s2 = systems[0].strands.find(s => s.id == 1296); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1457 and strand 213 (ligate 3' of 1457 to 5' of 213).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1457); var s2 = systems[0].strands.find(s => s.id == 213); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.73 to 9.16", "input": "", "output": "api.setColorBounds(1.73, 9.16)"}
+{"instruction": "Split the strand at element 896.", "input": "", "output": "api.selectElementIDs([896]); edit.splitStrand(api.getElements([896])[0]);"}
+{"instruction": "Add 'ACGATUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACGATUT'));"}
+{"instruction": "Add 'UGCUGGTTCUGTGUTCAAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UGCUGGTTCUGTGUTCAAA'));"}
+{"instruction": "Set the color map bounds from 4.08 to 9.15", "input": "", "output": "api.setColorBounds(4.08, 9.15)"}
+{"instruction": "Add 'CTTGTUC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CTTGTUC'));"}
+{"instruction": "Split the strand at element 1639.", "input": "", "output": "api.selectElementIDs([1639]); edit.splitStrand(api.getElements([1639])[0]);"}
+{"instruction": "Set the color map bounds from 4.21 to 6.32", "input": "", "output": "api.setColorBounds(4.21, 6.32)"}
+{"instruction": "Add 'CTGTACCAAATAUGTT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CTGTACCAAATAUGTT'));"}
+{"instruction": "Join strand 949 and strand 1514 (ligate 3' of 949 to 5' of 1514).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 949); var s2 = systems[0].strands.find(s => s.id == 1514); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GUCUAAUTTTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUCUAAUTTTG'));"}
+{"instruction": "Set the color map bounds from 2.38 to 8.89", "input": "", "output": "api.setColorBounds(2.38, 8.89)"}
+{"instruction": "Set the color map bounds from 0.94 to 6.81", "input": "", "output": "api.setColorBounds(0.94, 6.81)"}
+{"instruction": "Split the strand at element 342.", "input": "", "output": "api.selectElementIDs([342]); edit.splitStrand(api.getElements([342])[0]);"}
+{"instruction": "Add 'UGUGUUGAAUGGTTCCUTU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UGUGUUGAAUGGTTCCUTU'));"}
+{"instruction": "Add 'TCTUCUTGUUCUGC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCTUCUTGUUCUGC'));"}
+{"instruction": "Set the color map bounds from 0.25 to 6.24", "input": "", "output": "api.setColorBounds(0.25, 6.24)"}
+{"instruction": "Add 'UTUUGGUGTGU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTUUGGUGTGU'));"}
+{"instruction": "Join strand 242 and strand 1650 (ligate 3' of 242 to 5' of 1650).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 242); var s2 = systems[0].strands.find(s => s.id == 1650); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CUTCATAAGTCUTTUTGTCA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CUTCATAAGTCUTTUTGTCA'));"}
+{"instruction": "Split the strand at element 22.", "input": "", "output": "api.selectElementIDs([22]); edit.splitStrand(api.getElements([22])[0]);"}
+{"instruction": "Join strand 185 and strand 964 (ligate 3' of 185 to 5' of 964).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 185); var s2 = systems[0].strands.find(s => s.id == 964); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GUUUUACAGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUUUUACAGA'));"}
+{"instruction": "Set the color map bounds from 2.29 to 8.33", "input": "", "output": "api.setColorBounds(2.29, 8.33)"}
+{"instruction": "Split the strand at element 1198.", "input": "", "output": "api.selectElementIDs([1198]); edit.splitStrand(api.getElements([1198])[0]);"}
+{"instruction": "Join strand 1166 and strand 193 (ligate 3' of 1166 to 5' of 193).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1166); var s2 = systems[0].strands.find(s => s.id == 193); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.96 to 7.34", "input": "", "output": "api.setColorBounds(0.96, 7.34)"}
+{"instruction": "Join strand 1980 and strand 253 (ligate 3' of 1980 to 5' of 253).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1980); var s2 = systems[0].strands.find(s => s.id == 253); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1039 and strand 252 (ligate 3' of 1039 to 5' of 252).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1039); var s2 = systems[0].strands.find(s => s.id == 252); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'UTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTC'));"}
+{"instruction": "Add 'UTACUUCAUGUUGU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTACUUCAUGUUGU'));"}
+{"instruction": "Join strand 1869 and strand 1336 (ligate 3' of 1869 to 5' of 1336).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1869); var s2 = systems[0].strands.find(s => s.id == 1336); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 692 and strand 1641 (ligate 3' of 692 to 5' of 1641).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 692); var s2 = systems[0].strands.find(s => s.id == 1641); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 318 and strand 59 (ligate 3' of 318 to 5' of 59).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 318); var s2 = systems[0].strands.find(s => s.id == 59); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 353.", "input": "", "output": "api.selectElementIDs([353]); edit.splitStrand(api.getElements([353])[0]);"}
+{"instruction": "Set the color map bounds from 2.84 to 5.59", "input": "", "output": "api.setColorBounds(2.84, 5.59)"}
+{"instruction": "Add 'TTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TTG'));"}
+{"instruction": "Join strand 428 and strand 138 (ligate 3' of 428 to 5' of 138).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 428); var s2 = systems[0].strands.find(s => s.id == 138); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1232.", "input": "", "output": "api.selectElementIDs([1232]); edit.splitStrand(api.getElements([1232])[0]);"}
+{"instruction": "Set the color map bounds from 2.71 to 8.96", "input": "", "output": "api.setColorBounds(2.71, 8.96)"}
+{"instruction": "Split the strand at element 1220.", "input": "", "output": "api.selectElementIDs([1220]); edit.splitStrand(api.getElements([1220])[0]);"}
+{"instruction": "Split the strand at element 1938.", "input": "", "output": "api.selectElementIDs([1938]); edit.splitStrand(api.getElements([1938])[0]);"}
+{"instruction": "Set the color map bounds from 0.67 to 7.72", "input": "", "output": "api.setColorBounds(0.67, 7.72)"}
+{"instruction": "Add 'CCTGGGTGCUUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCTGGGTGCUUT'));"}
+{"instruction": "Join strand 652 and strand 914 (ligate 3' of 652 to 5' of 914).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 652); var s2 = systems[0].strands.find(s => s.id == 914); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.72 to 9.58", "input": "", "output": "api.setColorBounds(0.72, 9.58)"}
+{"instruction": "Join strand 1429 and strand 252 (ligate 3' of 1429 to 5' of 252).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1429); var s2 = systems[0].strands.find(s => s.id == 252); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1363.", "input": "", "output": "api.selectElementIDs([1363]); edit.splitStrand(api.getElements([1363])[0]);"}
+{"instruction": "Add 'UCTCTUGGUAAATGGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UCTCTUGGUAAATGGA'));"}
+{"instruction": "Join strand 251 and strand 1739 (ligate 3' of 251 to 5' of 1739).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 251); var s2 = systems[0].strands.find(s => s.id == 1739); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 158.", "input": "", "output": "api.selectElementIDs([158]); edit.splitStrand(api.getElements([158])[0]);"}
+{"instruction": "Add 'GCTTCUGUTAUC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCTTCUGUTAUC'));"}
+{"instruction": "Add 'CTUACTATGTAGUUAUAATC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CTUACTATGTAGUUAUAATC'));"}
+{"instruction": "Split the strand at element 125.", "input": "", "output": "api.selectElementIDs([125]); edit.splitStrand(api.getElements([125])[0]);"}
+{"instruction": "Set the color map bounds from 0.33 to 7.29", "input": "", "output": "api.setColorBounds(0.33, 7.29)"}
+{"instruction": "Set the color map bounds from 0.17 to 6.15", "input": "", "output": "api.setColorBounds(0.17, 6.15)"}
+{"instruction": "Add 'AGC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGC'));"}
+{"instruction": "Split the strand at element 711.", "input": "", "output": "api.selectElementIDs([711]); edit.splitStrand(api.getElements([711])[0]);"}
+{"instruction": "Split the strand at element 1603.", "input": "", "output": "api.selectElementIDs([1603]); edit.splitStrand(api.getElements([1603])[0]);"}
+{"instruction": "Set the color map bounds from 1.74 to 6.57", "input": "", "output": "api.setColorBounds(1.74, 6.57)"}
+{"instruction": "Set the color map bounds from 1.2 to 7.59", "input": "", "output": "api.setColorBounds(1.2, 7.59)"}
+{"instruction": "Add 'UCGCCUUTUCCCCCU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UCGCCUUTUCCCCCU'));"}
+{"instruction": "Set the color map bounds from 2.41 to 8.12", "input": "", "output": "api.setColorBounds(2.41, 8.12)"}
+{"instruction": "Split the strand at element 747.", "input": "", "output": "api.selectElementIDs([747]); edit.splitStrand(api.getElements([747])[0]);"}
+{"instruction": "Join strand 1042 and strand 1144 (ligate 3' of 1042 to 5' of 1144).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1042); var s2 = systems[0].strands.find(s => s.id == 1144); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 964.", "input": "", "output": "api.selectElementIDs([964]); edit.splitStrand(api.getElements([964])[0]);"}
+{"instruction": "Split the strand at element 118.", "input": "", "output": "api.selectElementIDs([118]); edit.splitStrand(api.getElements([118])[0]);"}
+{"instruction": "Set the color map bounds from 0.88 to 9.43", "input": "", "output": "api.setColorBounds(0.88, 9.43)"}
+{"instruction": "Split the strand at element 1151.", "input": "", "output": "api.selectElementIDs([1151]); edit.splitStrand(api.getElements([1151])[0]);"}
+{"instruction": "Set the color map bounds from 1.98 to 6.34", "input": "", "output": "api.setColorBounds(1.98, 6.34)"}
+{"instruction": "Join strand 1156 and strand 1115 (ligate 3' of 1156 to 5' of 1115).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1156); var s2 = systems[0].strands.find(s => s.id == 1115); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1123 and strand 152 (ligate 3' of 1123 to 5' of 152).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1123); var s2 = systems[0].strands.find(s => s.id == 152); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TGAUUCTTUCCAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGAUUCTTUCCAA'));"}
+{"instruction": "Add 'TAAATGGCAUGACCU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TAAATGGCAUGACCU'));"}
+{"instruction": "Join strand 308 and strand 657 (ligate 3' of 308 to 5' of 657).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 308); var s2 = systems[0].strands.find(s => s.id == 657); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 273.", "input": "", "output": "api.selectElementIDs([273]); edit.splitStrand(api.getElements([273])[0]);"}
+{"instruction": "Add 'UCUCTAGTUTUUAGGT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UCUCTAGTUTUUAGGT'));"}
+{"instruction": "Set the color map bounds from 3.11 to 6.32", "input": "", "output": "api.setColorBounds(3.11, 6.32)"}
+{"instruction": "Join strand 1616 and strand 1138 (ligate 3' of 1616 to 5' of 1138).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1616); var s2 = systems[0].strands.find(s => s.id == 1138); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CAUUUGUUTAUGCTA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CAUUUGUUTAUGCTA'));"}
+{"instruction": "Split the strand at element 1735.", "input": "", "output": "api.selectElementIDs([1735]); edit.splitStrand(api.getElements([1735])[0]);"}
+{"instruction": "Set the color map bounds from 0.17 to 6.93", "input": "", "output": "api.setColorBounds(0.17, 6.93)"}
+{"instruction": "Add 'CAAGGGGAGGAAUGAC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CAAGGGGAGGAAUGAC'));"}
+{"instruction": "Split the strand at element 1037.", "input": "", "output": "api.selectElementIDs([1037]); edit.splitStrand(api.getElements([1037])[0]);"}
+{"instruction": "Add 'TAAAGTAUTUATTTT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TAAAGTAUTUATTTT'));"}
+{"instruction": "Split the strand at element 410.", "input": "", "output": "api.selectElementIDs([410]); edit.splitStrand(api.getElements([410])[0]);"}
+{"instruction": "Split the strand at element 49.", "input": "", "output": "api.selectElementIDs([49]); edit.splitStrand(api.getElements([49])[0]);"}
+{"instruction": "Set the color map bounds from 0.61 to 7.19", "input": "", "output": "api.setColorBounds(0.61, 7.19)"}
+{"instruction": "Set the color map bounds from 1.27 to 7.42", "input": "", "output": "api.setColorBounds(1.27, 7.42)"}
+{"instruction": "Join strand 215 and strand 875 (ligate 3' of 215 to 5' of 875).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 215); var s2 = systems[0].strands.find(s => s.id == 875); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.97 to 5.65", "input": "", "output": "api.setColorBounds(0.97, 5.65)"}
+{"instruction": "Join strand 1185 and strand 1276 (ligate 3' of 1185 to 5' of 1276).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1185); var s2 = systems[0].strands.find(s => s.id == 1276); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1013 and strand 422 (ligate 3' of 1013 to 5' of 422).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1013); var s2 = systems[0].strands.find(s => s.id == 422); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 221 and strand 1753 (ligate 3' of 221 to 5' of 1753).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 221); var s2 = systems[0].strands.find(s => s.id == 1753); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.45 to 9.65", "input": "", "output": "api.setColorBounds(3.45, 9.65)"}
+{"instruction": "Split the strand at element 727.", "input": "", "output": "api.selectElementIDs([727]); edit.splitStrand(api.getElements([727])[0]);"}
+{"instruction": "Set the color map bounds from 2.73 to 8.83", "input": "", "output": "api.setColorBounds(2.73, 8.83)"}
+{"instruction": "Set the color map bounds from 4.7 to 7.79", "input": "", "output": "api.setColorBounds(4.7, 7.79)"}
+{"instruction": "Join strand 788 and strand 958 (ligate 3' of 788 to 5' of 958).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 788); var s2 = systems[0].strands.find(s => s.id == 958); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1926 and strand 111 (ligate 3' of 1926 to 5' of 111).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1926); var s2 = systems[0].strands.find(s => s.id == 111); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.87 to 8.82", "input": "", "output": "api.setColorBounds(1.87, 8.82)"}
+{"instruction": "Split the strand at element 722.", "input": "", "output": "api.selectElementIDs([722]); edit.splitStrand(api.getElements([722])[0]);"}
+{"instruction": "Set the color map bounds from 2.42 to 6.24", "input": "", "output": "api.setColorBounds(2.42, 6.24)"}
+{"instruction": "Split the strand at element 744.", "input": "", "output": "api.selectElementIDs([744]); edit.splitStrand(api.getElements([744])[0]);"}
+{"instruction": "Set the color map bounds from 3.03 to 7.76", "input": "", "output": "api.setColorBounds(3.03, 7.76)"}
+{"instruction": "Join strand 1103 and strand 593 (ligate 3' of 1103 to 5' of 593).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1103); var s2 = systems[0].strands.find(s => s.id == 593); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.29 to 9.45", "input": "", "output": "api.setColorBounds(3.29, 9.45)"}
+{"instruction": "Join strand 1261 and strand 18 (ligate 3' of 1261 to 5' of 18).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1261); var s2 = systems[0].strands.find(s => s.id == 18); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 731.", "input": "", "output": "api.selectElementIDs([731]); edit.splitStrand(api.getElements([731])[0]);"}
+{"instruction": "Set the color map bounds from 3.11 to 5.74", "input": "", "output": "api.setColorBounds(3.11, 5.74)"}
+{"instruction": "Set the color map bounds from 0.46 to 5.71", "input": "", "output": "api.setColorBounds(0.46, 5.71)"}
+{"instruction": "Join strand 1680 and strand 1152 (ligate 3' of 1680 to 5' of 1152).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1680); var s2 = systems[0].strands.find(s => s.id == 1152); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 716.", "input": "", "output": "api.selectElementIDs([716]); edit.splitStrand(api.getElements([716])[0]);"}
+{"instruction": "Split the strand at element 1612.", "input": "", "output": "api.selectElementIDs([1612]); edit.splitStrand(api.getElements([1612])[0]);"}
+{"instruction": "Set the color map bounds from 1.57 to 5.68", "input": "", "output": "api.setColorBounds(1.57, 5.68)"}
+{"instruction": "Split the strand at element 946.", "input": "", "output": "api.selectElementIDs([946]); edit.splitStrand(api.getElements([946])[0]);"}
+{"instruction": "Split the strand at element 508.", "input": "", "output": "api.selectElementIDs([508]); edit.splitStrand(api.getElements([508])[0]);"}
+{"instruction": "Join strand 1886 and strand 328 (ligate 3' of 1886 to 5' of 328).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1886); var s2 = systems[0].strands.find(s => s.id == 328); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1205 and strand 556 (ligate 3' of 1205 to 5' of 556).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1205); var s2 = systems[0].strands.find(s => s.id == 556); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GCGUGUGUTGUCT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCGUGUGUTGUCT'));"}
+{"instruction": "Split the strand at element 1222.", "input": "", "output": "api.selectElementIDs([1222]); edit.splitStrand(api.getElements([1222])[0]);"}
+{"instruction": "Add 'TCGTUCGUTAGCAGC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCGTUCGUTAGCAGC'));"}
+{"instruction": "Join strand 1305 and strand 1053 (ligate 3' of 1305 to 5' of 1053).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1305); var s2 = systems[0].strands.find(s => s.id == 1053); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.41 to 6.82", "input": "", "output": "api.setColorBounds(2.41, 6.82)"}
+{"instruction": "Join strand 518 and strand 161 (ligate 3' of 518 to 5' of 161).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 518); var s2 = systems[0].strands.find(s => s.id == 161); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TGCAUGTGUTCCAUUAGAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGCAUGTGUTCCAUUAGAG'));"}
+{"instruction": "Join strand 815 and strand 1750 (ligate 3' of 815 to 5' of 1750).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 815); var s2 = systems[0].strands.find(s => s.id == 1750); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GGTUTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGTUTG'));"}
+{"instruction": "Set the color map bounds from 0.58 to 7.39", "input": "", "output": "api.setColorBounds(0.58, 7.39)"}
+{"instruction": "Set the color map bounds from 1.31 to 6.6", "input": "", "output": "api.setColorBounds(1.31, 6.6)"}
+{"instruction": "Add 'ATTCUCAGTAGCAAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ATTCUCAGTAGCAAG'));"}
+{"instruction": "Set the color map bounds from 4.8 to 8.99", "input": "", "output": "api.setColorBounds(4.8, 8.99)"}
+{"instruction": "Add 'AGCAC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGCAC'));"}
+{"instruction": "Join strand 969 and strand 243 (ligate 3' of 969 to 5' of 243).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 969); var s2 = systems[0].strands.find(s => s.id == 243); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'AGAGAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGAGAG'));"}
+{"instruction": "Split the strand at element 464.", "input": "", "output": "api.selectElementIDs([464]); edit.splitStrand(api.getElements([464])[0]);"}
+{"instruction": "Split the strand at element 1597.", "input": "", "output": "api.selectElementIDs([1597]); edit.splitStrand(api.getElements([1597])[0]);"}
+{"instruction": "Join strand 176 and strand 1938 (ligate 3' of 176 to 5' of 1938).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 176); var s2 = systems[0].strands.find(s => s.id == 1938); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 383 and strand 36 (ligate 3' of 383 to 5' of 36).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 383); var s2 = systems[0].strands.find(s => s.id == 36); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.72 to 6.25", "input": "", "output": "api.setColorBounds(1.72, 6.25)"}
+{"instruction": "Add 'TUUUAGTATUUAAAATUU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TUUUAGTATUUAAAATUU'));"}
+{"instruction": "Set the color map bounds from 2.82 to 9.15", "input": "", "output": "api.setColorBounds(2.82, 9.15)"}
+{"instruction": "Set the color map bounds from 0.75 to 9.57", "input": "", "output": "api.setColorBounds(0.75, 9.57)"}
+{"instruction": "Join strand 728 and strand 402 (ligate 3' of 728 to 5' of 402).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 728); var s2 = systems[0].strands.find(s => s.id == 402); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 218.", "input": "", "output": "api.selectElementIDs([218]); edit.splitStrand(api.getElements([218])[0]);"}
+{"instruction": "Add 'AAGUG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AAGUG'));"}
+{"instruction": "Set the color map bounds from 1.79 to 7.36", "input": "", "output": "api.setColorBounds(1.79, 7.36)"}
+{"instruction": "Split the strand at element 1354.", "input": "", "output": "api.selectElementIDs([1354]); edit.splitStrand(api.getElements([1354])[0]);"}
+{"instruction": "Join strand 535 and strand 1670 (ligate 3' of 535 to 5' of 1670).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 535); var s2 = systems[0].strands.find(s => s.id == 1670); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.24 to 6.37", "input": "", "output": "api.setColorBounds(2.24, 6.37)"}
+{"instruction": "Split the strand at element 1640.", "input": "", "output": "api.selectElementIDs([1640]); edit.splitStrand(api.getElements([1640])[0]);"}
+{"instruction": "Set the color map bounds from 0.95 to 6.86", "input": "", "output": "api.setColorBounds(0.95, 6.86)"}
+{"instruction": "Join strand 236 and strand 964 (ligate 3' of 236 to 5' of 964).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 236); var s2 = systems[0].strands.find(s => s.id == 964); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 537.", "input": "", "output": "api.selectElementIDs([537]); edit.splitStrand(api.getElements([537])[0]);"}
+{"instruction": "Add 'AGUUAGCTGTCCUTTTTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGUUAGCTGTCCUTTTTC'));"}
+{"instruction": "Split the strand at element 1028.", "input": "", "output": "api.selectElementIDs([1028]); edit.splitStrand(api.getElements([1028])[0]);"}
+{"instruction": "Add 'GCTACAUTCAGCUGGU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCTACAUTCAGCUGGU'));"}
+{"instruction": "Split the strand at element 831.", "input": "", "output": "api.selectElementIDs([831]); edit.splitStrand(api.getElements([831])[0]);"}
+{"instruction": "Join strand 1027 and strand 700 (ligate 3' of 1027 to 5' of 700).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1027); var s2 = systems[0].strands.find(s => s.id == 700); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.85 to 6.11", "input": "", "output": "api.setColorBounds(2.85, 6.11)"}
+{"instruction": "Split the strand at element 107.", "input": "", "output": "api.selectElementIDs([107]); edit.splitStrand(api.getElements([107])[0]);"}
+{"instruction": "Set the color map bounds from 3.97 to 5.71", "input": "", "output": "api.setColorBounds(3.97, 5.71)"}
+{"instruction": "Add 'TATAUUTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TATAUUTG'));"}
+{"instruction": "Join strand 1971 and strand 624 (ligate 3' of 1971 to 5' of 624).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1971); var s2 = systems[0].strands.find(s => s.id == 624); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1155.", "input": "", "output": "api.selectElementIDs([1155]); edit.splitStrand(api.getElements([1155])[0]);"}
+{"instruction": "Add 'TCCGACAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCCGACAA'));"}
+{"instruction": "Add 'ACUCUCTCTTACG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACUCUCTCTTACG'));"}
+{"instruction": "Set the color map bounds from 1.23 to 5.95", "input": "", "output": "api.setColorBounds(1.23, 5.95)"}
+{"instruction": "Split the strand at element 1712.", "input": "", "output": "api.selectElementIDs([1712]); edit.splitStrand(api.getElements([1712])[0]);"}
+{"instruction": "Split the strand at element 998.", "input": "", "output": "api.selectElementIDs([998]); edit.splitStrand(api.getElements([998])[0]);"}
+{"instruction": "Join strand 134 and strand 1694 (ligate 3' of 134 to 5' of 1694).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 134); var s2 = systems[0].strands.find(s => s.id == 1694); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 249 and strand 1963 (ligate 3' of 249 to 5' of 1963).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 249); var s2 = systems[0].strands.find(s => s.id == 1963); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GAGCTTAGUCGGUUUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GAGCTTAGUCGGUUUT'));"}
+{"instruction": "Split the strand at element 1449.", "input": "", "output": "api.selectElementIDs([1449]); edit.splitStrand(api.getElements([1449])[0]);"}
+{"instruction": "Add 'TUGCTCATUUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TUGCTCATUUA'));"}
+{"instruction": "Join strand 1486 and strand 1439 (ligate 3' of 1486 to 5' of 1439).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1486); var s2 = systems[0].strands.find(s => s.id == 1439); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TGUGUGUCGT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGUGUGUCGT'));"}
+{"instruction": "Join strand 1638 and strand 504 (ligate 3' of 1638 to 5' of 504).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1638); var s2 = systems[0].strands.find(s => s.id == 504); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1920.", "input": "", "output": "api.selectElementIDs([1920]); edit.splitStrand(api.getElements([1920])[0]);"}
+{"instruction": "Split the strand at element 1653.", "input": "", "output": "api.selectElementIDs([1653]); edit.splitStrand(api.getElements([1653])[0]);"}
+{"instruction": "Join strand 1764 and strand 1528 (ligate 3' of 1764 to 5' of 1528).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1764); var s2 = systems[0].strands.find(s => s.id == 1528); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'ACGUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACGUT'));"}
+{"instruction": "Join strand 1939 and strand 191 (ligate 3' of 1939 to 5' of 191).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1939); var s2 = systems[0].strands.find(s => s.id == 191); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TAUUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TAUUA'));"}
+{"instruction": "Set the color map bounds from 3.7 to 8.08", "input": "", "output": "api.setColorBounds(3.7, 8.08)"}
+{"instruction": "Add 'CGCUUGAGTUAGUATGUU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGCUUGAGTUAGUATGUU'));"}
+{"instruction": "Add 'GGCGCGUUCGC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGCGCGUUCGC'));"}
+{"instruction": "Join strand 1479 and strand 700 (ligate 3' of 1479 to 5' of 700).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1479); var s2 = systems[0].strands.find(s => s.id == 700); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.4 to 8.22", "input": "", "output": "api.setColorBounds(1.4, 8.22)"}
+{"instruction": "Join strand 893 and strand 451 (ligate 3' of 893 to 5' of 451).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 893); var s2 = systems[0].strands.find(s => s.id == 451); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 4.03 to 7.85", "input": "", "output": "api.setColorBounds(4.03, 7.85)"}
+{"instruction": "Split the strand at element 1060.", "input": "", "output": "api.selectElementIDs([1060]); edit.splitStrand(api.getElements([1060])[0]);"}
+{"instruction": "Join strand 1565 and strand 1731 (ligate 3' of 1565 to 5' of 1731).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1565); var s2 = systems[0].strands.find(s => s.id == 1731); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'ACGTGUTCTGAUTUGUU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACGTGUTCTGAUTUGUU'));"}
+{"instruction": "Add 'CCTTAAGGCCGGAAU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCTTAAGGCCGGAAU'));"}
+{"instruction": "Add 'TGUUUTTUAGCUCCGCCCG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGUUUTTUAGCUCCGCCCG'));"}
+{"instruction": "Join strand 843 and strand 383 (ligate 3' of 843 to 5' of 383).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 843); var s2 = systems[0].strands.find(s => s.id == 383); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GTCAAAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GTCAAAA'));"}
+{"instruction": "Join strand 263 and strand 25 (ligate 3' of 263 to 5' of 25).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 263); var s2 = systems[0].strands.find(s => s.id == 25); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'ATACATCUGTCUCTCTUTTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ATACATCUGTCUCTCTUTTG'));"}
+{"instruction": "Split the strand at element 1734.", "input": "", "output": "api.selectElementIDs([1734]); edit.splitStrand(api.getElements([1734])[0]);"}
+{"instruction": "Split the strand at element 1578.", "input": "", "output": "api.selectElementIDs([1578]); edit.splitStrand(api.getElements([1578])[0]);"}
+{"instruction": "Add 'GTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GTC'));"}
+{"instruction": "Set the color map bounds from 4.02 to 7.64", "input": "", "output": "api.setColorBounds(4.02, 7.64)"}
+{"instruction": "Split the strand at element 1055.", "input": "", "output": "api.selectElementIDs([1055]); edit.splitStrand(api.getElements([1055])[0]);"}
+{"instruction": "Join strand 687 and strand 847 (ligate 3' of 687 to 5' of 847).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 687); var s2 = systems[0].strands.find(s => s.id == 847); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 4.0 to 5.94", "input": "", "output": "api.setColorBounds(4.0, 5.94)"}
+{"instruction": "Split the strand at element 434.", "input": "", "output": "api.selectElementIDs([434]); edit.splitStrand(api.getElements([434])[0]);"}
+{"instruction": "Join strand 136 and strand 399 (ligate 3' of 136 to 5' of 399).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 136); var s2 = systems[0].strands.find(s => s.id == 399); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 853.", "input": "", "output": "api.selectElementIDs([853]); edit.splitStrand(api.getElements([853])[0]);"}
+{"instruction": "Split the strand at element 1349.", "input": "", "output": "api.selectElementIDs([1349]); edit.splitStrand(api.getElements([1349])[0]);"}
+{"instruction": "Split the strand at element 149.", "input": "", "output": "api.selectElementIDs([149]); edit.splitStrand(api.getElements([149])[0]);"}
+{"instruction": "Split the strand at element 871.", "input": "", "output": "api.selectElementIDs([871]); edit.splitStrand(api.getElements([871])[0]);"}
+{"instruction": "Join strand 1007 and strand 200 (ligate 3' of 1007 to 5' of 200).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1007); var s2 = systems[0].strands.find(s => s.id == 200); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 89.", "input": "", "output": "api.selectElementIDs([89]); edit.splitStrand(api.getElements([89])[0]);"}
+{"instruction": "Add 'ACUGGCGATTUCT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACUGGCGATTUCT'));"}
+{"instruction": "Set the color map bounds from 0.99 to 7.81", "input": "", "output": "api.setColorBounds(0.99, 7.81)"}
+{"instruction": "Join strand 1357 and strand 1909 (ligate 3' of 1357 to 5' of 1909).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1357); var s2 = systems[0].strands.find(s => s.id == 1909); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.37 to 6.51", "input": "", "output": "api.setColorBounds(1.37, 6.51)"}
+{"instruction": "Split the strand at element 1123.", "input": "", "output": "api.selectElementIDs([1123]); edit.splitStrand(api.getElements([1123])[0]);"}
+{"instruction": "Add 'AGUATCCTUAUATUGCTGU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGUATCCTUAUATUGCTGU'));"}
+{"instruction": "Join strand 1720 and strand 1465 (ligate 3' of 1720 to 5' of 1465).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1720); var s2 = systems[0].strands.find(s => s.id == 1465); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.43 to 5.71", "input": "", "output": "api.setColorBounds(0.43, 5.71)"}
+{"instruction": "Split the strand at element 1880.", "input": "", "output": "api.selectElementIDs([1880]); edit.splitStrand(api.getElements([1880])[0]);"}
+{"instruction": "Split the strand at element 673.", "input": "", "output": "api.selectElementIDs([673]); edit.splitStrand(api.getElements([673])[0]);"}
+{"instruction": "Add 'UCCCUTTGGATAUC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UCCCUTTGGATAUC'));"}
+{"instruction": "Split the strand at element 826.", "input": "", "output": "api.selectElementIDs([826]); edit.splitStrand(api.getElements([826])[0]);"}
+{"instruction": "Add 'GUCGTGGAACCCUTACC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUCGTGGAACCCUTACC'));"}
+{"instruction": "Set the color map bounds from 0.12 to 7.98", "input": "", "output": "api.setColorBounds(0.12, 7.98)"}
+{"instruction": "Add 'GTATGUCTGCAACUAUATTU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GTATGUCTGCAACUAUATTU'));"}
+{"instruction": "Split the strand at element 1369.", "input": "", "output": "api.selectElementIDs([1369]); edit.splitStrand(api.getElements([1369])[0]);"}
+{"instruction": "Join strand 1154 and strand 660 (ligate 3' of 1154 to 5' of 660).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1154); var s2 = systems[0].strands.find(s => s.id == 660); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.49 to 5.61", "input": "", "output": "api.setColorBounds(2.49, 5.61)"}
+{"instruction": "Add 'UCGTUTTGCUC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UCGTUTTGCUC'));"}
+{"instruction": "Add 'CAACUGAGC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CAACUGAGC'));"}
+{"instruction": "Split the strand at element 1021.", "input": "", "output": "api.selectElementIDs([1021]); edit.splitStrand(api.getElements([1021])[0]);"}
+{"instruction": "Add 'AACUCUUAGGUTUUC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AACUCUUAGGUTUUC'));"}
+{"instruction": "Set the color map bounds from 2.22 to 9.29", "input": "", "output": "api.setColorBounds(2.22, 9.29)"}
+{"instruction": "Set the color map bounds from 2.68 to 6.69", "input": "", "output": "api.setColorBounds(2.68, 6.69)"}
+{"instruction": "Set the color map bounds from 1.28 to 7.33", "input": "", "output": "api.setColorBounds(1.28, 7.33)"}
+{"instruction": "Set the color map bounds from 3.23 to 9.73", "input": "", "output": "api.setColorBounds(3.23, 9.73)"}
+{"instruction": "Split the strand at element 1611.", "input": "", "output": "api.selectElementIDs([1611]); edit.splitStrand(api.getElements([1611])[0]);"}
+{"instruction": "Set the color map bounds from 1.11 to 5.51", "input": "", "output": "api.setColorBounds(1.11, 5.51)"}
+{"instruction": "Join strand 1847 and strand 971 (ligate 3' of 1847 to 5' of 971).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1847); var s2 = systems[0].strands.find(s => s.id == 971); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 613 and strand 366 (ligate 3' of 613 to 5' of 366).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 613); var s2 = systems[0].strands.find(s => s.id == 366); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 31 and strand 59 (ligate 3' of 31 to 5' of 59).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 31); var s2 = systems[0].strands.find(s => s.id == 59); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.65 to 9.87", "input": "", "output": "api.setColorBounds(0.65, 9.87)"}
+{"instruction": "Add 'TCAUAUATU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCAUAUATU'));"}
+{"instruction": "Add 'TUUUUUUACGATTGAACUAU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TUUUUUUACGATTGAACUAU'));"}
+{"instruction": "Join strand 1596 and strand 1840 (ligate 3' of 1596 to 5' of 1840).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1596); var s2 = systems[0].strands.find(s => s.id == 1840); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1484 and strand 465 (ligate 3' of 1484 to 5' of 465).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1484); var s2 = systems[0].strands.find(s => s.id == 465); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 534.", "input": "", "output": "api.selectElementIDs([534]); edit.splitStrand(api.getElements([534])[0]);"}
+{"instruction": "Split the strand at element 1408.", "input": "", "output": "api.selectElementIDs([1408]); edit.splitStrand(api.getElements([1408])[0]);"}
+{"instruction": "Add 'CUGAUUTTAGACAT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CUGAUUTTAGACAT'));"}
+{"instruction": "Split the strand at element 1054.", "input": "", "output": "api.selectElementIDs([1054]); edit.splitStrand(api.getElements([1054])[0]);"}
+{"instruction": "Add 'GTTCTCATGGTTTAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GTTCTCATGGTTTAA'));"}
+{"instruction": "Add 'GGCTTUCT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGCTTUCT'));"}
+{"instruction": "Split the strand at element 1962.", "input": "", "output": "api.selectElementIDs([1962]); edit.splitStrand(api.getElements([1962])[0]);"}
+{"instruction": "Join strand 1857 and strand 643 (ligate 3' of 1857 to 5' of 643).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1857); var s2 = systems[0].strands.find(s => s.id == 643); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TATGAGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TATGAGA'));"}
+{"instruction": "Split the strand at element 694.", "input": "", "output": "api.selectElementIDs([694]); edit.splitStrand(api.getElements([694])[0]);"}
+{"instruction": "Join strand 735 and strand 1641 (ligate 3' of 735 to 5' of 1641).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 735); var s2 = systems[0].strands.find(s => s.id == 1641); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 413 and strand 975 (ligate 3' of 413 to 5' of 975).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 413); var s2 = systems[0].strands.find(s => s.id == 975); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CCTUUUG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCTUUUG'));"}
+{"instruction": "Join strand 1769 and strand 779 (ligate 3' of 1769 to 5' of 779).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1769); var s2 = systems[0].strands.find(s => s.id == 779); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1474 and strand 369 (ligate 3' of 1474 to 5' of 369).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1474); var s2 = systems[0].strands.find(s => s.id == 369); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CCGGTGCCCG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCGGTGCCCG'));"}
+{"instruction": "Set the color map bounds from 1.1 to 9.93", "input": "", "output": "api.setColorBounds(1.1, 9.93)"}
+{"instruction": "Split the strand at element 396.", "input": "", "output": "api.selectElementIDs([396]); edit.splitStrand(api.getElements([396])[0]);"}
+{"instruction": "Split the strand at element 172.", "input": "", "output": "api.selectElementIDs([172]); edit.splitStrand(api.getElements([172])[0]);"}
+{"instruction": "Join strand 1364 and strand 184 (ligate 3' of 1364 to 5' of 184).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1364); var s2 = systems[0].strands.find(s => s.id == 184); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.91 to 7.02", "input": "", "output": "api.setColorBounds(1.91, 7.02)"}
+{"instruction": "Join strand 1322 and strand 749 (ligate 3' of 1322 to 5' of 749).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1322); var s2 = systems[0].strands.find(s => s.id == 749); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 644.", "input": "", "output": "api.selectElementIDs([644]); edit.splitStrand(api.getElements([644])[0]);"}
+{"instruction": "Split the strand at element 20.", "input": "", "output": "api.selectElementIDs([20]); edit.splitStrand(api.getElements([20])[0]);"}
+{"instruction": "Join strand 1997 and strand 1462 (ligate 3' of 1997 to 5' of 1462).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1997); var s2 = systems[0].strands.find(s => s.id == 1462); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 566 and strand 1757 (ligate 3' of 566 to 5' of 1757).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 566); var s2 = systems[0].strands.find(s => s.id == 1757); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 742 and strand 1346 (ligate 3' of 742 to 5' of 1346).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 742); var s2 = systems[0].strands.find(s => s.id == 1346); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 4.04 to 5.68", "input": "", "output": "api.setColorBounds(4.04, 5.68)"}
+{"instruction": "Split the strand at element 297.", "input": "", "output": "api.selectElementIDs([297]); edit.splitStrand(api.getElements([297])[0]);"}
+{"instruction": "Add 'UTGTGACATUATCTGTATT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTGTGACATUATCTGTATT'));"}
+{"instruction": "Add 'UGCGTUUTCUTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UGCGTUUTCUTG'));"}
+{"instruction": "Join strand 1875 and strand 1851 (ligate 3' of 1875 to 5' of 1851).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1875); var s2 = systems[0].strands.find(s => s.id == 1851); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 738.", "input": "", "output": "api.selectElementIDs([738]); edit.splitStrand(api.getElements([738])[0]);"}
+{"instruction": "Set the color map bounds from 1.9 to 6.79", "input": "", "output": "api.setColorBounds(1.9, 6.79)"}
+{"instruction": "Set the color map bounds from 1.43 to 7.37", "input": "", "output": "api.setColorBounds(1.43, 7.37)"}
+{"instruction": "Join strand 936 and strand 1066 (ligate 3' of 936 to 5' of 1066).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 936); var s2 = systems[0].strands.find(s => s.id == 1066); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 655.", "input": "", "output": "api.selectElementIDs([655]); edit.splitStrand(api.getElements([655])[0]);"}
+{"instruction": "Join strand 341 and strand 1024 (ligate 3' of 341 to 5' of 1024).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 341); var s2 = systems[0].strands.find(s => s.id == 1024); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CUAGTGATTUC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CUAGTGATTUC'));"}
+{"instruction": "Join strand 915 and strand 883 (ligate 3' of 915 to 5' of 883).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 915); var s2 = systems[0].strands.find(s => s.id == 883); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.08 to 8.82", "input": "", "output": "api.setColorBounds(2.08, 8.82)"}
+{"instruction": "Set the color map bounds from 3.14 to 8.19", "input": "", "output": "api.setColorBounds(3.14, 8.19)"}
+{"instruction": "Split the strand at element 1886.", "input": "", "output": "api.selectElementIDs([1886]); edit.splitStrand(api.getElements([1886])[0]);"}
+{"instruction": "Split the strand at element 1314.", "input": "", "output": "api.selectElementIDs([1314]); edit.splitStrand(api.getElements([1314])[0]);"}
+{"instruction": "Add 'CUTUAATUGU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CUTUAATUGU'));"}
+{"instruction": "Join strand 807 and strand 1636 (ligate 3' of 807 to 5' of 1636).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 807); var s2 = systems[0].strands.find(s => s.id == 1636); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.81 to 7.29", "input": "", "output": "api.setColorBounds(0.81, 7.29)"}
+{"instruction": "Split the strand at element 827.", "input": "", "output": "api.selectElementIDs([827]); edit.splitStrand(api.getElements([827])[0]);"}
+{"instruction": "Join strand 967 and strand 1344 (ligate 3' of 967 to 5' of 1344).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 967); var s2 = systems[0].strands.find(s => s.id == 1344); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 276.", "input": "", "output": "api.selectElementIDs([276]); edit.splitStrand(api.getElements([276])[0]);"}
+{"instruction": "Split the strand at element 558.", "input": "", "output": "api.selectElementIDs([558]); edit.splitStrand(api.getElements([558])[0]);"}
+{"instruction": "Set the color map bounds from 2.83 to 9.27", "input": "", "output": "api.setColorBounds(2.83, 9.27)"}
+{"instruction": "Join strand 530 and strand 500 (ligate 3' of 530 to 5' of 500).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 530); var s2 = systems[0].strands.find(s => s.id == 500); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'UAUUAUTGGCTUGGCATCU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UAUUAUTGGCTUGGCATCU'));"}
+{"instruction": "Add 'AAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AAA'));"}
+{"instruction": "Set the color map bounds from 1.66 to 7.85", "input": "", "output": "api.setColorBounds(1.66, 7.85)"}
+{"instruction": "Set the color map bounds from 2.22 to 7.62", "input": "", "output": "api.setColorBounds(2.22, 7.62)"}
+{"instruction": "Set the color map bounds from 1.27 to 7.82", "input": "", "output": "api.setColorBounds(1.27, 7.82)"}
+{"instruction": "Split the strand at element 1454.", "input": "", "output": "api.selectElementIDs([1454]); edit.splitStrand(api.getElements([1454])[0]);"}
+{"instruction": "Join strand 136 and strand 1453 (ligate 3' of 136 to 5' of 1453).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 136); var s2 = systems[0].strands.find(s => s.id == 1453); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 578.", "input": "", "output": "api.selectElementIDs([578]); edit.splitStrand(api.getElements([578])[0]);"}
+{"instruction": "Join strand 136 and strand 113 (ligate 3' of 136 to 5' of 113).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 136); var s2 = systems[0].strands.find(s => s.id == 113); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GCCC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCCC'));"}
+{"instruction": "Split the strand at element 1525.", "input": "", "output": "api.selectElementIDs([1525]); edit.splitStrand(api.getElements([1525])[0]);"}
+{"instruction": "Set the color map bounds from 0.99 to 6.03", "input": "", "output": "api.setColorBounds(0.99, 6.03)"}
+{"instruction": "Split the strand at element 636.", "input": "", "output": "api.selectElementIDs([636]); edit.splitStrand(api.getElements([636])[0]);"}
+{"instruction": "Add 'UUACATUTGUU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UUACATUTGUU'));"}
+{"instruction": "Split the strand at element 1301.", "input": "", "output": "api.selectElementIDs([1301]); edit.splitStrand(api.getElements([1301])[0]);"}
+{"instruction": "Join strand 432 and strand 214 (ligate 3' of 432 to 5' of 214).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 432); var s2 = systems[0].strands.find(s => s.id == 214); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'AUCACGTCUGUAGGUATAT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AUCACGTCUGUAGGUATAT'));"}
+{"instruction": "Set the color map bounds from 1.27 to 9.49", "input": "", "output": "api.setColorBounds(1.27, 9.49)"}
+{"instruction": "Add 'AGTUTTCUAUAACU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGTUTTCUAUAACU'));"}
+{"instruction": "Add 'AAATUTCGCAATCGTT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AAATUTCGCAATCGTT'));"}
+{"instruction": "Set the color map bounds from 3.86 to 8.47", "input": "", "output": "api.setColorBounds(3.86, 8.47)"}
+{"instruction": "Split the strand at element 740.", "input": "", "output": "api.selectElementIDs([740]); edit.splitStrand(api.getElements([740])[0]);"}
+{"instruction": "Split the strand at element 805.", "input": "", "output": "api.selectElementIDs([805]); edit.splitStrand(api.getElements([805])[0]);"}
+{"instruction": "Join strand 1303 and strand 155 (ligate 3' of 1303 to 5' of 155).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1303); var s2 = systems[0].strands.find(s => s.id == 155); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1227.", "input": "", "output": "api.selectElementIDs([1227]); edit.splitStrand(api.getElements([1227])[0]);"}
+{"instruction": "Set the color map bounds from 3.75 to 5.74", "input": "", "output": "api.setColorBounds(3.75, 5.74)"}
+{"instruction": "Split the strand at element 251.", "input": "", "output": "api.selectElementIDs([251]); edit.splitStrand(api.getElements([251])[0]);"}
+{"instruction": "Join strand 1864 and strand 1519 (ligate 3' of 1864 to 5' of 1519).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1864); var s2 = systems[0].strands.find(s => s.id == 1519); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TGUCUAGATTGUUGGAAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGUCUAGATTGUUGGAAA'));"}
+{"instruction": "Split the strand at element 428.", "input": "", "output": "api.selectElementIDs([428]); edit.splitStrand(api.getElements([428])[0]);"}
+{"instruction": "Join strand 197 and strand 1103 (ligate 3' of 197 to 5' of 1103).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 197); var s2 = systems[0].strands.find(s => s.id == 1103); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GAGCUTU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GAGCUTU'));"}
+{"instruction": "Split the strand at element 1703.", "input": "", "output": "api.selectElementIDs([1703]); edit.splitStrand(api.getElements([1703])[0]);"}
+{"instruction": "Join strand 570 and strand 549 (ligate 3' of 570 to 5' of 549).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 570); var s2 = systems[0].strands.find(s => s.id == 549); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GGUCCUACTU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGUCCUACTU'));"}
+{"instruction": "Split the strand at element 646.", "input": "", "output": "api.selectElementIDs([646]); edit.splitStrand(api.getElements([646])[0]);"}
+{"instruction": "Join strand 1121 and strand 1941 (ligate 3' of 1121 to 5' of 1941).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1121); var s2 = systems[0].strands.find(s => s.id == 1941); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1144.", "input": "", "output": "api.selectElementIDs([1144]); edit.splitStrand(api.getElements([1144])[0]);"}
+{"instruction": "Join strand 1299 and strand 638 (ligate 3' of 1299 to 5' of 638).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1299); var s2 = systems[0].strands.find(s => s.id == 638); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 730.", "input": "", "output": "api.selectElementIDs([730]); edit.splitStrand(api.getElements([730])[0]);"}
+{"instruction": "Split the strand at element 1125.", "input": "", "output": "api.selectElementIDs([1125]); edit.splitStrand(api.getElements([1125])[0]);"}
+{"instruction": "Set the color map bounds from 3.58 to 5.99", "input": "", "output": "api.setColorBounds(3.58, 5.99)"}
+{"instruction": "Set the color map bounds from 0.7 to 7.25", "input": "", "output": "api.setColorBounds(0.7, 7.25)"}
+{"instruction": "Set the color map bounds from 2.87 to 9.64", "input": "", "output": "api.setColorBounds(2.87, 9.64)"}
+{"instruction": "Split the strand at element 1978.", "input": "", "output": "api.selectElementIDs([1978]); edit.splitStrand(api.getElements([1978])[0]);"}
+{"instruction": "Add 'CCUAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCUAG'));"}
+{"instruction": "Add 'CCTUGCGGUCGUGAU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCTUGCGGUCGUGAU'));"}
+{"instruction": "Join strand 1566 and strand 694 (ligate 3' of 1566 to 5' of 694).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1566); var s2 = systems[0].strands.find(s => s.id == 694); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CTTCUUAUGUAGAGGGTAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CTTCUUAUGUAGAGGGTAA'));"}
+{"instruction": "Add 'ATCGGUCTUCTTAUUTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ATCGGUCTUCTTAUUTC'));"}
+{"instruction": "Add 'GGCUATGTCAAGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGCUATGTCAAGA'));"}
+{"instruction": "Split the strand at element 11.", "input": "", "output": "api.selectElementIDs([11]); edit.splitStrand(api.getElements([11])[0]);"}
+{"instruction": "Split the strand at element 882.", "input": "", "output": "api.selectElementIDs([882]); edit.splitStrand(api.getElements([882])[0]);"}
+{"instruction": "Join strand 385 and strand 620 (ligate 3' of 385 to 5' of 620).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 385); var s2 = systems[0].strands.find(s => s.id == 620); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1198 and strand 265 (ligate 3' of 1198 to 5' of 265).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1198); var s2 = systems[0].strands.find(s => s.id == 265); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'UUCGTUUGTTTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UUCGTUUGTTTG'));"}
+{"instruction": "Join strand 717 and strand 1020 (ligate 3' of 717 to 5' of 1020).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 717); var s2 = systems[0].strands.find(s => s.id == 1020); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 502 and strand 1521 (ligate 3' of 502 to 5' of 1521).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 502); var s2 = systems[0].strands.find(s => s.id == 1521); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 293.", "input": "", "output": "api.selectElementIDs([293]); edit.splitStrand(api.getElements([293])[0]);"}
+{"instruction": "Join strand 509 and strand 110 (ligate 3' of 509 to 5' of 110).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 509); var s2 = systems[0].strands.find(s => s.id == 110); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.31 to 6.06", "input": "", "output": "api.setColorBounds(3.31, 6.06)"}
+{"instruction": "Join strand 1784 and strand 688 (ligate 3' of 1784 to 5' of 688).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1784); var s2 = systems[0].strands.find(s => s.id == 688); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.84 to 8.46", "input": "", "output": "api.setColorBounds(1.84, 8.46)"}
+{"instruction": "Set the color map bounds from 3.97 to 8.97", "input": "", "output": "api.setColorBounds(3.97, 8.97)"}
+{"instruction": "Set the color map bounds from 3.3 to 8.73", "input": "", "output": "api.setColorBounds(3.3, 8.73)"}
+{"instruction": "Set the color map bounds from 3.73 to 6.32", "input": "", "output": "api.setColorBounds(3.73, 6.32)"}
+{"instruction": "Set the color map bounds from 1.94 to 7.74", "input": "", "output": "api.setColorBounds(1.94, 7.74)"}
+{"instruction": "Set the color map bounds from 2.98 to 9.38", "input": "", "output": "api.setColorBounds(2.98, 9.38)"}
+{"instruction": "Add 'CGUCTAUATACC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGUCTAUATACC'));"}
+{"instruction": "Split the strand at element 406.", "input": "", "output": "api.selectElementIDs([406]); edit.splitStrand(api.getElements([406])[0]);"}
+{"instruction": "Set the color map bounds from 1.23 to 8.38", "input": "", "output": "api.setColorBounds(1.23, 8.38)"}
+{"instruction": "Set the color map bounds from 1.68 to 7.1", "input": "", "output": "api.setColorBounds(1.68, 7.1)"}
+{"instruction": "Set the color map bounds from 1.62 to 9.04", "input": "", "output": "api.setColorBounds(1.62, 9.04)"}
+{"instruction": "Set the color map bounds from 1.22 to 5.62", "input": "", "output": "api.setColorBounds(1.22, 5.62)"}
+{"instruction": "Split the strand at element 746.", "input": "", "output": "api.selectElementIDs([746]); edit.splitStrand(api.getElements([746])[0]);"}
+{"instruction": "Set the color map bounds from 1.98 to 7.4", "input": "", "output": "api.setColorBounds(1.98, 7.4)"}
+{"instruction": "Set the color map bounds from 1.76 to 9.44", "input": "", "output": "api.setColorBounds(1.76, 9.44)"}
+{"instruction": "Join strand 1845 and strand 108 (ligate 3' of 1845 to 5' of 108).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1845); var s2 = systems[0].strands.find(s => s.id == 108); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1160.", "input": "", "output": "api.selectElementIDs([1160]); edit.splitStrand(api.getElements([1160])[0]);"}
+{"instruction": "Join strand 18 and strand 1937 (ligate 3' of 18 to 5' of 1937).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 18); var s2 = systems[0].strands.find(s => s.id == 1937); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1878 and strand 94 (ligate 3' of 1878 to 5' of 94).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1878); var s2 = systems[0].strands.find(s => s.id == 94); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.29 to 8.56", "input": "", "output": "api.setColorBounds(2.29, 8.56)"}
+{"instruction": "Split the strand at element 736.", "input": "", "output": "api.selectElementIDs([736]); edit.splitStrand(api.getElements([736])[0]);"}
+{"instruction": "Join strand 1535 and strand 1173 (ligate 3' of 1535 to 5' of 1173).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1535); var s2 = systems[0].strands.find(s => s.id == 1173); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'ATCUAGAGCTGT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ATCUAGAGCTGT'));"}
+{"instruction": "Set the color map bounds from 3.04 to 7.69", "input": "", "output": "api.setColorBounds(3.04, 7.69)"}
+{"instruction": "Set the color map bounds from 2.96 to 8.77", "input": "", "output": "api.setColorBounds(2.96, 8.77)"}
+{"instruction": "Add 'AUATTGU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AUATTGU'));"}
+{"instruction": "Add 'AATAC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AATAC'));"}
+{"instruction": "Set the color map bounds from 1.27 to 6.86", "input": "", "output": "api.setColorBounds(1.27, 6.86)"}
+{"instruction": "Set the color map bounds from 1.23 to 7.62", "input": "", "output": "api.setColorBounds(1.23, 7.62)"}
+{"instruction": "Split the strand at element 601.", "input": "", "output": "api.selectElementIDs([601]); edit.splitStrand(api.getElements([601])[0]);"}
+{"instruction": "Add 'UTACGUTUGCUG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTACGUTUGCUG'));"}
+{"instruction": "Set the color map bounds from 2.67 to 9.75", "input": "", "output": "api.setColorBounds(2.67, 9.75)"}
+{"instruction": "Add 'UTGUGUGUTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTGUGUGUTC'));"}
+{"instruction": "Split the strand at element 1585.", "input": "", "output": "api.selectElementIDs([1585]); edit.splitStrand(api.getElements([1585])[0]);"}
+{"instruction": "Split the strand at element 1753.", "input": "", "output": "api.selectElementIDs([1753]); edit.splitStrand(api.getElements([1753])[0]);"}
+{"instruction": "Split the strand at element 105.", "input": "", "output": "api.selectElementIDs([105]); edit.splitStrand(api.getElements([105])[0]);"}
+{"instruction": "Add 'CTAUTAGAGTCAUTCTUG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CTAUTAGAGTCAUTCTUG'));"}
+{"instruction": "Join strand 1436 and strand 1083 (ligate 3' of 1436 to 5' of 1083).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1436); var s2 = systems[0].strands.find(s => s.id == 1083); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 994.", "input": "", "output": "api.selectElementIDs([994]); edit.splitStrand(api.getElements([994])[0]);"}
+{"instruction": "Set the color map bounds from 0.64 to 9.79", "input": "", "output": "api.setColorBounds(0.64, 9.79)"}
+{"instruction": "Set the color map bounds from 3.34 to 6.72", "input": "", "output": "api.setColorBounds(3.34, 6.72)"}
+{"instruction": "Set the color map bounds from 2.76 to 8.27", "input": "", "output": "api.setColorBounds(2.76, 8.27)"}
+{"instruction": "Set the color map bounds from 2.06 to 9.42", "input": "", "output": "api.setColorBounds(2.06, 9.42)"}
+{"instruction": "Split the strand at element 382.", "input": "", "output": "api.selectElementIDs([382]); edit.splitStrand(api.getElements([382])[0]);"}
+{"instruction": "Set the color map bounds from 1.66 to 8.42", "input": "", "output": "api.setColorBounds(1.66, 8.42)"}
+{"instruction": "Add 'CTTCGCGCATGUUAAC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CTTCGCGCATGUUAAC'));"}
+{"instruction": "Add 'ATUGGACACCAUTCTCACCU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ATUGGACACCAUTCTCACCU'));"}
+{"instruction": "Split the strand at element 1195.", "input": "", "output": "api.selectElementIDs([1195]); edit.splitStrand(api.getElements([1195])[0]);"}
+{"instruction": "Add 'CAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CAA'));"}
+{"instruction": "Split the strand at element 1681.", "input": "", "output": "api.selectElementIDs([1681]); edit.splitStrand(api.getElements([1681])[0]);"}
+{"instruction": "Join strand 518 and strand 1788 (ligate 3' of 518 to 5' of 1788).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 518); var s2 = systems[0].strands.find(s => s.id == 1788); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TCATTCCCGTAACCTUUCUG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCATTCCCGTAACCTUUCUG'));"}
+{"instruction": "Set the color map bounds from 4.04 to 7.16", "input": "", "output": "api.setColorBounds(4.04, 7.16)"}
+{"instruction": "Add 'TGTUUTGCGTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGTUUTGCGTG'));"}
+{"instruction": "Set the color map bounds from 0.04 to 9.91", "input": "", "output": "api.setColorBounds(0.04, 9.91)"}
+{"instruction": "Join strand 1274 and strand 956 (ligate 3' of 1274 to 5' of 956).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1274); var s2 = systems[0].strands.find(s => s.id == 956); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'UCACCGTUGTTCTTGUAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UCACCGTUGTTCTTGUAG'));"}
+{"instruction": "Add 'TUUTTAAUAGUTGCGUAAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TUUTTAAUAGUTGCGUAAG'));"}
+{"instruction": "Split the strand at element 339.", "input": "", "output": "api.selectElementIDs([339]); edit.splitStrand(api.getElements([339])[0]);"}
+{"instruction": "Add 'AACUTUTCUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AACUTUTCUA'));"}
+{"instruction": "Join strand 546 and strand 1286 (ligate 3' of 546 to 5' of 1286).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 546); var s2 = systems[0].strands.find(s => s.id == 1286); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1971.", "input": "", "output": "api.selectElementIDs([1971]); edit.splitStrand(api.getElements([1971])[0]);"}
+{"instruction": "Split the strand at element 301.", "input": "", "output": "api.selectElementIDs([301]); edit.splitStrand(api.getElements([301])[0]);"}
+{"instruction": "Add 'TCTUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCTUT'));"}
+{"instruction": "Split the strand at element 1503.", "input": "", "output": "api.selectElementIDs([1503]); edit.splitStrand(api.getElements([1503])[0]);"}
+{"instruction": "Add 'ATATUCTACAGGAGUUUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ATATUCTACAGGAGUUUT'));"}
+{"instruction": "Split the strand at element 81.", "input": "", "output": "api.selectElementIDs([81]); edit.splitStrand(api.getElements([81])[0]);"}
+{"instruction": "Join strand 348 and strand 1690 (ligate 3' of 348 to 5' of 1690).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 348); var s2 = systems[0].strands.find(s => s.id == 1690); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GTGATGAUGTCA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GTGATGAUGTCA'));"}
+{"instruction": "Join strand 1303 and strand 1982 (ligate 3' of 1303 to 5' of 1982).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1303); var s2 = systems[0].strands.find(s => s.id == 1982); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.17 to 9.34", "input": "", "output": "api.setColorBounds(1.17, 9.34)"}
+{"instruction": "Split the strand at element 1403.", "input": "", "output": "api.selectElementIDs([1403]); edit.splitStrand(api.getElements([1403])[0]);"}
+{"instruction": "Set the color map bounds from 1.95 to 8.05", "input": "", "output": "api.setColorBounds(1.95, 8.05)"}
+{"instruction": "Set the color map bounds from 1.94 to 6.41", "input": "", "output": "api.setColorBounds(1.94, 6.41)"}
+{"instruction": "Set the color map bounds from 3.71 to 6.82", "input": "", "output": "api.setColorBounds(3.71, 6.82)"}
+{"instruction": "Set the color map bounds from 2.87 to 5.62", "input": "", "output": "api.setColorBounds(2.87, 5.62)"}
+{"instruction": "Split the strand at element 1317.", "input": "", "output": "api.selectElementIDs([1317]); edit.splitStrand(api.getElements([1317])[0]);"}
+{"instruction": "Split the strand at element 350.", "input": "", "output": "api.selectElementIDs([350]); edit.splitStrand(api.getElements([350])[0]);"}
+{"instruction": "Join strand 1026 and strand 598 (ligate 3' of 1026 to 5' of 598).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1026); var s2 = systems[0].strands.find(s => s.id == 598); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 728 and strand 342 (ligate 3' of 728 to 5' of 342).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 728); var s2 = systems[0].strands.find(s => s.id == 342); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 157 and strand 507 (ligate 3' of 157 to 5' of 507).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 157); var s2 = systems[0].strands.find(s => s.id == 507); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.33 to 8.77", "input": "", "output": "api.setColorBounds(3.33, 8.77)"}
+{"instruction": "Add 'CTGCAGUTACGGUGUUCAGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CTGCAGUTACGGUGUUCAGA'));"}
+{"instruction": "Join strand 1440 and strand 1465 (ligate 3' of 1440 to 5' of 1465).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1440); var s2 = systems[0].strands.find(s => s.id == 1465); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1533 and strand 1565 (ligate 3' of 1533 to 5' of 1565).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1533); var s2 = systems[0].strands.find(s => s.id == 1565); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'ATTGG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ATTGG'));"}
+{"instruction": "Join strand 924 and strand 1607 (ligate 3' of 924 to 5' of 1607).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 924); var s2 = systems[0].strands.find(s => s.id == 1607); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CUUTAUAGTAUTGUTATAC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CUUTAUAGTAUTGUTATAC'));"}
+{"instruction": "Join strand 780 and strand 1452 (ligate 3' of 780 to 5' of 1452).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 780); var s2 = systems[0].strands.find(s => s.id == 1452); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1681 and strand 1119 (ligate 3' of 1681 to 5' of 1119).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1681); var s2 = systems[0].strands.find(s => s.id == 1119); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CGUTT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGUTT'));"}
+{"instruction": "Join strand 435 and strand 1485 (ligate 3' of 435 to 5' of 1485).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 435); var s2 = systems[0].strands.find(s => s.id == 1485); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.42 to 8.16", "input": "", "output": "api.setColorBounds(2.42, 8.16)"}
+{"instruction": "Set the color map bounds from 4.11 to 6.79", "input": "", "output": "api.setColorBounds(4.11, 6.79)"}
+{"instruction": "Add 'CTGTUAUATTGGTUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CTGTUAUATTGGTUT'));"}
+{"instruction": "Add 'CGACCUAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGACCUAG'));"}
+{"instruction": "Join strand 1972 and strand 1035 (ligate 3' of 1972 to 5' of 1035).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1972); var s2 = systems[0].strands.find(s => s.id == 1035); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.59 to 7.34", "input": "", "output": "api.setColorBounds(2.59, 7.34)"}
+{"instruction": "Add 'CTCATGGUUGTCCU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CTCATGGUUGTCCU'));"}
+{"instruction": "Set the color map bounds from 0.02 to 9.44", "input": "", "output": "api.setColorBounds(0.02, 9.44)"}
+{"instruction": "Add 'ACCTTTAGATCG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACCTTTAGATCG'));"}
+{"instruction": "Add 'UGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UGA'));"}
+{"instruction": "Set the color map bounds from 1.28 to 6.35", "input": "", "output": "api.setColorBounds(1.28, 6.35)"}
+{"instruction": "Add 'TTTGUCCTTGUCUAGTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TTTGUCCTTGUCUAGTC'));"}
+{"instruction": "Join strand 873 and strand 732 (ligate 3' of 873 to 5' of 732).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 873); var s2 = systems[0].strands.find(s => s.id == 732); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1537.", "input": "", "output": "api.selectElementIDs([1537]); edit.splitStrand(api.getElements([1537])[0]);"}
+{"instruction": "Join strand 450 and strand 483 (ligate 3' of 450 to 5' of 483).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 450); var s2 = systems[0].strands.find(s => s.id == 483); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 274 and strand 1772 (ligate 3' of 274 to 5' of 1772).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 274); var s2 = systems[0].strands.find(s => s.id == 1772); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.28 to 9.52", "input": "", "output": "api.setColorBounds(1.28, 9.52)"}
+{"instruction": "Split the strand at element 1595.", "input": "", "output": "api.selectElementIDs([1595]); edit.splitStrand(api.getElements([1595])[0]);"}
+{"instruction": "Join strand 1042 and strand 1228 (ligate 3' of 1042 to 5' of 1228).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1042); var s2 = systems[0].strands.find(s => s.id == 1228); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1684.", "input": "", "output": "api.selectElementIDs([1684]); edit.splitStrand(api.getElements([1684])[0]);"}
+{"instruction": "Add 'UUCAAUTUTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UUCAAUTUTC'));"}
+{"instruction": "Set the color map bounds from 3.86 to 8.94", "input": "", "output": "api.setColorBounds(3.86, 8.94)"}
+{"instruction": "Add 'TACTT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TACTT'));"}
+{"instruction": "Split the strand at element 1798.", "input": "", "output": "api.selectElementIDs([1798]); edit.splitStrand(api.getElements([1798])[0]);"}
+{"instruction": "Add 'GCGUTU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCGUTU'));"}
+{"instruction": "Split the strand at element 1634.", "input": "", "output": "api.selectElementIDs([1634]); edit.splitStrand(api.getElements([1634])[0]);"}
+{"instruction": "Add 'GUAGAAAATTTUUUGTA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUAGAAAATTTUUUGTA'));"}
+{"instruction": "Add 'UAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UAG'));"}
+{"instruction": "Add 'UUCACCTCUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UUCACCTCUA'));"}
+{"instruction": "Set the color map bounds from 3.25 to 5.75", "input": "", "output": "api.setColorBounds(3.25, 5.75)"}
+{"instruction": "Join strand 1191 and strand 581 (ligate 3' of 1191 to 5' of 581).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1191); var s2 = systems[0].strands.find(s => s.id == 581); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.62 to 9.88", "input": "", "output": "api.setColorBounds(1.62, 9.88)"}
+{"instruction": "Add 'UUUGGTTATGAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UUUGGTTATGAG'));"}
+{"instruction": "Set the color map bounds from 1.78 to 8.12", "input": "", "output": "api.setColorBounds(1.78, 8.12)"}
+{"instruction": "Split the strand at element 1390.", "input": "", "output": "api.selectElementIDs([1390]); edit.splitStrand(api.getElements([1390])[0]);"}
+{"instruction": "Join strand 1046 and strand 641 (ligate 3' of 1046 to 5' of 641).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1046); var s2 = systems[0].strands.find(s => s.id == 641); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CCUAUUATA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCUAUUATA'));"}
+{"instruction": "Add 'TACCU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TACCU'));"}
+{"instruction": "Set the color map bounds from 1.37 to 9.83", "input": "", "output": "api.setColorBounds(1.37, 9.83)"}
+{"instruction": "Join strand 1853 and strand 734 (ligate 3' of 1853 to 5' of 734).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1853); var s2 = systems[0].strands.find(s => s.id == 734); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TAT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TAT'));"}
+{"instruction": "Join strand 1329 and strand 452 (ligate 3' of 1329 to 5' of 452).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1329); var s2 = systems[0].strands.find(s => s.id == 452); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'AGCGUTCAAUTUAACUU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGCGUTCAAUTUAACUU'));"}
+{"instruction": "Add 'GAGCCA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GAGCCA'));"}
+{"instruction": "Join strand 642 and strand 1658 (ligate 3' of 642 to 5' of 1658).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 642); var s2 = systems[0].strands.find(s => s.id == 1658); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 206.", "input": "", "output": "api.selectElementIDs([206]); edit.splitStrand(api.getElements([206])[0]);"}
+{"instruction": "Set the color map bounds from 0.72 to 8.3", "input": "", "output": "api.setColorBounds(0.72, 8.3)"}
+{"instruction": "Add 'AACUUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AACUUT'));"}
+{"instruction": "Split the strand at element 554.", "input": "", "output": "api.selectElementIDs([554]); edit.splitStrand(api.getElements([554])[0]);"}
+{"instruction": "Add 'TGUCAGGACATTTAUCTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGUCAGGACATTTAUCTC'));"}
+{"instruction": "Join strand 559 and strand 78 (ligate 3' of 559 to 5' of 78).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 559); var s2 = systems[0].strands.find(s => s.id == 78); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 4.69 to 8.79", "input": "", "output": "api.setColorBounds(4.69, 8.79)"}
+{"instruction": "Set the color map bounds from 2.54 to 9.73", "input": "", "output": "api.setColorBounds(2.54, 9.73)"}
+{"instruction": "Add 'TCTCUTUTTUGCGGTCCGC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCTCUTUTTUGCGGTCCGC'));"}
+{"instruction": "Set the color map bounds from 3.73 to 8.97", "input": "", "output": "api.setColorBounds(3.73, 8.97)"}
+{"instruction": "Split the strand at element 451.", "input": "", "output": "api.selectElementIDs([451]); edit.splitStrand(api.getElements([451])[0]);"}
+{"instruction": "Join strand 1074 and strand 1918 (ligate 3' of 1074 to 5' of 1918).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1074); var s2 = systems[0].strands.find(s => s.id == 1918); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.69 to 8.07", "input": "", "output": "api.setColorBounds(0.69, 8.07)"}
+{"instruction": "Join strand 1328 and strand 1534 (ligate 3' of 1328 to 5' of 1534).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1328); var s2 = systems[0].strands.find(s => s.id == 1534); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TTCCTGTUATUATCAUCG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TTCCTGTUATUATCAUCG'));"}
+{"instruction": "Set the color map bounds from 0.42 to 8.77", "input": "", "output": "api.setColorBounds(0.42, 8.77)"}
+{"instruction": "Add 'GGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGA'));"}
+{"instruction": "Split the strand at element 491.", "input": "", "output": "api.selectElementIDs([491]); edit.splitStrand(api.getElements([491])[0]);"}
+{"instruction": "Add 'UTUGTUUUAUUG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTUGTUUUAUUG'));"}
+{"instruction": "Join strand 1068 and strand 1365 (ligate 3' of 1068 to 5' of 1365).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1068); var s2 = systems[0].strands.find(s => s.id == 1365); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 476.", "input": "", "output": "api.selectElementIDs([476]); edit.splitStrand(api.getElements([476])[0]);"}
+{"instruction": "Join strand 1794 and strand 1012 (ligate 3' of 1794 to 5' of 1012).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1794); var s2 = systems[0].strands.find(s => s.id == 1012); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.99 to 7.79", "input": "", "output": "api.setColorBounds(0.99, 7.79)"}
+{"instruction": "Set the color map bounds from 3.95 to 5.79", "input": "", "output": "api.setColorBounds(3.95, 5.79)"}
+{"instruction": "Set the color map bounds from 0.81 to 8.7", "input": "", "output": "api.setColorBounds(0.81, 8.7)"}
+{"instruction": "Join strand 668 and strand 978 (ligate 3' of 668 to 5' of 978).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 668); var s2 = systems[0].strands.find(s => s.id == 978); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1737 and strand 1119 (ligate 3' of 1737 to 5' of 1119).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1737); var s2 = systems[0].strands.find(s => s.id == 1119); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CUCGTCTTTGGUCTGGGGC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CUCGTCTTTGGUCTGGGGC'));"}
+{"instruction": "Add 'GCAGAUGGCUGTCCCACT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCAGAUGGCUGTCCCACT'));"}
+{"instruction": "Set the color map bounds from 4.66 to 6.21", "input": "", "output": "api.setColorBounds(4.66, 6.21)"}
+{"instruction": "Split the strand at element 30.", "input": "", "output": "api.selectElementIDs([30]); edit.splitStrand(api.getElements([30])[0]);"}
+{"instruction": "Add 'TCACCTTTTAATTUGCGG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCACCTTTTAATTUGCGG'));"}
+{"instruction": "Add 'UTAUUUG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTAUUUG'));"}
+{"instruction": "Set the color map bounds from 2.39 to 7.17", "input": "", "output": "api.setColorBounds(2.39, 7.17)"}
+{"instruction": "Split the strand at element 1974.", "input": "", "output": "api.selectElementIDs([1974]); edit.splitStrand(api.getElements([1974])[0]);"}
+{"instruction": "Set the color map bounds from 4.64 to 8.42", "input": "", "output": "api.setColorBounds(4.64, 8.42)"}
+{"instruction": "Set the color map bounds from 1.33 to 7.5", "input": "", "output": "api.setColorBounds(1.33, 7.5)"}
+{"instruction": "Join strand 1103 and strand 1298 (ligate 3' of 1103 to 5' of 1298).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1103); var s2 = systems[0].strands.find(s => s.id == 1298); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.31 to 8.47", "input": "", "output": "api.setColorBounds(3.31, 8.47)"}
+{"instruction": "Join strand 265 and strand 203 (ligate 3' of 265 to 5' of 203).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 265); var s2 = systems[0].strands.find(s => s.id == 203); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 798.", "input": "", "output": "api.selectElementIDs([798]); edit.splitStrand(api.getElements([798])[0]);"}
+{"instruction": "Set the color map bounds from 4.58 to 8.33", "input": "", "output": "api.setColorBounds(4.58, 8.33)"}
+{"instruction": "Set the color map bounds from 1.92 to 5.7", "input": "", "output": "api.setColorBounds(1.92, 5.7)"}
+{"instruction": "Set the color map bounds from 1.04 to 8.91", "input": "", "output": "api.setColorBounds(1.04, 8.91)"}
+{"instruction": "Split the strand at element 1457.", "input": "", "output": "api.selectElementIDs([1457]); edit.splitStrand(api.getElements([1457])[0]);"}
+{"instruction": "Set the color map bounds from 2.72 to 6.03", "input": "", "output": "api.setColorBounds(2.72, 6.03)"}
+{"instruction": "Split the strand at element 345.", "input": "", "output": "api.selectElementIDs([345]); edit.splitStrand(api.getElements([345])[0]);"}
+{"instruction": "Set the color map bounds from 1.5 to 5.6", "input": "", "output": "api.setColorBounds(1.5, 5.6)"}
+{"instruction": "Join strand 223 and strand 1229 (ligate 3' of 223 to 5' of 1229).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 223); var s2 = systems[0].strands.find(s => s.id == 1229); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'UGGAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UGGAA'));"}
+{"instruction": "Set the color map bounds from 3.53 to 8.42", "input": "", "output": "api.setColorBounds(3.53, 8.42)"}
+{"instruction": "Split the strand at element 1487.", "input": "", "output": "api.selectElementIDs([1487]); edit.splitStrand(api.getElements([1487])[0]);"}
+{"instruction": "Split the strand at element 328.", "input": "", "output": "api.selectElementIDs([328]); edit.splitStrand(api.getElements([328])[0]);"}
+{"instruction": "Add 'AGGGAGUUCUCGUAUGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AGGGAGUUCUCGUAUGA'));"}
+{"instruction": "Join strand 124 and strand 1615 (ligate 3' of 124 to 5' of 1615).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 124); var s2 = systems[0].strands.find(s => s.id == 1615); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TTUTAAGATUUCAT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TTUTAAGATUUCAT'));"}
+{"instruction": "Add 'CCCCUUGGUTUUCCTAAUGC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCCCUUGGUTUUCCTAAUGC'));"}
+{"instruction": "Set the color map bounds from 4.98 to 8.11", "input": "", "output": "api.setColorBounds(4.98, 8.11)"}
+{"instruction": "Split the strand at element 760.", "input": "", "output": "api.selectElementIDs([760]); edit.splitStrand(api.getElements([760])[0]);"}
+{"instruction": "Split the strand at element 633.", "input": "", "output": "api.selectElementIDs([633]); edit.splitStrand(api.getElements([633])[0]);"}
+{"instruction": "Add 'UCUGCUAGATCTUTGUAC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UCUGCUAGATCTUTGUAC'));"}
+{"instruction": "Set the color map bounds from 0.49 to 5.72", "input": "", "output": "api.setColorBounds(0.49, 5.72)"}
+{"instruction": "Split the strand at element 1969.", "input": "", "output": "api.selectElementIDs([1969]); edit.splitStrand(api.getElements([1969])[0]);"}
+{"instruction": "Add 'AACATU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AACATU'));"}
+{"instruction": "Join strand 311 and strand 1065 (ligate 3' of 311 to 5' of 1065).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 311); var s2 = systems[0].strands.find(s => s.id == 1065); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.25 to 5.67", "input": "", "output": "api.setColorBounds(0.25, 5.67)"}
+{"instruction": "Split the strand at element 1306.", "input": "", "output": "api.selectElementIDs([1306]); edit.splitStrand(api.getElements([1306])[0]);"}
+{"instruction": "Split the strand at element 1374.", "input": "", "output": "api.selectElementIDs([1374]); edit.splitStrand(api.getElements([1374])[0]);"}
+{"instruction": "Add 'CAUCUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CAUCUA'));"}
+{"instruction": "Add 'CUUTAUTTUTTTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CUUTAUTTUTTTC'));"}
+{"instruction": "Join strand 1697 and strand 1768 (ligate 3' of 1697 to 5' of 1768).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1697); var s2 = systems[0].strands.find(s => s.id == 1768); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GAGAAUAAGACU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GAGAAUAAGACU'));"}
+{"instruction": "Add 'UAUCGUAUCGG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UAUCGUAUCGG'));"}
+{"instruction": "Add 'UUGTGACUUUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UUGTGACUUUA'));"}
+{"instruction": "Split the strand at element 1423.", "input": "", "output": "api.selectElementIDs([1423]); edit.splitStrand(api.getElements([1423])[0]);"}
+{"instruction": "Add 'ACUAAT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ACUAAT'));"}
+{"instruction": "Add 'GUUUCATUGCUUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUUUCATUGCUUT'));"}
+{"instruction": "Add 'UAGUACCCA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UAGUACCCA'));"}
+{"instruction": "Join strand 1100 and strand 539 (ligate 3' of 1100 to 5' of 539).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1100); var s2 = systems[0].strands.find(s => s.id == 539); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'UATCTGCAUCUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UATCTGCAUCUT'));"}
+{"instruction": "Split the strand at element 516.", "input": "", "output": "api.selectElementIDs([516]); edit.splitStrand(api.getElements([516])[0]);"}
+{"instruction": "Join strand 1712 and strand 1430 (ligate 3' of 1712 to 5' of 1430).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1712); var s2 = systems[0].strands.find(s => s.id == 1430); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1967 and strand 332 (ligate 3' of 1967 to 5' of 332).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1967); var s2 = systems[0].strands.find(s => s.id == 332); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CCATGCAUGACGGUGGU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCATGCAUGACGGUGGU'));"}
+{"instruction": "Split the strand at element 1668.", "input": "", "output": "api.selectElementIDs([1668]); edit.splitStrand(api.getElements([1668])[0]);"}
+{"instruction": "Split the strand at element 1811.", "input": "", "output": "api.selectElementIDs([1811]); edit.splitStrand(api.getElements([1811])[0]);"}
+{"instruction": "Split the strand at element 460.", "input": "", "output": "api.selectElementIDs([460]); edit.splitStrand(api.getElements([460])[0]);"}
+{"instruction": "Add 'UUUTGGCT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UUUTGGCT'));"}
+{"instruction": "Split the strand at element 1785.", "input": "", "output": "api.selectElementIDs([1785]); edit.splitStrand(api.getElements([1785])[0]);"}
+{"instruction": "Join strand 1228 and strand 178 (ligate 3' of 1228 to 5' of 178).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1228); var s2 = systems[0].strands.find(s => s.id == 178); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.92 to 9.29", "input": "", "output": "api.setColorBounds(3.92, 9.29)"}
+{"instruction": "Add 'ATUGT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ATUGT'));"}
+{"instruction": "Set the color map bounds from 3.11 to 9.62", "input": "", "output": "api.setColorBounds(3.11, 9.62)"}
+{"instruction": "Split the strand at element 1078.", "input": "", "output": "api.selectElementIDs([1078]); edit.splitStrand(api.getElements([1078])[0]);"}
+{"instruction": "Split the strand at element 1555.", "input": "", "output": "api.selectElementIDs([1555]); edit.splitStrand(api.getElements([1555])[0]);"}
+{"instruction": "Add 'GCUGUACATATTGTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCUGUACATATTGTC'));"}
+{"instruction": "Split the strand at element 676.", "input": "", "output": "api.selectElementIDs([676]); edit.splitStrand(api.getElements([676])[0]);"}
+{"instruction": "Join strand 1177 and strand 1173 (ligate 3' of 1177 to 5' of 1173).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1177); var s2 = systems[0].strands.find(s => s.id == 1173); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 1.11 to 9.51", "input": "", "output": "api.setColorBounds(1.11, 9.51)"}
+{"instruction": "Join strand 1342 and strand 1728 (ligate 3' of 1342 to 5' of 1728).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1342); var s2 = systems[0].strands.find(s => s.id == 1728); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GCATGCCUGTTUATAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCATGCCUGTTUATAA'));"}
+{"instruction": "Add 'CUU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CUU'));"}
+{"instruction": "Join strand 879 and strand 1481 (ligate 3' of 879 to 5' of 1481).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 879); var s2 = systems[0].strands.find(s => s.id == 1481); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 212.", "input": "", "output": "api.selectElementIDs([212]); edit.splitStrand(api.getElements([212])[0]);"}
+{"instruction": "Set the color map bounds from 1.73 to 9.04", "input": "", "output": "api.setColorBounds(1.73, 9.04)"}
+{"instruction": "Add 'UUCCCUUUC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UUCCCUUUC'));"}
+{"instruction": "Set the color map bounds from 4.2 to 5.55", "input": "", "output": "api.setColorBounds(4.2, 5.55)"}
+{"instruction": "Add 'GUGGCAUACCG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUGGCAUACCG'));"}
+{"instruction": "Join strand 613 and strand 1699 (ligate 3' of 613 to 5' of 1699).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 613); var s2 = systems[0].strands.find(s => s.id == 1699); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1909.", "input": "", "output": "api.selectElementIDs([1909]); edit.splitStrand(api.getElements([1909])[0]);"}
+{"instruction": "Add 'TCT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCT'));"}
+{"instruction": "Split the strand at element 879.", "input": "", "output": "api.selectElementIDs([879]); edit.splitStrand(api.getElements([879])[0]);"}
+{"instruction": "Join strand 1199 and strand 1997 (ligate 3' of 1199 to 5' of 1997).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1199); var s2 = systems[0].strands.find(s => s.id == 1997); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CAUUGUCUTTATCACGGU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CAUUGUCUTTATCACGGU'));"}
+{"instruction": "Set the color map bounds from 0.88 to 9.66", "input": "", "output": "api.setColorBounds(0.88, 9.66)"}
+{"instruction": "Add 'GUGUGTTGTTT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUGUGTTGTTT'));"}
+{"instruction": "Add 'GUUGTTGTCUATTCTGAUA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GUUGTTGTCUATTCTGAUA'));"}
+{"instruction": "Set the color map bounds from 3.7 to 9.66", "input": "", "output": "api.setColorBounds(3.7, 9.66)"}
+{"instruction": "Add 'UTCTGGUCAGCGCCT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTCTGGUCAGCGCCT'));"}
+{"instruction": "Set the color map bounds from 1.61 to 7.08", "input": "", "output": "api.setColorBounds(1.61, 7.08)"}
+{"instruction": "Set the color map bounds from 1.6 to 8.49", "input": "", "output": "api.setColorBounds(1.6, 8.49)"}
+{"instruction": "Add 'UACAGAGUUATCCUTGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UACAGAGUUATCCUTGA'));"}
+{"instruction": "Split the strand at element 465.", "input": "", "output": "api.selectElementIDs([465]); edit.splitStrand(api.getElements([465])[0]);"}
+{"instruction": "Join strand 376 and strand 917 (ligate 3' of 376 to 5' of 917).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 376); var s2 = systems[0].strands.find(s => s.id == 917); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.35 to 8.83", "input": "", "output": "api.setColorBounds(3.35, 8.83)"}
+{"instruction": "Add 'UTGG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UTGG'));"}
+{"instruction": "Set the color map bounds from 2.8 to 5.75", "input": "", "output": "api.setColorBounds(2.8, 5.75)"}
+{"instruction": "Set the color map bounds from 3.67 to 7.07", "input": "", "output": "api.setColorBounds(3.67, 7.07)"}
+{"instruction": "Join strand 1330 and strand 1556 (ligate 3' of 1330 to 5' of 1556).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1330); var s2 = systems[0].strands.find(s => s.id == 1556); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TTAGAUTUCT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TTAGAUTUCT'));"}
+{"instruction": "Set the color map bounds from 4.88 to 9.22", "input": "", "output": "api.setColorBounds(4.88, 9.22)"}
+{"instruction": "Join strand 1444 and strand 834 (ligate 3' of 1444 to 5' of 834).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1444); var s2 = systems[0].strands.find(s => s.id == 834); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 0.51 to 9.38", "input": "", "output": "api.setColorBounds(0.51, 9.38)"}
+{"instruction": "Split the strand at element 530.", "input": "", "output": "api.selectElementIDs([530]); edit.splitStrand(api.getElements([530])[0]);"}
+{"instruction": "Add 'GAGCTTACACAUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GAGCTTACACAUT'));"}
+{"instruction": "Add 'TCUTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCUTG'));"}
+{"instruction": "Set the color map bounds from 2.31 to 8.34", "input": "", "output": "api.setColorBounds(2.31, 8.34)"}
+{"instruction": "Join strand 25 and strand 1632 (ligate 3' of 25 to 5' of 1632).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 25); var s2 = systems[0].strands.find(s => s.id == 1632); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 0.", "input": "", "output": "api.selectElementIDs([0]); edit.splitStrand(api.getElements([0])[0]);"}
+{"instruction": "Split the strand at element 1183.", "input": "", "output": "api.selectElementIDs([1183]); edit.splitStrand(api.getElements([1183])[0]);"}
+{"instruction": "Split the strand at element 954.", "input": "", "output": "api.selectElementIDs([954]); edit.splitStrand(api.getElements([954])[0]);"}
+{"instruction": "Set the color map bounds from 2.78 to 6.76", "input": "", "output": "api.setColorBounds(2.78, 6.76)"}
+{"instruction": "Set the color map bounds from 4.78 to 6.53", "input": "", "output": "api.setColorBounds(4.78, 6.53)"}
+{"instruction": "Join strand 616 and strand 1313 (ligate 3' of 616 to 5' of 1313).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 616); var s2 = systems[0].strands.find(s => s.id == 1313); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1338.", "input": "", "output": "api.selectElementIDs([1338]); edit.splitStrand(api.getElements([1338])[0]);"}
+{"instruction": "Add 'GTUTGACTCCACTGTCTUGA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GTUTGACTCCACTGTCTUGA'));"}
+{"instruction": "Set the color map bounds from 0.21 to 7.6", "input": "", "output": "api.setColorBounds(0.21, 7.6)"}
+{"instruction": "Add 'TTTAAUUTUCAACGUUCC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TTTAAUUTUCAACGUUCC'));"}
+{"instruction": "Set the color map bounds from 0.03 to 5.66", "input": "", "output": "api.setColorBounds(0.03, 5.66)"}
+{"instruction": "Add 'CCCUTTUGGTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCCUTTUGGTG'));"}
+{"instruction": "Join strand 533 and strand 1309 (ligate 3' of 533 to 5' of 1309).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 533); var s2 = systems[0].strands.find(s => s.id == 1309); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1014.", "input": "", "output": "api.selectElementIDs([1014]); edit.splitStrand(api.getElements([1014])[0]);"}
+{"instruction": "Join strand 543 and strand 1160 (ligate 3' of 543 to 5' of 1160).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 543); var s2 = systems[0].strands.find(s => s.id == 1160); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 349 and strand 1667 (ligate 3' of 349 to 5' of 1667).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 349); var s2 = systems[0].strands.find(s => s.id == 1667); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1204.", "input": "", "output": "api.selectElementIDs([1204]); edit.splitStrand(api.getElements([1204])[0]);"}
+{"instruction": "Split the strand at element 1437.", "input": "", "output": "api.selectElementIDs([1437]); edit.splitStrand(api.getElements([1437])[0]);"}
+{"instruction": "Split the strand at element 88.", "input": "", "output": "api.selectElementIDs([88]); edit.splitStrand(api.getElements([88])[0]);"}
+{"instruction": "Set the color map bounds from 3.86 to 5.55", "input": "", "output": "api.setColorBounds(3.86, 5.55)"}
+{"instruction": "Join strand 960 and strand 1051 (ligate 3' of 960 to 5' of 1051).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 960); var s2 = systems[0].strands.find(s => s.id == 1051); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1814.", "input": "", "output": "api.selectElementIDs([1814]); edit.splitStrand(api.getElements([1814])[0]);"}
+{"instruction": "Split the strand at element 403.", "input": "", "output": "api.selectElementIDs([403]); edit.splitStrand(api.getElements([403])[0]);"}
+{"instruction": "Set the color map bounds from 1.11 to 9.6", "input": "", "output": "api.setColorBounds(1.11, 9.6)"}
+{"instruction": "Split the strand at element 1326.", "input": "", "output": "api.selectElementIDs([1326]); edit.splitStrand(api.getElements([1326])[0]);"}
+{"instruction": "Split the strand at element 1529.", "input": "", "output": "api.selectElementIDs([1529]); edit.splitStrand(api.getElements([1529])[0]);"}
+{"instruction": "Join strand 206 and strand 235 (ligate 3' of 206 to 5' of 235).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 206); var s2 = systems[0].strands.find(s => s.id == 235); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 196 and strand 1185 (ligate 3' of 196 to 5' of 1185).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 196); var s2 = systems[0].strands.find(s => s.id == 1185); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.85 to 9.19", "input": "", "output": "api.setColorBounds(2.85, 9.19)"}
+{"instruction": "Join strand 1575 and strand 76 (ligate 3' of 1575 to 5' of 76).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1575); var s2 = systems[0].strands.find(s => s.id == 76); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 1824.", "input": "", "output": "api.selectElementIDs([1824]); edit.splitStrand(api.getElements([1824])[0]);"}
+{"instruction": "Join strand 1956 and strand 816 (ligate 3' of 1956 to 5' of 816).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1956); var s2 = systems[0].strands.find(s => s.id == 816); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 109 and strand 1313 (ligate 3' of 109 to 5' of 1313).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 109); var s2 = systems[0].strands.find(s => s.id == 1313); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'AAGUCUTGUACGTTAG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'AAGUCUTGUACGTTAG'));"}
+{"instruction": "Split the strand at element 1719.", "input": "", "output": "api.selectElementIDs([1719]); edit.splitStrand(api.getElements([1719])[0]);"}
+{"instruction": "Join strand 707 and strand 1567 (ligate 3' of 707 to 5' of 1567).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 707); var s2 = systems[0].strands.find(s => s.id == 1567); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 802.", "input": "", "output": "api.selectElementIDs([802]); edit.splitStrand(api.getElements([802])[0]);"}
+{"instruction": "Split the strand at element 1446.", "input": "", "output": "api.selectElementIDs([1446]); edit.splitStrand(api.getElements([1446])[0]);"}
+{"instruction": "Split the strand at element 1815.", "input": "", "output": "api.selectElementIDs([1815]); edit.splitStrand(api.getElements([1815])[0]);"}
+{"instruction": "Set the color map bounds from 1.83 to 6.23", "input": "", "output": "api.setColorBounds(1.83, 6.23)"}
+{"instruction": "Add 'GAUUGGGTCATCTUCAC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GAUUGGGTCATCTUCAC'));"}
+{"instruction": "Set the color map bounds from 1.75 to 9.0", "input": "", "output": "api.setColorBounds(1.75, 9.0)"}
+{"instruction": "Join strand 857 and strand 1849 (ligate 3' of 857 to 5' of 1849).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 857); var s2 = systems[0].strands.find(s => s.id == 1849); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1054 and strand 1153 (ligate 3' of 1054 to 5' of 1153).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1054); var s2 = systems[0].strands.find(s => s.id == 1153); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 3.13 to 8.48", "input": "", "output": "api.setColorBounds(3.13, 8.48)"}
+{"instruction": "Split the strand at element 579.", "input": "", "output": "api.selectElementIDs([579]); edit.splitStrand(api.getElements([579])[0]);"}
+{"instruction": "Split the strand at element 1118.", "input": "", "output": "api.selectElementIDs([1118]); edit.splitStrand(api.getElements([1118])[0]);"}
+{"instruction": "Split the strand at element 1018.", "input": "", "output": "api.selectElementIDs([1018]); edit.splitStrand(api.getElements([1018])[0]);"}
+{"instruction": "Set the color map bounds from 1.67 to 9.05", "input": "", "output": "api.setColorBounds(1.67, 9.05)"}
+{"instruction": "Add 'CGATAGTAUGCUUCC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGATAGTAUGCUUCC'));"}
+{"instruction": "Add 'TCAUUAATGAUAUUCCTAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCAUUAATGAUAUUCCTAA'));"}
+{"instruction": "Split the strand at element 1885.", "input": "", "output": "api.selectElementIDs([1885]); edit.splitStrand(api.getElements([1885])[0]);"}
+{"instruction": "Join strand 787 and strand 719 (ligate 3' of 787 to 5' of 719).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 787); var s2 = systems[0].strands.find(s => s.id == 719); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 142.", "input": "", "output": "api.selectElementIDs([142]); edit.splitStrand(api.getElements([142])[0]);"}
+{"instruction": "Join strand 1754 and strand 1157 (ligate 3' of 1754 to 5' of 1157).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1754); var s2 = systems[0].strands.find(s => s.id == 1157); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 661 and strand 1447 (ligate 3' of 661 to 5' of 1447).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 661); var s2 = systems[0].strands.find(s => s.id == 1447); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GGGG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGGG'));"}
+{"instruction": "Set the color map bounds from 2.26 to 7.1", "input": "", "output": "api.setColorBounds(2.26, 7.1)"}
+{"instruction": "Add 'UCGUAGCUGGTCGUCGT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'UCGUAGCUGGTCGUCGT'));"}
+{"instruction": "Join strand 1102 and strand 1524 (ligate 3' of 1102 to 5' of 1524).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1102); var s2 = systems[0].strands.find(s => s.id == 1524); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 935.", "input": "", "output": "api.selectElementIDs([935]); edit.splitStrand(api.getElements([935])[0]);"}
+{"instruction": "Set the color map bounds from 3.14 to 6.44", "input": "", "output": "api.setColorBounds(3.14, 6.44)"}
+{"instruction": "Add 'CAAGAU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CAAGAU'));"}
+{"instruction": "Set the color map bounds from 2.68 to 7.58", "input": "", "output": "api.setColorBounds(2.68, 7.58)"}
+{"instruction": "Split the strand at element 552.", "input": "", "output": "api.selectElementIDs([552]); edit.splitStrand(api.getElements([552])[0]);"}
+{"instruction": "Join strand 1911 and strand 695 (ligate 3' of 1911 to 5' of 695).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1911); var s2 = systems[0].strands.find(s => s.id == 695); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 362 and strand 1876 (ligate 3' of 362 to 5' of 1876).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 362); var s2 = systems[0].strands.find(s => s.id == 1876); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 638.", "input": "", "output": "api.selectElementIDs([638]); edit.splitStrand(api.getElements([638])[0]);"}
+{"instruction": "Join strand 916 and strand 956 (ligate 3' of 916 to 5' of 956).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 916); var s2 = systems[0].strands.find(s => s.id == 956); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'CCGUAUGGTATCTACAGUGC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CCGUAUGGTATCTACAGUGC'));"}
+{"instruction": "Set the color map bounds from 0.58 to 8.0", "input": "", "output": "api.setColorBounds(0.58, 8.0)"}
+{"instruction": "Set the color map bounds from 0.67 to 6.43", "input": "", "output": "api.setColorBounds(0.67, 6.43)"}
+{"instruction": "Split the strand at element 824.", "input": "", "output": "api.selectElementIDs([824]); edit.splitStrand(api.getElements([824])[0]);"}
+{"instruction": "Set the color map bounds from 3.14 to 8.46", "input": "", "output": "api.setColorBounds(3.14, 8.46)"}
+{"instruction": "Add 'GCTGAGGT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GCTGAGGT'));"}
+{"instruction": "Split the strand at element 930.", "input": "", "output": "api.selectElementIDs([930]); edit.splitStrand(api.getElements([930])[0]);"}
+{"instruction": "Split the strand at element 1925.", "input": "", "output": "api.selectElementIDs([1925]); edit.splitStrand(api.getElements([1925])[0]);"}
+{"instruction": "Split the strand at element 545.", "input": "", "output": "api.selectElementIDs([545]); edit.splitStrand(api.getElements([545])[0]);"}
+{"instruction": "Join strand 334 and strand 1615 (ligate 3' of 334 to 5' of 1615).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 334); var s2 = systems[0].strands.find(s => s.id == 1615); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TGUTCTCUATCAAA' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TGUTCTCUATCAAA'));"}
+{"instruction": "Set the color map bounds from 0.63 to 9.09", "input": "", "output": "api.setColorBounds(0.63, 9.09)"}
+{"instruction": "Add 'TCAUTCTG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TCAUTCTG'));"}
+{"instruction": "Split the strand at element 1887.", "input": "", "output": "api.selectElementIDs([1887]); edit.splitStrand(api.getElements([1887])[0]);"}
+{"instruction": "Add 'CGCGCAGTCGCTCCCCTTC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGCGCAGTCGCTCCCCTTC'));"}
+{"instruction": "Set the color map bounds from 3.99 to 7.55", "input": "", "output": "api.setColorBounds(3.99, 7.55)"}
+{"instruction": "Set the color map bounds from 1.9 to 5.78", "input": "", "output": "api.setColorBounds(1.9, 5.78)"}
+{"instruction": "Join strand 1740 and strand 934 (ligate 3' of 1740 to 5' of 934).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1740); var s2 = systems[0].strands.find(s => s.id == 934); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'TTCUTCGAU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'TTCUTCGAU'));"}
+{"instruction": "Split the strand at element 1321.", "input": "", "output": "api.selectElementIDs([1321]); edit.splitStrand(api.getElements([1321])[0]);"}
+{"instruction": "Set the color map bounds from 2.66 to 8.29", "input": "", "output": "api.setColorBounds(2.66, 8.29)"}
+{"instruction": "Join strand 272 and strand 227 (ligate 3' of 272 to 5' of 227).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 272); var s2 = systems[0].strands.find(s => s.id == 227); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'ATAAUACGCCCG' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'ATAAUACGCCCG'));"}
+{"instruction": "Join strand 40 and strand 173 (ligate 3' of 40 to 5' of 173).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 40); var s2 = systems[0].strands.find(s => s.id == 173); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 860.", "input": "", "output": "api.selectElementIDs([860]); edit.splitStrand(api.getElements([860])[0]);"}
+{"instruction": "Add 'CGCCGU' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'CGCCGU'));"}
+{"instruction": "Join strand 1340 and strand 1701 (ligate 3' of 1340 to 5' of 1701).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1340); var s2 = systems[0].strands.find(s => s.id == 1701); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.41 to 8.38", "input": "", "output": "api.setColorBounds(2.41, 8.38)"}
+{"instruction": "Join strand 1668 and strand 119 (ligate 3' of 1668 to 5' of 119).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1668); var s2 = systems[0].strands.find(s => s.id == 119); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Add 'GGAATUAUCGUUUT' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GGAATUAUCGUUUT'));"}
+{"instruction": "Set the color map bounds from 3.44 to 5.73", "input": "", "output": "api.setColorBounds(3.44, 5.73)"}
+{"instruction": "Set the color map bounds from 2.65 to 5.99", "input": "", "output": "api.setColorBounds(2.65, 5.99)"}
+{"instruction": "Split the strand at element 1451.", "input": "", "output": "api.selectElementIDs([1451]); edit.splitStrand(api.getElements([1451])[0]);"}
+{"instruction": "Split the strand at element 452.", "input": "", "output": "api.selectElementIDs([452]); edit.splitStrand(api.getElements([452])[0]);"}
+{"instruction": "Set the color map bounds from 4.94 to 8.32", "input": "", "output": "api.setColorBounds(4.94, 8.32)"}
+{"instruction": "Add 'GACATUTCAGUUCC' to the end of all strands (at the 3' end).", "input": "", "output": "systems[0].strands.forEach(s => edit.extendStrand(s.end3, 'GACATUTCAGUUCC'));"}
+{"instruction": "Split the strand at element 331.", "input": "", "output": "api.selectElementIDs([331]); edit.splitStrand(api.getElements([331])[0]);"}
+{"instruction": "Set the color map bounds from 4.67 to 6.48", "input": "", "output": "api.setColorBounds(4.67, 6.48)"}
+{"instruction": "Join strand 936 and strand 1836 (ligate 3' of 936 to 5' of 1836).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 936); var s2 = systems[0].strands.find(s => s.id == 1836); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 233 and strand 1533 (ligate 3' of 233 to 5' of 1533).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 233); var s2 = systems[0].strands.find(s => s.id == 1533); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 2.7 to 5.68", "input": "", "output": "api.setColorBounds(2.7, 5.68)"}
+{"instruction": "Split the strand at element 677.", "input": "", "output": "api.selectElementIDs([677]); edit.splitStrand(api.getElements([677])[0]);"}
+{"instruction": "Split the strand at element 1937.", "input": "", "output": "api.selectElementIDs([1937]); edit.splitStrand(api.getElements([1937])[0]);"}
+{"instruction": "Join strand 535 and strand 1559 (ligate 3' of 535 to 5' of 1559).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 535); var s2 = systems[0].strands.find(s => s.id == 1559); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Join strand 1146 and strand 259 (ligate 3' of 1146 to 5' of 259).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1146); var s2 = systems[0].strands.find(s => s.id == 259); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Set the color map bounds from 4.27 to 8.07", "input": "", "output": "api.setColorBounds(4.27, 8.07)"}
+{"instruction": "Set the color map bounds from 1.44 to 7.19", "input": "", "output": "api.setColorBounds(1.44, 7.19)"}
+{"instruction": "Join strand 1235 and strand 241 (ligate 3' of 1235 to 5' of 241).", "input": "", "output": "var s1 = systems[0].strands.find(s => s.id == 1235); var s2 = systems[0].strands.find(s => s.id == 241); if(s1 && s2) edit.ligate(s1.end3, s2.end5);"}
+{"instruction": "Split the strand at element 897.", "input": "", "output": "api.selectElementIDs([897]); edit.splitStrand(api.getElements([897])[0]);"}
+{"instruction": "Set the color map bounds from 4.8 to 7.62", "input": "", "output": "api.setColorBounds(4.8, 7.62)"}
