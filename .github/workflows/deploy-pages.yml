@@ -32,22 +32,18 @@ jobs:
     steps:
       - name: Checkout oxdna-viewer
         uses: actions/checkout@v4
-        with:
-          path: oxdna-viewer
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: oxdna-viewer/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: oxdna-viewer
         run: npm ci
 
       - name: Build TypeScript (dist/)
-        working-directory: oxdna-viewer
         # A handful of pre-existing type errors elsewhere in this codebase
         # (unrelated to this workflow) make tsc exit non-zero even though it
         # still emits every file with no errors of its own -- `|| true` here
@@ -60,7 +56,6 @@ jobs:
           version: latest
 
       - name: Build rigidDNA WASM modules
-        working-directory: oxdna-viewer
         run: |
           set -e
           EMCC_FLAGS="-std=c++17 -O3 -s MODULARIZE=1 -s EXPORTED_RUNTIME_METHODS=[\"callMain\",\"FS\"] -s INVOKE_RUN=0 -s EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=1 -s ENVIRONMENT=web,worker -s FILESYSTEM=1"
@@ -75,10 +70,10 @@ jobs:
 
       - name: Verify WASM build output
         run: |
-          test -s oxdna-viewer/wasm/rigid_body_sim.wasm
-          test -s oxdna-viewer/wasm/helix_cluster.wasm
+          test -s wasm/rigid_body_sim.wasm
+          test -s wasm/helix_cluster.wasm
           echo "WASM modules built OK:"
-          ls -la oxdna-viewer/wasm/
+          ls -la wasm/
 
       - name: Stage deployable site
         run: |
@@ -88,7 +83,8 @@ jobs:
             --exclude='.github' \
             --exclude='node_modules' \
             --exclude='.gitignore' \
-            oxdna-viewer/ _site/
+            --exclude='_site' \
+            ./ _site/
 
       - name: Deploy to gh-pages branch
         uses: JamesIves/github-pages-deploy-action@v4
