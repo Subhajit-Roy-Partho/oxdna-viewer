@@ -84,6 +84,117 @@ function applyRigidDnaConf(confText: string, newElementIDs: Map<BasicElement, nu
     document.dispatchEvent(new Event('nextConfigLoaded'));
 }
 
+/** Reads a number input, treating an empty/unparseable value as "not set" (undefined) rather than NaN/0 -- for optional fields whose absence should leave the underlying C++ default in place. */
+function rigidDnaOptionalNumber(id: string): number | undefined {
+    const el = document.getElementById(id) as HTMLInputElement | null;
+    if (!el || el.value === '') return undefined;
+    const n = parseFloat(el.value);
+    return isNaN(n) ? undefined : n;
+}
+
+/**
+ * Gathers every rigidDNA relax parameter from the window's form fields into
+ * a RigidDnaRelaxOptions, matching every key RigidBodySim.cpp's readInput()
+ * accepts (see rigiddna_bridge.ts's doc comments and the parameters
+ * reference at https://subhajit-roy-partho.github.io/rigidDNA/parameters.html).
+ * Fields left at their default/blank value are simply omitted, so the C++
+ * side's own defaults apply untouched -- e.g. leaving "Bond distance" blank
+ * reproduces today's cluster_size-dependent default exactly.
+ */
+function collectRigidDnaRelaxOptions(): RigidDnaRelaxOptions {
+    const opts: RigidDnaRelaxOptions = {
+        steps: view.getInputNumber('rigidDnaSteps'),
+        dt: view.getInputNumber('rigidDnaDt'),
+        k: view.getInputNumber('rigidDnaK'),
+        b: view.getInputNumber('rigidDnaB'),
+        repulsion: view.getInputNumber('rigidDnaRepulsion'),
+        repulsionOffset: view.getInputNumber('rigidDnaRepulsionOffset'),
+        recluster: view.getInputBool('rigidDnaRecluster'),
+        clusterMode: (<HTMLSelectElement>document.getElementById('rigidDnaClusterMode')).value as 'auto' | 'helix' | 'bundle',
+        bundleSize: view.getInputNumber('rigidDnaBundleSize'),
+        clusterAngleDeg: view.getInputNumber('rigidDnaAngleDeg'),
+        clusterMaxMergeDist: view.getInputNumber('rigidDnaMaxMergeDist'),
+    };
+
+    const breakLength = rigidDnaOptionalNumber('rigidDnaBreakLength');
+    if (breakLength) opts.breakLength = breakLength;
+
+    const bondDistance = rigidDnaOptionalNumber('rigidDnaBondDistance');
+    if (bondDistance !== undefined) {
+        opts.bondDistance = bondDistance;
+        const bondDistanceEnd = rigidDnaOptionalNumber('rigidDnaBondDistanceEnd');
+        if (bondDistanceEnd !== undefined) opts.bondDistanceEnd = bondDistanceEnd;
+    }
+
+    if (view.getInputBool('rigidDnaKRampEnable')) {
+        opts.kStart = view.getInputNumber('rigidDnaKStart');
+        opts.kIncrement = view.getInputNumber('rigidDnaKIncrement');
+    }
+
+    if (view.getInputBool('rigidDnaPlanar')) {
+        opts.planar = true;
+        const nx = rigidDnaOptionalNumber('rigidDnaPlaneNormalX');
+        const ny = rigidDnaOptionalNumber('rigidDnaPlaneNormalY');
+        const nz = rigidDnaOptionalNumber('rigidDnaPlaneNormalZ');
+        if (nx !== undefined && ny !== undefined && nz !== undefined) opts.planeNormal = [nx, ny, nz];
+    }
+
+    if (view.getInputBool('rigidDnaVolumeExclusion')) {
+        opts.volumeExclusion = true;
+        opts.volumeExclusionType = parseInt((<HTMLSelectElement>document.getElementById('rigidDnaVolumeExclusionType')).value) as 1 | 2 | 3;
+        opts.volumeExclusionCutoff = view.getInputNumber('rigidDnaVolumeExclusionCutoff');
+        opts.volumeExclusionK = view.getInputNumber('rigidDnaVolumeExclusionK');
+        opts.volumeExclusionInterval = view.getInputNumber('rigidDnaVolumeExclusionInterval');
+        const start = rigidDnaOptionalNumber('rigidDnaVolumeExclusionStart');
+        if (start !== undefined) opts.volumeExclusionStart = start;
+    }
+
+    const energyLogInterval = rigidDnaOptionalNumber('rigidDnaEnergyLogInterval');
+    if (energyLogInterval) {
+        opts.energyLogInterval = energyLogInterval;
+        const file = view.getInputValue('rigidDnaEnergyLogFile');
+        if (file) opts.energyLogFile = file;
+    }
+
+    return opts;
+}
+
+/**
+ * Which of the chosen options force a single, continuous (non-chunked) run.
+ *
+ * RigidBodySim.cpp's initRigidBodies() resets cluster momentum, k_spring_current
+ * (to k_spring_start, or k_spring if no ramp), r0_current, and the ramp/
+ * volume-exclusion timing (bond_distance_ramp_end_step, volume_exclusion_start)
+ * EVERY time it runs -- all derived from the `steps` value of THAT run. Our
+ * chunked live-preview re-invokes rigid_body_sim fresh for every chunk with
+ * steps=chunkSize, so any ramp tied to the GLOBAL step count would incorrectly
+ * restart from scratch at the start of every chunk instead of continuing
+ * smoothly across the whole run (e.g. a bond_distance ramp meant to finish at
+ * global step 2000 would instead finish at the end of chunk 1, chunk 2, ...).
+ *
+ * Rather than reimplementing that ramp math on the JS side (fragile, and the
+ * volume_exclusion_start step-count gating inside stepPhysics() -- current_step
+ * being chunk-local, not global -- makes an exact reproduction awkward, see
+ * the task notes this was written against), we take the simpler, safer route:
+ * fall back to today's single non-chunked call whenever any of these are in
+ * play, and only use chunked live-preview for the common case (fixed k, fixed
+ * bond_distance, no volume exclusion, no in-relax reclustering). Momentum
+ * being reset to zero at each chunk boundary in the *chunked* path is an
+ * accepted, intentional approximation for these non-ramping cases -- this is
+ * a heavily-damped relaxation, not a real dynamics trajectory, and restarting
+ * each chunk "at rest" converges to essentially the same relaxed structure.
+ */
+function rigidDnaRequiresSingleRun(opts: RigidDnaRelaxOptions): string[] {
+    const reasons: string[] = [];
+    if (opts.kIncrement) reasons.push('spring ramping (k_start/k_increment)');
+    if (opts.bondDistanceEnd !== undefined && opts.bondDistance !== undefined && opts.bondDistanceEnd !== opts.bondDistance) {
+        reasons.push('bond_distance ramp');
+    }
+    if (opts.volumeExclusion) reasons.push('volume exclusion');
+    if (opts.recluster) reasons.push('recluster (geometry reclustering inside the relax step)');
+    return reasons;
+}
+
 function rigidDnaLog(line: string) {
     const el = document.getElementById('rigidDnaLog');
     if (!el) return;
@@ -112,14 +223,19 @@ function initRigidDnaWindow() {
 async function runRigidDnaAutoCluster() {
     if (elements.size === 0) { notify('Load a structure first.'); return; }
     const angleDeg = view.getInputNumber('rigidDnaAngleDeg');
+    const maxMergeDist = view.getInputNumber('rigidDnaMaxMergeDist');
     const clusterMode = (<HTMLSelectElement>document.getElementById('rigidDnaClusterMode')).value as 'auto' | 'helix' | 'bundle';
+    const bundleSize = view.getInputNumber('rigidDnaBundleSize');
+    const breakLength = rigidDnaOptionalNumber('rigidDnaBreakLength') ?? 0;
 
     const log = document.getElementById('rigidDnaLog');
     if (log) log.textContent = '';
     notify('Running rigidDNA auto-clustering (helix geometry)...');
 
     const { topText, datText, newElementIDs } = exportSceneForRigidDna();
-    const result = await RigidDnaBridge.computeClusters(topText, datText, { angleDeg, clusterMode, onLog: rigidDnaLog });
+    const result = await RigidDnaBridge.computeClusters(topText, datText, {
+        angleDeg, maxMergeDist, clusterMode, bundleSize, breakLength, onLog: rigidDnaLog,
+    });
     if (!result.ok) {
         notify(`rigidDNA clustering failed: ${result.error || 'unknown error'}`, 'alert');
         return;
@@ -165,24 +281,91 @@ function runRigidDnaClearClusters() {
     rigidDnaClusterSummary();
 }
 
+/**
+ * Runs the relaxation as a sequence of short chunks against the live scene,
+ * so the user can watch the structure move instead of seeing nothing until
+ * the whole run finishes. Each chunk is an independent rigid_body_sim
+ * invocation (steps=chunkSize) whose output configuration is applied to the
+ * scene immediately and fed back in as the next chunk's input configuration
+ * -- see rigidDnaRequiresSingleRun()'s doc comment for why this is only safe
+ * when no ramping/volume-exclusion/in-relax-reclustering option is active
+ * (the caller must have already checked that).
+ *
+ * Chunk size is adaptive rather than a fixed guess: after each chunk we know
+ * exactly how many wall-clock ms that many steps took on this machine for
+ * this structure, so we rescale the next chunk's step count to target
+ * ~220ms -- comfortably inside the "feels responsive" 150-300ms window the
+ * task called for, regardless of structure size or machine speed.
+ */
+async function runRigidDnaRelaxChunked(
+    topText: string, datText: string, newElementIDs: Map<BasicElement, number>,
+    opts: RigidDnaRelaxOptions, totalSteps: number,
+): Promise<boolean> {
+    const TARGET_CHUNK_MS = 220;
+    let chunkSize = Math.max(1, Math.min(50, totalSteps)); // conservative first probe, adapted immediately after
+    let stepsDone = 0;
+    let currentDat = datText;
+
+    while (stepsDone < totalSteps) {
+        const chunkSteps = Math.min(chunkSize, totalSteps - stepsDone);
+        const t0 = performance.now();
+        const result = await RigidDnaBridge.relax(topText, currentDat, {
+            ...opts,
+            steps: chunkSteps,
+            recluster: false, // guaranteed false here -- rigidDnaRequiresSingleRun() routes recluster=true runs to the non-chunked path instead
+            onLog: () => {}, // suppress this chunk's own engine boilerplate (topology/cluster summary would repeat every chunk); we log our own progress line below instead
+        });
+        const elapsedMs = performance.now() - t0;
+
+        if (!result.ok || !result.lastConf) {
+            notify(`rigidDNA relaxation failed: ${result.error || 'unknown error'}`, 'alert');
+            return false;
+        }
+
+        applyRigidDnaConf(result.lastConf, newElementIDs);
+        stepsDone += chunkSteps;
+        rigidDnaLog(`Step ${stepsDone}/${totalSteps}...`);
+        currentDat = result.lastConf;
+
+        if (elapsedMs > 0 && stepsDone < totalSteps) {
+            const stepsPerMs = chunkSteps / elapsedMs;
+            chunkSize = Math.max(5, Math.min(5000, Math.round(stepsPerMs * TARGET_CHUNK_MS)));
+        }
+
+        // Yield to the browser so it actually repaints the scene update above
+        // before the next (synchronous, potentially blocking) chunk runs.
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    }
+    return true;
+}
+
 /** "Run rigidDNA Relaxation" button */
 async function runRigidDnaRelax() {
     if (elements.size === 0) { notify('Load a structure first.'); return; }
 
     const log = document.getElementById('rigidDnaLog');
     if (log) log.textContent = '';
+
+    const opts = collectRigidDnaRelaxOptions();
+    const totalSteps = opts.steps ?? 2000;
+    const { topText, datText, newElementIDs } = exportSceneForRigidDna();
+
+    const livePreviewRequested = view.getInputBool('rigidDnaLivePreview');
+    const singleRunReasons = rigidDnaRequiresSingleRun(opts);
+
+    if (livePreviewRequested && singleRunReasons.length === 0) {
+        notify('Running rigidDNA relaxation with live preview (WASM, in your browser)...');
+        await runRigidDnaRelaxChunked(topText, datText, newElementIDs, opts, totalSteps);
+        notify('rigidDNA relaxation complete -- structure updated.');
+        return;
+    }
+
+    if (livePreviewRequested && singleRunReasons.length > 0) {
+        rigidDnaLog(`Live preview disabled for this run (${singleRunReasons.join(', ')} need${singleRunReasons.length === 1 ? 's' : ''} a single continuous pass to stay physically correct) -- running all ${totalSteps} steps in one shot...`);
+    }
     notify('Running rigidDNA relaxation -- this runs entirely in your browser (WASM), no server round-trip...');
 
-    const { topText, datText, newElementIDs } = exportSceneForRigidDna();
-    const result = await RigidDnaBridge.relax(topText, datText, {
-        steps: view.getInputNumber('rigidDnaSteps'),
-        dt: view.getInputNumber('rigidDnaDt'),
-        k: view.getInputNumber('rigidDnaK'),
-        b: view.getInputNumber('rigidDnaB'),
-        repulsion: view.getInputNumber('rigidDnaRepulsion'),
-        recluster: false, // cluster_id column we send is already final
-        onLog: rigidDnaLog,
-    });
+    const result = await RigidDnaBridge.relax(topText, datText, { ...opts, onLog: rigidDnaLog });
 
     if (!result.ok || !result.lastConf) {
         notify(`rigidDNA relaxation failed: ${result.error || 'unknown error'}`, 'alert');
