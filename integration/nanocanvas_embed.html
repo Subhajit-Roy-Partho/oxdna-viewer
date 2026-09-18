@@ -54,6 +54,7 @@
     .sync-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
     .sync-dot.syncing   { background: var(--warning); animation: pulse 1s infinite; }
     .sync-dot.error     { background: var(--error); }
+    .sync-dot.dormant   { background: transparent; border: 1.5px solid var(--text-muted); }
 
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
@@ -308,6 +309,8 @@ const WS_URL     = (isHttps ? 'wss://' : 'ws://') + host + ':8765/ws';
 
 let ws = null;
 let liveSyncEnabled = false;
+let wsConnectAttempts = 0;
+const WS_MAX_ATTEMPTS = 5; // then stay dormant — no reconnect storm vs a deleted backend
 let ncReady = false;
 let oxReady = false;
 let llmHistory = [];
@@ -504,10 +507,18 @@ function installNCBridge() {
 // WebSocket to NanoCanvas backend (optional — for persistent session sync)
 // ════════════════════════════════════════════════════════════════════════════
 function connectWS() {
-  if (ws && ws.readyState === WebSocket.OPEN) return;
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+  if (wsConnectAttempts >= WS_MAX_ATTEMPTS) {
+    // Capped out: stay dormant with a clear label instead of storming a
+    // backend that may simply be gone. postMessage sync still works.
+    setSyncState('dormant');
+    document.getElementById('wsStatus').textContent = 'WS: dormant';
+    return;
+  }
   try {
     ws = new WebSocket(WS_URL);
     ws.onopen = () => {
+      wsConnectAttempts = 0;
       setSyncState('connected');
       document.getElementById('wsStatus').textContent = 'WS: ●';
       toast('Connected to NanoCanvas backend', 'success');
@@ -520,9 +531,21 @@ function connectWS() {
     };
     ws.onerror = () => setSyncState('error');
     ws.onclose = () => {
+      if (!liveSyncEnabled) {
+        setSyncState('disconnected');
+        document.getElementById('wsStatus').textContent = 'WS: off';
+        return;
+      }
+      wsConnectAttempts++;
+      if (wsConnectAttempts >= WS_MAX_ATTEMPTS) {
+        setSyncState('dormant');
+        document.getElementById('wsStatus').textContent = 'WS: dormant';
+        toast('NanoCanvas backend unavailable — live sync dormant. Design push and direct file load still work.', 'warning');
+        return;
+      }
       setSyncState('disconnected');
       document.getElementById('wsStatus').textContent = 'WS: off';
-      if (liveSyncEnabled) setTimeout(connectWS, 3000);
+      setTimeout(connectWS, 1000 * Math.pow(2, wsConnectAttempts - 1));
     };
   } catch (err) {
     setSyncState('error');
@@ -556,6 +579,7 @@ function setSyncState(state) {
   lbl.textContent = {
     connected:    'Live Sync ON',
     disconnected: 'Disconnected',
+    dormant:      'Live Sync dormant — backend off',
     syncing:      'Syncing…',
     error:        'Error',
   }[state] || state;
@@ -566,9 +590,11 @@ function toggleLiveSync() {
     liveSyncEnabled = false;
     if (ws) { ws.close(); ws = null; }
     setSyncState('disconnected');
+    document.getElementById('wsStatus').textContent = 'WS: off';
     toast('Live sync stopped');
   } else {
     liveSyncEnabled = true;
+    wsConnectAttempts = 0; // explicit user action gets a fresh attempt budget
     connectWS();
   }
 }
@@ -598,11 +624,25 @@ async function syncNanoToOx() {
       toast('Nothing to sync yet — NanoCanvas has no helices. Build or add a structure first.', 'warning');
       return;
     }
-    const resp = await fetch(`${BACKEND}/preview/cadnano-to-oxdna`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ design, lattice: 'he' }),
-    });
+    // Backend convert step: the :8765 service may be absent entirely (the
+    // NanoCanvas backend is optional). A refused/unreachable backend rejects
+    // the fetch — fail soft with the offline alternative instead of an
+    // unhandled rejection. (No pure-frontend converter exists on this page;
+    // the JS converter lives in the NanoCanvas app, so the graceful message
+    // is the correct fix — not a re-implementation here.)
+    let resp;
+    try {
+      resp = await fetch(`${BACKEND}/preview/cadnano-to-oxdna`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ design, lattice: 'he' }),
+      });
+    } catch (fetchErr) {
+      setSyncState(liveSyncEnabled ? 'connected' : 'disconnected');
+      toast('Backend offline — cannot convert via :8765. Offline alternative: push the design from NanoCanvas Frontend mode, or load .top/.dat/.oxview files directly in oxView (File > Open).', 'warning');
+      console.info('[syncNanoToOx] backend convert unreachable:', fetchErr);
+      return;
+    }
     if (!resp.ok) throw new Error(await resp.text());
     const { top_url, dat_url, oxview_url } = await resp.json();
     loadDesignIntoOxView({ top_url, dat_url, oxview_url });

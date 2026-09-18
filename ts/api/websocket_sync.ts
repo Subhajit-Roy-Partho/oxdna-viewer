@@ -11,35 +11,154 @@
 module wsSync {
     let ws: WebSocket | null = null;
     let isConnected: boolean = false;
-    let reconnectInterval: number | null = null;
+    let wantConnection: boolean = false;
+    let reconnectTimer: number | null = null;
     let messageQueue: any[] = [];
+    let connectAttempts: number = 0;
+    let lastTriedUrl: string | null = null;
+    let dormant: boolean = false;  // backend absent: capped out, staying quiet
+    let dormantNotified: boolean = false;
+    let statusListeners: ((s: object) => void)[] = [];
 
     // Configuration
-    const WS_URL = 'ws://localhost:8765/ws';  // NanoCanvas WebSocket endpoint
-    const RECONNECT_DELAY = 3000;  // 3 seconds
+    const WS_PORT = 8765;  // NanoCanvas backend port
+    const WS_PATH = '/ws';  // NanoCanvas WebSocket endpoint
+    const MAX_CONNECT_ATTEMPTS = 5;
+    const RECONNECT_BASE_DELAY = 1000;  // 1s, doubled per attempt (1s..16s)
+    const MAX_QUEUED_MESSAGES = 100;
 
     /**
-     * Connect to NanoCanvas WebSocket server
+     * Default URL: derive the ws/wss scheme from how the page itself was
+     * served (wss:// under https — a hardcoded ws:// would be blocked as
+     * mixed content), and talk to the backend on the same host.
+     * Falls back to ws://localhost:8765/ws (e.g. file:// or workers).
      */
-    export function connect(url: string = WS_URL): void {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            console.log('WebSocket already connected');
+    function defaultWsUrl(): string {
+        try {
+            if (typeof location !== 'undefined' && location.hostname) {
+                const scheme = location.protocol === 'https:' ? 'wss://' : 'ws://';
+                return scheme + location.hostname + ':' + WS_PORT + WS_PATH;
+            }
+        } catch (_) {
+            // location inaccessible — use localhost default below
+        }
+        return 'ws://localhost:' + WS_PORT + WS_PATH;
+    }
+
+    const WS_URL = defaultWsUrl();
+
+    /**
+     * Human-readable one-liner so any live-sync toggle can show clearly
+     * whether sync is connected or dormant (backend absent).
+     */
+    export function statusText(): string {
+        if (isConnected) return 'Live Sync ON — connected';
+        if (dormant) return 'Live Sync dormant — backend unavailable';
+        if (wantConnection && connectAttempts > 0) return 'Live Sync connecting…';
+        return 'Live Sync off — disconnected';
+    }
+
+    function emitStatus(): void {
+        const s = getStatus();
+        for (const cb of statusListeners) {
+            try { cb(s); } catch (e) { console.error('wsSync status listener error:', e); }
+        }
+    }
+
+    export function onStatusChange(cb: (s: object) => void): void {
+        statusListeners.push(cb);
+        try { cb(getStatus()); } catch (e) { console.error('wsSync status listener error:', e); }
+    }
+
+    export function removeStatusListener(cb: (s: object) => void): void {
+        statusListeners = statusListeners.filter(fn => fn !== cb);
+    }
+
+    function clearReconnectTimer(): void {
+        if (reconnectTimer !== null) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+    }
+
+    /**
+     * A connection attempt failed (refused / unreachable / threw).
+     * Back off quietly with capped retries, then stay dormant: one
+     * one-line status, no reconnect storm, no unhandled exceptions.
+     */
+    function handleConnectFailure(url: string, err: any): void {
+        isConnected = false;
+        connectAttempts++;
+        const reason = (err && (err.message || err.toString())) || 'connection refused';
+        if (connectAttempts >= MAX_CONNECT_ATTEMPTS) {
+            dormant = true;
+            wantConnection = false;
+            clearReconnectTimer();
+            // One line only, then silence — the viewer works fine without
+            // the backend; live sync just stays dormant.
+            console.info(`[wsSync] NanoCanvas backend unavailable at ${url} (${reason}); `
+                + `gave up after ${connectAttempts} attempts — live sync dormant.`);
+            if (!dormantNotified) {
+                dormantNotified = true;
+                try { notify('Live sync dormant — NanoCanvas backend not running'); } catch (_) {}
+            }
+            emitStatus();
             return;
         }
+        const delay = RECONNECT_BASE_DELAY * Math.pow(2, connectAttempts - 1);
+        console.info(`[wsSync] Backend unreachable at ${url} (${reason}); `
+            + `retry ${connectAttempts}/${MAX_CONNECT_ATTEMPTS} in ${delay}ms.`);
+        emitStatus();
+        if (wantConnection) {
+            clearReconnectTimer();
+            reconnectTimer = window.setTimeout(() => {
+                reconnectTimer = null;
+                if (wantConnection && !isConnected && !dormant) connect(url);
+            }, delay);
+        }
+    }
+
+    /**
+     * Connect to NanoCanvas WebSocket server.
+     * Safe to call with no backend running: failures back off quietly
+     * (capped retries, then dormant) instead of throwing or storming.
+     */
+    export function connect(url: string = WS_URL): void {
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+            return;
+        }
+        if (url !== lastTriedUrl) {
+            // New target — fresh attempt budget.
+            connectAttempts = 0;
+            dormant = false;
+            dormantNotified = false;
+        } else if (dormant) {
+            // Already capped out for this URL: stay dormant, no storm.
+            emitStatus();
+            return;
+        }
+        lastTriedUrl = url;
+        wantConnection = true;
 
         console.log(`Connecting to NanoCanvas at ${url}...`);
-        ws = new WebSocket(url);
+        let socket: WebSocket;
+        try {
+            socket = new WebSocket(url);
+        } catch (e) {
+            handleConnectFailure(url, e);
+            return;
+        }
+        ws = socket;
 
         ws.onopen = () => {
             console.log('WebSocket connected to NanoCanvas');
             isConnected = true;
+            dormant = false;
+            dormantNotified = false;
+            connectAttempts = 0;
+            clearReconnectTimer();
             notify('Connected to NanoCanvas');
-
-            // Clear reconnect interval if set
-            if (reconnectInterval) {
-                clearInterval(reconnectInterval);
-                reconnectInterval = null;
-            }
+            emitStatus();
 
             // Send queued messages
             while (messageQueue.length > 0) {
@@ -64,22 +183,23 @@ module wsSync {
             }
         };
 
-        ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            notify('WebSocket connection error');
+        ws.onerror = () => {
+            // onclose follows with details; stay quiet here to avoid
+            // double-reporting every failed attempt.
+            console.info(`[wsSync] connection attempt to ${url} failed; waiting for close handler.`);
         };
 
         ws.onclose = () => {
+            const wasConnected = isConnected;
             console.log('WebSocket disconnected');
             isConnected = false;
-            notify('Disconnected from NanoCanvas');
-
-            // Attempt reconnection
-            if (!reconnectInterval) {
-                reconnectInterval = window.setInterval(() => {
-                    console.log('Attempting to reconnect...');
-                    connect(url);
-                }, RECONNECT_DELAY);
+            if (ws === socket) ws = null;
+            if (wasConnected) {
+                try { notify('Disconnected from NanoCanvas'); } catch (_) {}
+            }
+            emitStatus();
+            if (wantConnection && !dormant) {
+                handleConnectFailure(url, 'connection closed');
             }
         };
     }
@@ -88,15 +208,14 @@ module wsSync {
      * Disconnect from WebSocket server
      */
     export function disconnect(): void {
+        wantConnection = false;
+        clearReconnectTimer();
         if (ws) {
-            ws.close();
+            try { ws.close(); } catch (_) {}
             ws = null;
         }
-        if (reconnectInterval) {
-            clearInterval(reconnectInterval);
-            reconnectInterval = null;
-        }
         isConnected = false;
+        emitStatus();
     }
 
     /**
@@ -104,7 +223,9 @@ module wsSync {
      */
     function send(message: any): void {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
-            console.warn('WebSocket not connected, queuing message');
+            // Queue while disconnected, but cap it so a long dormant
+            // stretch can't grow memory without bound.
+            if (messageQueue.length >= MAX_QUEUED_MESSAGES) messageQueue.shift();
             messageQueue.push(message);
             return;
         }
@@ -310,22 +431,32 @@ module wsSync {
     }
 
     /**
-     * Initialize WebSocket sync system
+     * Initialize WebSocket sync system.
+     * Safe with no backend running: connect() backs off quietly and the
+     * module goes dormant instead of throwing or reconnect-storming.
      */
     export function initialize(url?: string): void {
         setupEventListeners();
-        connect(url);
+        try {
+            connect(url);
+        } catch (e) {
+            console.info('[wsSync] initialize: backend unavailable, live sync dormant.', e);
+        }
         console.log('WebSocket sync initialized');
     }
 
     /**
-     * Get connection status
+     * Get connection status — a live-sync toggle should read `connected`
+     * vs `dormant` (or the ready-made `status_text` one-liner).
      */
     export function getStatus(): object {
         return {
             connected: isConnected,
-            url: WS_URL,
-            queued_messages: messageQueue.length
+            dormant: dormant && !isConnected,
+            url: lastTriedUrl || WS_URL,
+            queued_messages: messageQueue.length,
+            connect_attempts: connectAttempts,
+            status_text: statusText()
         };
     }
 
