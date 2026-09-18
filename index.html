@@ -1115,6 +1115,13 @@
                     </button>
                     <span class="title">Forces</span>
                 </div>
+                <div class="group">
+                    <button class="ribbon-button" onclick="view.toggleWindow('rigidDNAWindow', initRigidDnaWindow)" title="Relax a flat caDNAno design via the rigidDNA WASM engine (runs entirely in your browser)">
+                        <span class="mif-cubes mif-3x"></span>
+                        <span class="caption">rigidDNA</span>
+                    </button>
+                    <span class="title">rigidDNA</span>
+                </div>
             </div>
             <!-- Separate Protein section-->
             <div class="section" id="section-protein">
@@ -1524,6 +1531,8 @@
         <script src="./dist/editing/doUndo.js"></script>
         <script src="./dist/editing/dijkstra.js"></script>
         <script src="./dist/editing/rigid-body_simulation.js"></script>
+        <script src="./dist/editing/rigiddna_bridge.js"></script>
+        <script src="./dist/editing/rigiddna_ui.js"></script>
         <script src="./dist/UI/UI.js"></script>
         <script src="./dist/main.js"></script>
         <script src="./dist/model/basicElement.js"></script>

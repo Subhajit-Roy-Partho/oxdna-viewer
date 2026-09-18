@@ -18,6 +18,8 @@
       "./ts/editing/dijkstra.ts",
       "./ts/editing/doUndo.ts",
       "./ts/editing/rigid-body_simulation.ts",
+      "./ts/editing/rigiddna_bridge.ts",
+      "./ts/editing/rigiddna_ui.ts",
       "./ts/editing/translation.ts",
       "ts/file_handling/file_handling.ts",
       "./ts/file_handling/file_getters.ts",
