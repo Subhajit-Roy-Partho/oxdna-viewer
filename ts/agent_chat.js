@@ -541,44 +541,131 @@ Do not use markdown formatting. Start directly with what was done.`;
 // ─────────────────────────────────────────────────────────────
 // Core API call — OpenAI-compatible /chat/completions format
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Robust chat-completions fetch: AbortController timeout (default
+// ~120s), retry with exponential backoff on 429/5xx/network errors
+// (max AGENT_FETCH_MAX_RETRIES retries). Error classes are
+// distinguished so chat-visible messages can point at the fix:
+//   - TypeError        → CORS/network failure (provider may block
+//                        browser CORS; backend-free operation is fine,
+//                        this only affects the LLM call itself)
+//   - AbortError       → request timed out
+//   - 401/403          → bad/rejected API key (points at key fields)
+//   - 429/5xx          → retried with backoff, then reported
+// Classic script (no bundler): agent-prefixed globals avoid colliding
+// with llm_chat.js, which is loaded on the same page.
+// ─────────────────────────────────────────────────────────────
+const AGENT_FETCH_TIMEOUT_MS = 120000;
+const AGENT_FETCH_MAX_RETRIES = 3;
+const AGENT_FETCH_BACKOFF_BASE_MS = 1000;
+
+function agentFetchIsRetryableStatus(status) {
+    return status === 429 || (status >= 500 && status <= 599);
+}
+
+function agentFetchSleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+}
+
+// POSTs a JSON body and resolves with parsed JSON. Throws Errors whose
+// messages are safe to show directly in the agent panel. Auth failures
+// keep the AUTH_ERROR: prefix and quota failures the QUOTA_ERROR:
+// prefix so agentChat.run()'s key-exhaustion hint keeps working.
+async function agentChatFetchJson(url, apiKey, body, opts) {
+    opts = opts || {};
+    var timeoutMs = (opts.timeoutMs != null) ? opts.timeoutMs : AGENT_FETCH_TIMEOUT_MS;
+    var maxRetries = (opts.maxRetries != null) ? opts.maxRetries : AGENT_FETCH_MAX_RETRIES;
+    var attempt = 0;
+    var lastErr = null;
+    while (true) {
+        var controller = null;
+        var timer = null;
+        try {
+            if (typeof AbortController !== 'undefined') {
+                controller = new AbortController();
+                timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+            }
+            var response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + apiKey
+                },
+                body: JSON.stringify(body),
+                signal: controller ? controller.signal : undefined
+            });
+            if (timer) clearTimeout(timer);
+            if (response.ok) {
+                return await response.json();
+            }
+            var errText = '';
+            try { errText = await response.text(); } catch (_) {}
+            var detail = errText;
+            try {
+                var parsed = JSON.parse(errText);
+                detail = (parsed.error && parsed.error.message) || errText;
+            } catch (_) {}
+            if (detail && detail.length > 500) detail = detail.substring(0, 500) + '…';
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('AUTH_ERROR: API key invalid or unauthorized. '
+                    + 'Set a valid key with the 🔑 button (stored as oxview_agent_api_key in localStorage) '
+                    + 'or agentApiKey/llmApiKey in ts/config.js. (' + (detail || ('HTTP ' + response.status)) + ')');
+            }
+            lastErr = new Error(response.status === 429
+                ? 'QUOTA_ERROR: Rate-limited or quota exhausted' + (detail ? '. (' + detail + ')' : '')
+                  + ' — retrying with backoff, then giving up.'
+                : 'API error ' + response.status + (detail ? ': ' + detail : ''));
+            lastErr._agentRetryable = agentFetchIsRetryableStatus(response.status);
+            lastErr._agentStatus = response.status;
+        } catch (err) {
+            if (timer) clearTimeout(timer);
+            if (err && err.name === 'AbortError') {
+                lastErr = new Error('Request timed out after ' + Math.round(timeoutMs / 1000) + 's — '
+                    + 'retrying (attempt ' + (attempt + 1) + '/' + (maxRetries + 1) + ').');
+                lastErr._agentRetryable = true;
+            } else if (err && !err._agentStatus && (err instanceof TypeError)) {
+                // fetch() rejects with TypeError on network failure / CORS block.
+                lastErr = new Error('NETWORK_ERROR: could not reach ' + url + '. '
+                    + 'The provider may block browser CORS requests, or you may be offline — '
+                    + 'retrying with backoff, then giving up. (' + err.message + ')');
+                lastErr._agentRetryable = true;
+            } else if (!err._agentRetryable && err._agentStatus == null
+                    && !/^(AUTH_ERROR|QUOTA_ERROR)/.test(err.message || '')) {
+                // Non-HTTP, non-network error (e.g. JSON parse) — not retryable.
+                throw err;
+            } else if (!err._agentRetryable) {
+                throw err;
+            } else {
+                lastErr = err;
+            }
+        }
+        if (attempt >= maxRetries || !lastErr._agentRetryable) {
+            if (/retrying/i.test(lastErr.message)) {
+                lastErr.message += ' Gave up after ' + (attempt + 1) + ' attempt' + (attempt === 0 ? '' : 's') + '.';
+            }
+            throw lastErr;
+        }
+        await agentFetchSleep(AGENT_FETCH_BACKOFF_BASE_MS * Math.pow(2, attempt));
+        attempt++;
+    }
+}
+
 async function agentApiCall(systemPrompt, userMessage) {
     const key = AGENT_CONFIG.apiKey;
     if (!key) {
         throw new Error('NO_KEY: No API key set. Click the 🔑 button in the Agent AI panel to add your API key.');
     }
 
-    const response = await fetch(`${AGENT_CONFIG.baseURL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${key}`
-        },
-        body: JSON.stringify({
-            model: AGENT_CONFIG.model,
-            max_tokens: 16000,
-            temperature: 0.1,
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userMessage }
-            ]
-        })
+    const data = await agentChatFetchJson(`${AGENT_CONFIG.baseURL}/chat/completions`, key, {
+        model: AGENT_CONFIG.model,
+        max_tokens: 16000,
+        temperature: 0.1,
+        messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage }
+        ]
     });
 
-    if (!response.ok) {
-        let errBody = {};
-        try { errBody = await response.json(); } catch (_) {}
-        const msg = errBody.error?.message || JSON.stringify(errBody);
-
-        if (response.status === 401 || response.status === 403) {
-            throw new Error(`AUTH_ERROR: API key invalid or unauthorized. (${msg})`);
-        }
-        if (response.status === 429) {
-            throw new Error(`QUOTA_ERROR: Rate-limited or quota exhausted. (${msg})`);
-        }
-        throw new Error(`API error ${response.status}: ${msg}`);
-    }
-
-    const data = await response.json();
     const choice = data.choices?.[0];
     let text = choice?.message?.content;
     // Thinking models occasionally leave content empty; salvage from reasoning.

@@ -593,6 +593,112 @@ NOTE: If window.__NC_BRIDGE__ is undefined, the viewer is running standalone (no
 In that case, inform the user they need to open the integration page at integration/nanocanvas_embed.html.
 `;
 
+// ─────────────────────────────────────────────────────────────
+// Robust chat-completions fetch: AbortController timeout (default
+// ~120s), retry with exponential backoff on 429/5xx/network errors
+// (max LLM_FETCH_MAX_RETRIES retries). Error classes are
+// distinguished so chat-visible messages can point at the fix:
+//   - TypeError        → CORS/network failure (provider may block
+//                        browser CORS; backend-free operation is fine,
+//                        this only affects the LLM call itself)
+//   - AbortError       → request timed out
+//   - 401/403          → bad/rejected API key (points at key fields)
+//   - 429/5xx          → retried with backoff, then reported
+// Classic script (no bundler): llm-prefixed globals avoid colliding
+// with agent_chat.js, which is loaded on the same page.
+// ─────────────────────────────────────────────────────────────
+const LLM_FETCH_TIMEOUT_MS = 120000;
+const LLM_FETCH_MAX_RETRIES = 3;
+const LLM_FETCH_BACKOFF_BASE_MS = 1000;
+
+function llmFetchIsRetryableStatus(status) {
+    return status === 429 || (status >= 500 && status <= 599);
+}
+
+function llmFetchSleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+}
+
+// POSTs a JSON body and resolves with parsed JSON. Throws Errors whose
+// messages are safe to show directly in the chat log.
+async function llmChatFetchJson(url, apiKey, body, opts) {
+    opts = opts || {};
+    var timeoutMs = (opts.timeoutMs != null) ? opts.timeoutMs : LLM_FETCH_TIMEOUT_MS;
+    var maxRetries = (opts.maxRetries != null) ? opts.maxRetries : LLM_FETCH_MAX_RETRIES;
+    var attempt = 0;
+    var lastErr = null;
+    while (true) {
+        var controller = null;
+        var timer = null;
+        try {
+            if (typeof AbortController !== 'undefined') {
+                controller = new AbortController();
+                timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+            }
+            var response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + apiKey
+                },
+                body: JSON.stringify(body),
+                signal: controller ? controller.signal : undefined
+            });
+            if (timer) clearTimeout(timer);
+            if (response.ok) {
+                return await response.json();
+            }
+            var errText = '';
+            try { errText = await response.text(); } catch (_) {}
+            var detail = '';
+            try {
+                var parsed = JSON.parse(errText);
+                detail = (parsed.error && parsed.error.message) || errText;
+            } catch (_) { detail = errText; }
+            if (detail && detail.length > 500) detail = detail.substring(0, 500) + '…';
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('🔑 API key rejected (HTTP ' + response.status + '). '
+                    + 'Set a valid key with the 🔑 button (stored as oxview_llm_api_key in localStorage) '
+                    + 'or llmApiKey in ts/config.js.' + (detail ? ' Provider says: ' + detail : ''));
+            }
+            lastErr = new Error(response.status === 429
+                ? 'Rate-limited (HTTP 429)' + (detail ? ': ' + detail : '')
+                  + ' — retrying with backoff, then giving up.'
+                : 'API error ' + response.status + (detail ? ': ' + detail : ''));
+            lastErr._llmRetryable = llmFetchIsRetryableStatus(response.status);
+            lastErr._llmStatus = response.status;
+        } catch (err) {
+            if (timer) clearTimeout(timer);
+            if (err && err.name === 'AbortError') {
+                lastErr = new Error('Request timed out after ' + Math.round(timeoutMs / 1000) + 's — '
+                    + 'retrying (attempt ' + (attempt + 1) + '/' + (maxRetries + 1) + ').');
+                lastErr._llmRetryable = true;
+            } else if (err && !err._llmStatus && (err instanceof TypeError)) {
+                // fetch() rejects with TypeError on network failure / CORS block.
+                lastErr = new Error('Network error: could not reach ' + url + '. '
+                    + 'The provider may block browser CORS requests, or you may be offline — '
+                    + 'retrying with backoff, then giving up. (' + err.message + ')');
+                lastErr._llmRetryable = true;
+            } else if (!err._llmRetryable && err._llmStatus == null && !/API key rejected/.test(err.message || '')) {
+                // Non-HTTP, non-network error (e.g. JSON parse) — not retryable.
+                throw err;
+            } else if (!err._llmRetryable) {
+                throw err;
+            } else {
+                lastErr = err;
+            }
+        }
+        if (attempt >= maxRetries || !lastErr._llmRetryable) {
+            if (/retrying/i.test(lastErr.message)) {
+                lastErr.message += ' Gave up after ' + (attempt + 1) + ' attempt' + (attempt === 0 ? '' : 's') + '.';
+            }
+            throw lastErr;
+        }
+        await llmFetchSleep(LLM_FETCH_BACKOFF_BASE_MS * Math.pow(2, attempt));
+        attempt++;
+    }
+}
+
 
 const llmChat = {
     isOpen: false,
@@ -686,26 +792,13 @@ const llmChat = {
             const log = document.getElementById('llm-chat-log');
             const thinking = log.lastChild;
 
-            const response = await fetch(`${LLM_CONFIG.baseURL}/chat/completions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${LLM_CONFIG.apiKey}`
-                },
-                body: JSON.stringify({
-                    model: LLM_CONFIG.model,
-                    messages: messages,
-                    temperature: 0.1,
-                    max_tokens: 16000
-                })
+            const data = await llmChatFetchJson(`${LLM_CONFIG.baseURL}/chat/completions`, LLM_CONFIG.apiKey, {
+                model: LLM_CONFIG.model,
+                messages: messages,
+                temperature: 0.1,
+                max_tokens: 16000
             });
 
-            if (!response.ok) {
-                const err = await response.text();
-                throw new Error(`API error ${response.status}: ${err}`);
-            }
-
-            const data = await response.json();
             const msg = (data.choices && data.choices[0] && data.choices[0].message) || {};
             // Thinking models sometimes leave content empty and put everything in
             // reasoning; salvage a fenced code block from reasoning if so.
