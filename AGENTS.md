@@ -5,9 +5,9 @@
 
 ## Current Status
 
-**Last Updated:** 2026-09-01
-**Last Session Summary:** _Fixed the in-browser AI (LLM Chat 💬 + Agent Chat 🤖) which was erroring on shape requests: dead nano-gpt key in `web-config.js` + `ts/config.js` template **replacing** `OXVIEW_CONFIG` instead of merging (wiped model/key, left Agent Chat pointed at Apple floodgate). Now: keys only in gitignored `ts/config.js`, `web-config.js`/`config.example.js` carry none and use `Object.assign` merge, default model `z-ai/glm-5.3:thinking`, agent baseURL → nano-gpt, `max_tokens` 16000, empty-`content`→`reasoning` salvage. Added `shapes.star()`. New `ts/api/spatial_api.js` (`window.space`): live scene digest injected into both AI prompts, object-addressed transforms by name (`moveTo/moveBy/rotate/align/place/gap/overlaps`), reference grid + XYZ axes (`space.grid()`), inline snapshot images in chat (`space.show()`). Both AI prompts now document `shapes.*` + `space.*`. All changes mirrored to the NanoCanvas vendored copy._
-**Resume From:** _AI works end-to-end (Playwright-verified: "draw a 3d star and show the output" → `shapes.star(...); space.show()` runs clean, image rendered). Open `http://localhost:8766/` (grid appears when a chat panel opens) or the embed at `/integration/nanocanvas_embed.html`. `ts/config.js` holds the live key and is gitignored — recreate it from `ts/config.example.js` on a fresh clone._
+**Last Updated:** 2026-09-18
+**Last Session Summary:** _(Work done in a NanoCanvas-side session, mirrored here since both copies are kept in sync.) Landed the rigidDNA relaxation window's full parameter set (bond distance/end, k_start/k_increment, cluster angle/merge distance, break length during clustering, planar/plane-normal, volume-exclusion settings, energy log interval/file — see https://subhajit-roy-partho.github.io/rigidDNA/parameters.html) plus live intermediate relaxation steps, both of which existed uncommitted from an earlier session and were committed now. Also found and removed a dead `<script src="./ts/api/spatial_api.js">` reference in `index.html` (the file doesn't exist in this repo — only `transform_api.js`/`llm_tracker_api.js`/`shapes_api.js` do) that was 404ing on every page load; found while diagnosing why NanoCanvas's "Frontend (Beta)" push looked successful but loaded nothing into the viewer (that bug's actual root causes were both on the NanoCanvas side — see its AGENTS.md Session 19 — this repo's only involvement was the incidental dead-reference cleanup)._
+**Resume From:** _AI works end-to-end (Playwright-verified: "draw a 3d star and show the output" → `shapes.star(...); space.show()` runs clean, image rendered). Open `http://localhost:8766/` (grid appears when a chat panel opens) or the embed at `/integration/nanocanvas_embed.html`. `ts/config.js` holds the live key and is gitignored — recreate it from `ts/config.example.js` on a fresh clone. Current branch is `recovered` (tracks `origin/recovered`), not `main` — confirm before merging if that matters._
 
 ---
 
@@ -32,10 +32,33 @@
 | #8 | Testing and validation | 2026-06-12 23:28 |
 | #9 | Create comprehensive documentation | 2026-06-12 23:30 |
 | #10 | Browser web deployment, non-root Tailscale proxy, postMessage bridge, and unified LLM cross-tool integration | 2026-07-23 08:24 |
+| #11 | Commit the rigidDNA relaxation window's full parameter set + live intermediate relaxation steps (existed uncommitted from an earlier session); remove dead `spatial_api.js` script reference | 2026-09-18 |
 
 ---
 
 ## Session Log
+
+### 2026-09-18 — Commit backlog: rigidDNA full parameters, dead script reference
+
+Two small, low-risk items landed while working the NanoCanvas side of the
+shared history:
+1. `windows/rigidDNAWindow.html` + `ts/editing/rigiddna_{bridge,ui}.ts`
+   (and their built `dist/` counterparts) already had, from an earlier
+   session, the full rigidDNA parameter set exposed in an Advanced
+   accordion (bond distance/end, k_start/k_increment, cluster angle/merge
+   distance, break length during clustering, planar/plane-normal,
+   volume-exclusion settings, energy log interval/file) and live
+   intermediate relaxation steps streamed into the viewer instead of only
+   the final result — this was sitting uncommitted; committed now.
+2. `index.html` had `<script src="./ts/api/spatial_api.js"></script>` but
+   that file doesn't exist anywhere in this repo (its siblings
+   `transform_api.js`/`llm_tracker_api.js`/`shapes_api.js` do) — a 404 on
+   every page load. Removed the dead reference. Found while diagnosing a
+   NanoCanvas-side bug (its "Frontend (Beta)" push to oxView looked
+   successful but silently loaded nothing) — that bug's real causes were
+   both in NanoCanvas's own `App.jsx` (a blob: URL with no file extension,
+   and an iframe-ref-read race), not here; this repo's only involvement
+   was this incidental dead-script cleanup.
 
 ### 2026-09-01 — AI fix + spatial API
 
