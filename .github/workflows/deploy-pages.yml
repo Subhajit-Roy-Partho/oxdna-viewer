@@ -7,6 +7,11 @@ name: Deploy oxView to GitHub Pages
 # rigidDNA checkout is ever required on a developer's machine just to keep
 # the deployed site current -- only when actively working on that C++
 # source itself.
+#
+# The rigidDNA C++ source is vendored into wasm/rigiddna-src/ (see the
+# README there) rather than checked out from its own repo at build time,
+# because that repo is private and the default GITHUB_TOKEN for *this*
+# repo has no access to it.
 
 on:
   push:
@@ -29,12 +34,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: oxdna-viewer
-
-      - name: Checkout rigidDNA (WASM source)
-        uses: actions/checkout@v4
-        with:
-          repository: Subhajit-Roy-Partho/rigidDNA
-          path: rigidDNA
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -61,18 +60,18 @@ jobs:
           version: latest
 
       - name: Build rigidDNA WASM modules
+        working-directory: oxdna-viewer
         run: |
           set -e
-          mkdir -p oxdna-viewer/wasm
           EMCC_FLAGS="-std=c++17 -O3 -s MODULARIZE=1 -s EXPORTED_RUNTIME_METHODS=[\"callMain\",\"FS\"] -s INVOKE_RUN=0 -s EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=1 -s ENVIRONMENT=web,worker -s FILESYSTEM=1"
 
           em++ $EMCC_FLAGS -s EXPORT_NAME=createRigidBodySimModule \
-            rigidDNA/rigid_body_sim/RigidBodySim.cpp \
-            -o oxdna-viewer/wasm/rigid_body_sim.js
+            wasm/rigiddna-src/rigid_body_sim/RigidBodySim.cpp \
+            -o wasm/rigid_body_sim.js
 
           em++ $EMCC_FLAGS -s EXPORT_NAME=createHelixClusterModule \
-            rigidDNA/helix_cluster/HelixCluster.cpp \
-            -o oxdna-viewer/wasm/helix_cluster.js
+            wasm/rigiddna-src/helix_cluster/HelixCluster.cpp \
+            -o wasm/helix_cluster.js
 
       - name: Verify WASM build output
         run: |
