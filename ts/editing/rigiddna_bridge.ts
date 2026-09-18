@@ -41,10 +41,34 @@ interface RigidDnaRelaxOptions {
     b?: number;
     repulsion?: number;
     repulsionOffset?: number;
+    // bond_distance / legacy r0: fixed target (bondDistance alone) or a
+    // linear ramp from bondDistance -> bondDistanceEnd (both given and
+    // different). Left undefined entirely, the C++ side falls back to its
+    // own cluster_size-dependent default (2.0 "large" / 0.75 "helix") --
+    // see RigidBodySim.cpp's bond_distance_* members.
     bondDistance?: number;
+    bondDistanceEnd?: number;
+    // Spring-constant ramp (k_start -> k_increment per step, capped at k).
+    // Undefined reproduces the old fixed-k behavior exactly (C++ defaults:
+    // k_spring_start=-1 sentinel, k_spring_increment=0).
+    kStart?: number;
+    kIncrement?: number;
     clusterMode?: 'auto' | 'helix' | 'bundle';
     bundleSize?: number;
     recluster?: boolean;
+    clusterAngleDeg?: number;
+    clusterMaxMergeDist?: number;
+    breakLength?: number;
+    planar?: boolean;
+    planeNormal?: [number, number, number];
+    volumeExclusion?: boolean;
+    volumeExclusionType?: 1 | 2 | 3;
+    volumeExclusionCutoff?: number;
+    volumeExclusionK?: number;
+    volumeExclusionInterval?: number;
+    volumeExclusionStart?: number;
+    energyLogInterval?: number;
+    energyLogFile?: string;
     onLog?: (line: string) => void;
 }
 
@@ -184,9 +208,38 @@ const RigidDnaBridge = {
                 `recluster=${opts.recluster ? 'true' : 'false'}`,
                 `cluster_mode=${opts.clusterMode ?? 'auto'}`,
                 `bundle_size=${opts.bundleSize ?? 1}`,
+                `cluster_angle_deg=${opts.clusterAngleDeg ?? 10}`,
+                `cluster_max_merge_dist=${opts.clusterMaxMergeDist ?? 10}`,
                 `print_conf_interval=0`,
             ];
-            if (opts.bondDistance !== undefined) lines.push(`bond_distance=${opts.bondDistance}`);
+            // bond_distance: one value (fixed) or "start,end" (ramp) -- see
+            // the RigidDnaRelaxOptions doc comment. Omitted entirely unless
+            // the caller explicitly set bondDistance, so the C++ side's own
+            // cluster_size-dependent default keeps applying untouched.
+            if (opts.bondDistance !== undefined) {
+                const end = (opts.bondDistanceEnd !== undefined && opts.bondDistanceEnd !== opts.bondDistance)
+                    ? `,${opts.bondDistanceEnd}` : '';
+                lines.push(`bond_distance=${opts.bondDistance}${end}`);
+            }
+            if (opts.kStart !== undefined) lines.push(`k_start=${opts.kStart}`);
+            if (opts.kIncrement !== undefined) lines.push(`k_increment=${opts.kIncrement}`);
+            if (opts.breakLength !== undefined) lines.push(`break_length=${opts.breakLength}`);
+            if (opts.planar) {
+                lines.push(`planar=true`);
+                if (opts.planeNormal) lines.push(`plane_normal=${opts.planeNormal.join(',')}`);
+            }
+            if (opts.volumeExclusion) {
+                lines.push(`volume_exclusion=true`);
+                if (opts.volumeExclusionType !== undefined) lines.push(`volume_exclusion_type=${opts.volumeExclusionType}`);
+                if (opts.volumeExclusionCutoff !== undefined) lines.push(`volume_exclusion_cutoff=${opts.volumeExclusionCutoff}`);
+                if (opts.volumeExclusionK !== undefined) lines.push(`volume_exclusion_k=${opts.volumeExclusionK}`);
+                if (opts.volumeExclusionInterval !== undefined) lines.push(`volume_exclusion_interval=${opts.volumeExclusionInterval}`);
+                if (opts.volumeExclusionStart !== undefined) lines.push(`volume_exclusion_start=${opts.volumeExclusionStart}`);
+            }
+            if (opts.energyLogInterval) {
+                lines.push(`energy_log_interval=${opts.energyLogInterval}`);
+                if (opts.energyLogFile) lines.push(`energy_log_file=${opts.energyLogFile}`);
+            }
             Module.FS.writeFile('/rd/input', lines.join('\n') + '\n');
 
             const ret = Module.callMain(['/rd/input']);

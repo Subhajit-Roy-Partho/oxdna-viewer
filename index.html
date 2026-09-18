@@ -1624,6 +1624,63 @@
                 try { (new Function(d.code))(); if (typeof render === 'function') render(); } catch(err) { console.error('[oxView bridge]', err); }
                 return;
             }
+
+            // Incremental update (NanoCanvas Task 3): update only the given
+            // particles' positions/orientations in the already-loaded scene,
+            // instead of a full readFilesFromURLPath() reconvert+reload.
+            // `d.changes` is `[{ id, position: [x,y,z], a1?: [x,y,z], a3?: [x,y,z] }, ...]`,
+            // where `id` is the oxView/oxDNA particle index -- see
+            // convertCadnanoToOxDnaJs()'s idMap in NanoCanvas's
+            // editor/io/cadnanoOxDnaJs.js and App.jsx's applyOxViewDiff().
+            // This assumes the currently-loaded scene's particle ids still
+            // match the id map the diff was computed from (same topology,
+            // loaded via the Frontend (Beta) converter) -- if `elements` or
+            // `translateElements` aren't available yet (nothing loaded), or
+            // an id isn't found, that change is skipped rather than thrown.
+            if (d.type === 'apply_diff' && Array.isArray(d.changes)) {
+                try {
+                    if (typeof elements === 'undefined' || typeof translateElements !== 'function') {
+                        console.warn('[oxView bridge] apply_diff: no scene loaded yet, ignoring');
+                        return;
+                    }
+                    d.changes.forEach(function(c) {
+                        var elem = elements.get(c.id);
+                        if (!elem || !c.position) return;
+
+                        var newPos = new THREE.Vector3(c.position[0], c.position[1], c.position[2]);
+                        var delta = newPos.clone().sub(elem.getPos());
+                        if (delta.lengthSq() > 1e-10) {
+                            translateElements(new Set([elem]), delta);
+                        }
+
+                        // Reorient in place (about its own, now-updated,
+                        // position) so a1/a3 track a rotated bundle too.
+                        // This only corrects the a1 axis exactly; residual
+                        // twist about a1 (a3) is a known first-version
+                        // limitation -- a full reload always shows both
+                        // exactly.
+                        if (c.a1 && typeof rotateElementsByQuaternion === 'function') {
+                            var oldA1 = elem.getA1();
+                            var newA1 = new THREE.Vector3(c.a1[0], c.a1[1], c.a1[2]).normalize();
+                            if (oldA1.lengthSq() > 1e-10 && newA1.lengthSq() > 1e-10) {
+                                var q = new THREE.Quaternion().setFromUnitVectors(oldA1.normalize(), newA1);
+                                if (Math.abs(1 - q.w * q.w) > 1e-8) {
+                                    // `updateScene=true` (default) so this also
+                                    // flips the instanceRotation buffer's dirty
+                                    // flag via callUpdates() -- with `false` the
+                                    // fillVec() writes land but never reach the
+                                    // GPU, so the reorientation wouldn't render.
+                                    rotateElementsByQuaternion(new Set([elem]), q, elem.getPos());
+                                }
+                            }
+                        }
+                    });
+                    if (typeof render === 'function') render();
+                } catch (err) {
+                    console.error('[oxView bridge] apply_diff failed:', err);
+                }
+                return;
+            }
         });
 
         // 2. Install window.__NC_BRIDGE__ — proxies NanoCanvas calls to parent frame

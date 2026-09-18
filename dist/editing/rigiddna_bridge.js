@@ -122,10 +122,48 @@ const RigidDnaBridge = {
                 `recluster=${opts.recluster ? 'true' : 'false'}`,
                 `cluster_mode=${opts.clusterMode ?? 'auto'}`,
                 `bundle_size=${opts.bundleSize ?? 1}`,
+                `cluster_angle_deg=${opts.clusterAngleDeg ?? 10}`,
+                `cluster_max_merge_dist=${opts.clusterMaxMergeDist ?? 10}`,
                 `print_conf_interval=0`,
             ];
-            if (opts.bondDistance !== undefined)
-                lines.push(`bond_distance=${opts.bondDistance}`);
+            // bond_distance: one value (fixed) or "start,end" (ramp) -- see
+            // the RigidDnaRelaxOptions doc comment. Omitted entirely unless
+            // the caller explicitly set bondDistance, so the C++ side's own
+            // cluster_size-dependent default keeps applying untouched.
+            if (opts.bondDistance !== undefined) {
+                const end = (opts.bondDistanceEnd !== undefined && opts.bondDistanceEnd !== opts.bondDistance)
+                    ? `,${opts.bondDistanceEnd}` : '';
+                lines.push(`bond_distance=${opts.bondDistance}${end}`);
+            }
+            if (opts.kStart !== undefined)
+                lines.push(`k_start=${opts.kStart}`);
+            if (opts.kIncrement !== undefined)
+                lines.push(`k_increment=${opts.kIncrement}`);
+            if (opts.breakLength !== undefined)
+                lines.push(`break_length=${opts.breakLength}`);
+            if (opts.planar) {
+                lines.push(`planar=true`);
+                if (opts.planeNormal)
+                    lines.push(`plane_normal=${opts.planeNormal.join(',')}`);
+            }
+            if (opts.volumeExclusion) {
+                lines.push(`volume_exclusion=true`);
+                if (opts.volumeExclusionType !== undefined)
+                    lines.push(`volume_exclusion_type=${opts.volumeExclusionType}`);
+                if (opts.volumeExclusionCutoff !== undefined)
+                    lines.push(`volume_exclusion_cutoff=${opts.volumeExclusionCutoff}`);
+                if (opts.volumeExclusionK !== undefined)
+                    lines.push(`volume_exclusion_k=${opts.volumeExclusionK}`);
+                if (opts.volumeExclusionInterval !== undefined)
+                    lines.push(`volume_exclusion_interval=${opts.volumeExclusionInterval}`);
+                if (opts.volumeExclusionStart !== undefined)
+                    lines.push(`volume_exclusion_start=${opts.volumeExclusionStart}`);
+            }
+            if (opts.energyLogInterval) {
+                lines.push(`energy_log_interval=${opts.energyLogInterval}`);
+                if (opts.energyLogFile)
+                    lines.push(`energy_log_file=${opts.energyLogFile}`);
+            }
             Module.FS.writeFile('/rd/input', lines.join('\n') + '\n');
             const ret = Module.callMain(['/rd/input']);
             if (ret !== 0)

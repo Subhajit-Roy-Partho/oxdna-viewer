@@ -11,17 +11,33 @@
 <h2>1. Choose clusters</h2>
 
 <h4>Auto -- rigidDNA (helix geometry)</h4>
-<div class="group">
-    <label>Angle threshold (deg): </label>
-    <input type="number" value="10" id="rigidDnaAngleDeg" title="Max angle between two bonded helix axes to count as 'same direction'" min="0">
+<div class="row">
+    <div class="cell-6">
+        <label>Angle threshold (deg): </label>
+        <input type="number" value="10" id="rigidDnaAngleDeg" title="Max angle between two bonded helix axes to count as 'same direction'" min="0">
+    </div>
+    <div class="cell-6">
+        <label>Max merge dist (su): </label>
+        <input type="number" value="10" id="rigidDnaMaxMergeDist" title="Reject coaxial merges that jump a real-space gap larger than this (a genuine inter-domain bridge, not a helix continuation)" min="0">
+    </div>
+</div>
+<div class="row">
+    <div class="cell-6">
+        <label>Granularity: </label>
+        <select id="rigidDnaClusterMode" data-role="select">
+            <option value="auto">Auto (merge coaxial helices)</option>
+            <option value="helix">One cluster per helix</option>
+            <option value="bundle">Bundle (nearest-neighbor groups)</option>
+        </select>
+    </div>
+    <div class="cell-6">
+        <label>Bundle size: </label>
+        <input type="number" value="1" id="rigidDnaBundleSize" title="Number of spatially-nearest helices grouped together when Granularity is set to Bundle" min="1" step="1">
+    </div>
 </div>
 <div class="group">
-    <label>Granularity: </label>
-    <select id="rigidDnaClusterMode" data-role="select">
-        <option value="auto">Auto (merge coaxial helices)</option>
-        <option value="helix">One cluster per helix</option>
-        <option value="bundle">Bundle (nearest-neighbor groups)</option>
-    </select>
+    <label>Break length (su, blank/0 = off): </label>
+    <input type="number" id="rigidDnaBreakLength" title="Slice any cluster whose extent along its own axis exceeds this into shorter hinged pieces -- for compact/globular designs that would otherwise auto-cluster into one long rigid rod" min="0" placeholder="0 (disabled)">
 </div>
 <button class="button primary" onclick="runRigidDnaAutoCluster()" title="Detect base pairs and helix bundles from geometry">
     Auto-cluster (rigidDNA)
@@ -71,13 +87,145 @@
         <input type="number" value="0.2" id="rigidDnaB" step="0.01" min="0">
     </div>
 </div>
-<div class="group">
-    <label>Repulsion</label>
-    <input type="number" value="1500" id="rigidDnaRepulsion" min="0">
+<div class="row">
+    <div class="cell-6">
+        <label>Repulsion</label>
+        <input type="number" value="1500" id="rigidDnaRepulsion" min="0">
+    </div>
+    <div class="cell-6">
+        <label>Repulsion offset (su)</label>
+        <input type="number" value="0" id="rigidDnaRepulsionOffset" title="Extra slack added to two clusters' combined radius before repulsion engages" min="0">
+    </div>
 </div>
-<button class="button primary" onclick="runRigidDnaRelax()" title="Run the rigid-body relaxation and apply the result to the scene">
+<div class="row">
+    <div class="cell-6">
+        <label>Bond distance (su, blank = auto)</label>
+        <input type="number" id="rigidDnaBondDistance" title="Fixed rest length for cross-cluster springs. Left blank, defaults to 2.0 for Auto/Bundle granularity or 0.75 for one-cluster-per-helix -- see rigidDNA docs' bond_distance section." min="0" step="0.01" placeholder="auto">
+    </div>
+    <div class="cell-6">
+        <label>...ramp to (su, optional)</label>
+        <input type="number" id="rigidDnaBondDistanceEnd" title="If set (and different from Bond distance), bond_distance ramps linearly from the start value to this one, finishing at the volume-exclusion start step (if enabled) or the last step." min="0" step="0.01" placeholder="no ramp">
+    </div>
+</div>
+
+<div class="group">
+    <input type="checkbox" id="rigidDnaLivePreview" data-role="checkbox" data-caption="Live preview (watch it relax)" checked="true" title="Run the relaxation in short chunks, updating the scene after each one, instead of jumping straight to the final result">
+</div>
+<div class="group">
+    <input type="checkbox" id="rigidDnaRecluster" data-role="checkbox" data-caption="Recluster from geometry before relaxing" title="Recompute cluster assignment from geometry (rigidDNA auto-clusterer, using the settings in section 1) instead of using the clusters chosen above. Disables live preview for this run.">
+</div>
+
+<button class="button primary mt-1" onclick="runRigidDnaRelax()" title="Run the rigid-body relaxation and apply the result to the scene">
     Run rigidDNA Relaxation
 </button>
+
+<h4 class="mt-2">Advanced</h4>
+<p class="text-muted text-small mb-1">
+    Spring ramping, volume exclusion, and reclustering-before-relax each require the whole run to
+    happen as one continuous pass (their internal timers/ramps are only correct across a single
+    run) -- enabling any of them automatically disables live preview for that run and falls back
+    to today's "run everything, then update once" behavior.
+</p>
+<div class="accordion" data-role="accordion" data-one-frame="false">
+
+    <div class="frame">
+        <div class="heading">Spring ramping</div>
+        <div class="content">
+            <div class="group">
+                <input type="checkbox" id="rigidDnaKRampEnable" data-role="checkbox" data-caption="Ramp spring constant toward k" title="Start the cross-cluster spring constant at a different value and ramp it toward k over the run, letting overlapping clusters separate before stiffening">
+            </div>
+            <div class="row">
+                <div class="cell-6">
+                    <label>k_start</label>
+                    <input type="number" value="0" id="rigidDnaKStart" min="0" step="0.1">
+                </div>
+                <div class="cell-6">
+                    <label>k_increment (per step)</label>
+                    <input type="number" value="0.01" id="rigidDnaKIncrement" step="0.001">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="frame">
+        <div class="heading">Volume exclusion</div>
+        <div class="content">
+            <div class="group">
+                <input type="checkbox" id="rigidDnaVolumeExclusion" data-role="checkbox" data-caption="Enable volume exclusion" title="Additional steric-clash checking on top of the always-on cluster-sphere repulsion">
+            </div>
+            <div class="group">
+                <label>Type</label>
+                <select id="rigidDnaVolumeExclusionType" data-role="select">
+                    <option value="1">1 -- per-nucleotide (rigorous, slowest)</option>
+                    <option value="2">2 -- cluster outline (OBB, shape-aware)</option>
+                    <option value="3">3 -- capsule (fast, approximate)</option>
+                </select>
+            </div>
+            <div class="row">
+                <div class="cell-6">
+                    <label>Cutoff (su, type 1 only)</label>
+                    <input type="number" value="0.3" id="rigidDnaVolumeExclusionCutoff" min="0" step="0.01">
+                </div>
+                <div class="cell-6">
+                    <label>Strength (k)</label>
+                    <input type="number" value="1500" id="rigidDnaVolumeExclusionK" min="0">
+                </div>
+            </div>
+            <div class="row">
+                <div class="cell-6">
+                    <label>Recheck every N steps</label>
+                    <input type="number" value="1" id="rigidDnaVolumeExclusionInterval" min="1" step="1">
+                </div>
+                <div class="cell-6">
+                    <label>Start step (blank = steps/2)</label>
+                    <input type="number" id="rigidDnaVolumeExclusionStart" min="0" step="1" placeholder="steps/2">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="frame">
+        <div class="heading">Planar constraint</div>
+        <div class="content">
+            <div class="group">
+                <input type="checkbox" id="rigidDnaPlanar" data-role="checkbox" data-caption="Keep clusters in a plane" title="Restrict every rigid cluster to translate only within a plane and rotate only about that plane's normal -- for origami designed flat that should stay flat">
+            </div>
+            <label>Plane normal (blank = auto-detect from geometry)</label>
+            <div class="row">
+                <div class="cell-4">
+                    <input type="number" id="rigidDnaPlaneNormalX" step="0.01" placeholder="x">
+                </div>
+                <div class="cell-4">
+                    <input type="number" id="rigidDnaPlaneNormalY" step="0.01" placeholder="y">
+                </div>
+                <div class="cell-4">
+                    <input type="number" id="rigidDnaPlaneNormalZ" step="0.01" placeholder="z">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="frame">
+        <div class="heading">Output / logging</div>
+        <div class="content">
+            <div class="row">
+                <div class="cell-6">
+                    <label>Energy log interval (steps, blank/0 = off)</label>
+                    <input type="number" id="rigidDnaEnergyLogInterval" min="0" step="1" title="Log total kinetic energy every N steps, for judging how quickly a run settles toward equilibrium" placeholder="0 (disabled)">
+                </div>
+                <div class="cell-6">
+                    <label>Energy log filename (optional)</label>
+                    <input type="text" id="rigidDnaEnergyLogFile" placeholder="auto">
+                </div>
+            </div>
+            <p class="text-muted text-small mb-0">
+                Only meaningful for a single continuous run -- with live preview active this option
+                has no effect, since each chunk is its own separate process.
+            </p>
+        </div>
+    </div>
+
+</div>
 
 <h2>Log</h2>
 <pre id="rigidDnaLog" style="max-height: 150px; overflow-y: auto; font-size: 11px; background: #1e1e1e; color: #ddd; padding: 6px; white-space: pre-wrap;"></pre>
