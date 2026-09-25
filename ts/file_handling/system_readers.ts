@@ -446,7 +446,10 @@ function parseOxViewString(s: string) {
 
                     // Set cluster id, making sure not to reuse any already
                     // existing cluster id loaded earlier.
-                    if (elementData.cluster) {
+                    // 0 is a valid cluster id (0-based external clusterings),
+                    // so check null/undefined and range explicitly: a plain
+                    // truthiness check would silently drop cluster: 0 on load.
+                    if (elementData.cluster != null && elementData.cluster >= 0) {
                         if (!newClusterMap.has(elementData.cluster)) {
                             newClusterMap.set(elementData.cluster, ++clusterCounter);
                         }

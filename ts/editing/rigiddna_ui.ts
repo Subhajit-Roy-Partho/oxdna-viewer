@@ -246,13 +246,25 @@ async function runRigidDnaAutoCluster() {
     const byId = new Map<number, BasicElement>();
     newElementIDs.forEach((id, el) => byId.set(id, el));
     const lines = result.clusteredTop.split('\n').slice(1);
+    // The WASM auto-clusterer numbers clusters 0-based, but every native
+    // oxView consumer is 1-based (DBSCAN starts at ++clusterCounter, .oxview
+    // I/O and UNF export index groups as clusterId-1). Normalize here, at the
+    // import boundary, so the rest of the pipeline keeps a single convention.
+    let maxImportedId = clusterCounter;
     lines.forEach((line, i) => {
         if (!line) return;
         const cols = line.split(/\s+/);
         const clusterId = parseInt(cols[cols.length - 1]);
         const el = byId.get(i);
-        if (el && !isNaN(clusterId)) el.clusterId = clusterId;
+        if (el && !isNaN(clusterId)) {
+            el.clusterId = clusterId + 1;
+            if (el.clusterId > maxImportedId) maxImportedId = el.clusterId;
+        }
     });
+    // Keep clusterCounter covering the imported ids: identifyClusters() sizes
+    // its UNF group array from clusterCounter, so a stale (smaller) counter
+    // would index out of bounds and crash the export with a TypeError.
+    clusterCounter = maxImportedId;
 
     view.coloringMode.set('Cluster');
     notify(rigidDnaClusterSummary());
