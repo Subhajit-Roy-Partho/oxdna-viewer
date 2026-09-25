@@ -251,7 +251,13 @@ abstract class BasicElement {
         if (this.n3) json['n3'] = this.n3.id;
         if (this.n5) json['n5'] = this.n5.id;
         if (this.label) json['label'] = this.label;
-        if (this.clusterId) json['cluster'] = this.clusterId;
+        // Cluster id 0 is a valid assignment (e.g. from 0-based external
+        // clusterings), so test null/undefined and range explicitly: a plain
+        // truthiness check would silently drop cluster 0 on .oxview save.
+        // (DBSCAN noise, -1, is deliberately not persisted: it means
+        // "unclustered", and saving it would lump all noise into one cluster
+        // on reload via the reader's id remap.)
+        if (this.clusterId != null && this.clusterId >= 0) json['cluster'] = this.clusterId;
         if (this.color) json['color'] = this.color.getHex();
 
         return json;

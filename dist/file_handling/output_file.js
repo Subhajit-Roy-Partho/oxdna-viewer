@@ -408,7 +408,19 @@ function makeUNFOutput(name) {
             groups.push(new unfGroup(`group${i}`, i, []));
         }
         systems.forEach(sys => sys.strands.forEach(strand => strand.forEach(e => {
-            groups[e.clusterId - 1].includedObjects.push(e.id); //apparently clusters are 1-indexed
+            // Cluster ids are 1-based throughout oxView (0-based WASM
+            // auto-cluster ids are normalized to 1-based on import in
+            // runRigidDnaAutoCluster), so a valid id indexes groups as
+            // id-1. Elements with no cluster (undefined) or DBSCAN noise
+            // (-1) belong to no UNF group and are skipped; the array is
+            // grown defensively so a stale clusterCounter can never crash
+            // the export with a TypeError on groups[undefined].
+            if (typeof e.clusterId !== 'number' || !(e.clusterId >= 1))
+                return;
+            const idx = e.clusterId - 1;
+            while (groups.length <= idx)
+                groups.push(new unfGroup(`group${groups.length}`, groups.length, []));
+            groups[idx].includedObjects.push(e.id);
         })));
         return groups;
     }
