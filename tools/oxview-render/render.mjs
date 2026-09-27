@@ -98,7 +98,10 @@ function validate(o) {
   if (!o.input) fail(2, "--input is required (see --help).");
   if (!o.out) fail(2, "--out is required (see --help).");
   if (!fs.existsSync(o.input)) fail(2, `input not found: ${o.input}`);
-  const ext = path.extname(o.input).slice(1).toLowerCase();
+  const rawExt = path.extname(o.input).slice(1).toLowerCase();
+  // Accept trailing ".json" on system formats (our exporter writes ".oxview.json").
+  const base = path.basename(o.input).toLowerCase();
+  const ext = rawExt === "json" && base.endsWith(".oxview.json") ? "oxview" : rawExt;
   if (!SYSTEM_EXTS.has(ext)) {
     fail(2, `unsupported input extension ".${ext}" for ${o.input} ` +
       `(supported system files: ${[...SYSTEM_EXTS].join(", ")}). ` +
@@ -226,14 +229,18 @@ const inputAbs = path.resolve(o.input);
 const datAbs = o.dat ? path.resolve(o.dat) : null;
 
 const routes = new Map();
-routes.set(`/__in__/0/${path.basename(inputAbs)}`, inputAbs);
+// Serve under a basename carrying the normalized extension: the viewer's
+// handleFiles dispatches on the URL extension, so "*.oxview.json" must be
+// served as "*.oxview" (bytes come from the real path either way).
+const servedBase = path.basename(inputAbs).replace(/\.json$/i, "");
+routes.set(`/__in__/0/${servedBase}`, inputAbs);
 if (datAbs) routes.set(`/__in__/1/${path.basename(datAbs)}`, datAbs);
 
 const srv = serveStatic(REPO_ROOT, routes);
 const port = await listen(srv, o.port);
 
 const params = new URLSearchParams();
-params.set("f", `/__in__/0/${path.basename(inputAbs)}`);
+params.set("f", `/__in__/0/${servedBase}`);
 if (datAbs) params.set("g", `/__in__/1/${path.basename(datAbs)}`);
 const target = `http://127.0.0.1:${port}/index.html?${params.toString()}`;
 
