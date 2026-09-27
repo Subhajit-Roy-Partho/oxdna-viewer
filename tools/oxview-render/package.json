@@ -1,0 +1,13 @@
+{
+  "name": "oxview-render",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Headless CLI: render oxView structure images (.oxview / .top+.dat) via Playwright",
+  "type": "module",
+  "bin": {
+    "oxview-render": "./render.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.63.0"
+  }
+}
