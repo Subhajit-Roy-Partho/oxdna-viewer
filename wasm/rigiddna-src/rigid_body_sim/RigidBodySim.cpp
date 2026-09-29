@@ -304,6 +304,15 @@ public:
   double b_damp;
   double repulsion_k;
   double repulsion_offset;
+  // Repulsion ramp: optionally scale the cluster-sphere repulsion constant
+  // down over the run, from `repulsion` at step 0 to `repulsion_end` at the
+  // last step -- lets overlapping clusters separate early (strong repulsion)
+  // without that same strength fighting bond tightening late in the run.
+  // Mirrors the bond_distance ramp pattern: unset (or equal to repulsion)
+  // reproduces the old fixed-repulsion behavior exactly.
+  double repulsion_end = 0.0;      // target value at the last step; only used when repulsion_is_ramp
+  bool repulsion_is_ramp = false;
+  double repulsion_k_current = 0.0; // working value for the current step, set in initRigidBodies() and advanced in stepPhysics()
   double dt = 0.005; // Time step
 
   // bond_distance (r0, the spring's target rest length for every
@@ -493,6 +502,10 @@ public:
           repulsion_k = std::stod(val);
         else if (key == "repulsion_offset")
           repulsion_offset = std::stod(val);
+        else if (key == "repulsion_end") {
+          repulsion_end = std::stod(val);
+          repulsion_is_ramp = true;
+        }
         else if (key == "r0" || key == "bond_distance") {
           // Accept either one value (fixed r0 for the whole run) or two
           // comma-separated values (linear ramp start,end -- see the
@@ -836,6 +849,11 @@ public:
     }
     r0_current = bond_distance_start;
 
+    // Starting value for the (optionally ramped) repulsion constant. With
+    // no repulsion_end= given (or one equal to repulsion), this stays at
+    // repulsion_k, so behavior is unchanged unless the user opts into ramping.
+    repulsion_k_current = repulsion_k;
+
     // Resolve volume_exclusion_start's default (steps/2) now that `steps`
     // is known, and derive where the bond_distance ramp should finish: at
     // volume_exclusion_start if volume exclusion is on (so tightening
@@ -864,6 +882,12 @@ public:
                          std::to_string(bond_distance_end) + "su by step " +
                          std::to_string(bond_distance_ramp_end_step))
                       : (std::to_string(bond_distance_start) + "su fixed"))
+              << ", repulsion="
+              << (repulsion_is_ramp
+                      ? (std::to_string(repulsion_k) + " -> " +
+                         std::to_string(repulsion_end) + " by step " +
+                         std::to_string(steps))
+                      : (std::to_string(repulsion_k) + " fixed"))
               << (volume_exclusion
                       ? (" | volume_exclusion type=" + std::to_string(volume_exclusion_type) +
                          " starting at step " + std::to_string(volume_exclusion_start))
@@ -1232,6 +1256,16 @@ public:
       r0_current = bond_distance_start;
     }
 
+    // Advance the repulsion ramp the same way (no-op unless repulsion_end=
+    // was requested): linear from repulsion_k at step 0 to repulsion_end at
+    // the last step, held there after (t clamps at 1.0).
+    if (repulsion_is_ramp && steps > 0) {
+      double t = std::min(1.0, (double)current_step / (double)steps);
+      repulsion_k_current = repulsion_k + (repulsion_end - repulsion_k) * t;
+    } else {
+      repulsion_k_current = repulsion_k;
+    }
+
     // Reset forces (serial - trivial cost for a handful of clusters).
     for (auto &c : clusters) {
       c.force = Vector3(0, 0, 0);
@@ -1285,7 +1319,7 @@ public:
         double limit = c1.radius + c2.radius + repulsion_offset;
 
         if (d < limit && d > 1e-10) {
-          double f_mag = repulsion_k * (1.0 - d / limit);
+          double f_mag = repulsion_k_current * (1.0 - d / limit);
           double inv_d = 1.0 / d;
           Vector3 f_vec(r_12.x * f_mag * inv_d, r_12.y * f_mag * inv_d, r_12.z * f_mag * inv_d);
           c1.force += f_vec;

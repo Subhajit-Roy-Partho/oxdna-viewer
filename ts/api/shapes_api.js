@@ -29,6 +29,12 @@
  *   shapes.helix(center, axis, radius, rise, turns, nBases, ...) → elems
  *   shapes.pointCloud(points, seq?, isRNA?, tagName?)         → elems
  *   shapes.basesForLength(length, spacing?)                   → number
+ * Duplex outline routing (real B-DNA, auto-ligated at vertices):
+ *   shapes.duplexEdge(p0, p1, seq?, isRNA?, tag?)             → elems
+ *   shapes.outline(points, {closed?, seq?, isRNA?, tag?, ligate?, threshold?})
+ *   shapes.triangleDuplex(center, normal, sideLen, seq?, isRNA?, tag?)
+ *   shapes.triLattice(nx, ny, sideLen, center?, normal?)      → pure geometry
+ *   shapes.triangleCrystal(center, normal, sideLen, nx, ny, nz, opts?)
  */
 
 window.shapes = (function() {
@@ -775,6 +781,397 @@ window.shapes = (function() {
 
         return _place(positions, a1s, a3s, seq, isRNA,
                       tagName != null ? tagName : 'spiral');
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DUPLEX OUTLINE ROUTING (real B-DNA duplexes along edges, PERDIX-style)
+    // ─────────────────────────────────────────────────────────────────────────
+    //
+    // Unlike the nucleotide point-cloud shapes above, these build ideal B-DNA
+    // duplexes (edit.createStrand with createDuplex=true) and orient each one
+    // along an outline edge via its PCA helix axis, then auto-detect which
+    // ends meet at each vertex and ligate them (greedy closest 5'/3' pairing).
+    // Ref: Jun et al., Sci Adv 2019 (PERDIX) — outline → duplex edges +
+    // unpaired-nt vertex rule; here single-duplex edges instead of DX edges.
+    //
+    //   shapes.duplexEdge(p0, p1, seq?, isRNA?, tag?)
+    //   shapes.outline(points, opts?)          → elems (with .edges/.ligated)
+    //   shapes.triangleDuplex(center, normal, sideLen, seq?, isRNA?, tag?)
+    //   shapes.triLattice(nx, ny, sideLen, center?, normal?) → pure geometry
+    //   shapes.triangleCrystal(center, normal, sideLen, nx, ny, nz, opts?)
+
+    /** Axial rise per base-pair for a B-DNA duplex, in oxDNA units (~0.34 nm). */
+    shapes.DUPLEX_RISE = 0.4;
+
+    /**
+     * Orient an already-created duplex along the segment p0→p1:
+     * PCA helix axis → edge direction (quaternion), COM → segment midpoint.
+     */
+    function _orientDuplexToEdge(valid, p0, p1) {
+        var com = api.getCOM(valid);
+        var cur = null;
+        try {
+            if (valid.length >= 3 && api.getPCA) {
+                var pca = api.getPCA(valid);
+                if (pca && pca.primaryAxis) cur = pca.primaryAxis.clone();
+            }
+        } catch(_) {}
+        if (!cur) cur = new THREE.Vector3(0, 0, 1);
+        var want = p1.clone().sub(p0);
+        if (want.lengthSq() < 1e-8) want.set(0, 0, 1);
+        want.normalize();
+        var q = new THREE.Quaternion().setFromUnitVectors(cur.clone().normalize(), want);
+        rotateElementsByQuaternion(new Set(valid), q, com);
+        var com2 = api.getCOM(valid);
+        var mid = p0.clone().lerp(p1, 0.5);
+        translateElements(new Set(valid), mid.sub(com2));
+        valid.forEach(function(e) { if (e.n3) calcsp(e); });
+        var sys = valid[0].dummySys || valid[0].getSystem();
+        sys.callAllUpdates();
+    }
+
+    /**
+     * Greedy closest-pair ligation over the strand ends found in `elems`.
+     * Only ends belonging to these elements are considered (never touches
+     * unrelated structures). Returns {ligated, pairs:[{aId,bId,dist}]}.
+     */
+    function _ligateEndsGreedy(elems, threshold, allowCircular) {
+        threshold = (threshold == null) ? 1.5 : threshold;
+        var strands = {}, ids = [];
+        elems.forEach(function(e) {
+            if (e && e.strand && !strands[e.strand.id]) {
+                strands[e.strand.id] = e.strand;
+                ids.push(e.strand.id);
+            }
+        });
+        var open5 = [], open3 = [];
+        ids.forEach(function(id) {
+            var st = strands[id];
+            if (st.end5 && !st.end5.n5) open5.push(st.end5);
+            if (st.end3 && !st.end3.n3) open3.push(st.end3);
+        });
+        var cands = [];
+        open3.forEach(function(e3) {
+            var p3;
+            try { p3 = e3.getPos(); } catch(_) { return; }
+            open5.forEach(function(e5) {
+                if (e3 === e5) return;
+                var p5;
+                try { p5 = e5.getPos(); } catch(_) { return; }
+                var d = p3.distanceTo(p5);
+                if (d <= threshold) cands.push({ e3: e3, e5: e5, dist: d });
+            });
+        });
+        cands.sort(function(a, b) { return a.dist - b.dist; });
+        var used = {}, pairs = [], n = 0;
+        cands.forEach(function(cd) {
+            if (used[cd.e3.id] || used[cd.e5.id]) return;
+            if (!allowCircular && cd.e3.strand === cd.e5.strand) return;
+            try {
+                edit.ligate(cd.e3, cd.e5);
+                used[cd.e3.id] = used[cd.e5.id] = true;
+                n++;
+                pairs.push({ aId: cd.e3.id, bId: cd.e5.id, dist: Math.round(cd.dist * 10) / 10 });
+            } catch(_) { /* incompatible — skip */ }
+        });
+        return { ligated: n, pairs: pairs };
+    }
+
+    /**
+     * Place one ideal B-DNA duplex along the segment p0→p1.
+     *
+     * @param {THREE.Vector3} p0, p1
+     * @param {string}  [seq]     Auto-generated if too short (needs len/0.4 bp).
+     * @param {boolean} [isRNA]
+     * @param {string}  [tagName] Registered as kind 'duplex'. Null = untagged.
+     * @returns {BasicElement[]}
+     *
+     * Example:
+     *   shapes.duplexEdge(new THREE.Vector3(0,0,0), new THREE.Vector3(12,0,0),
+     *                     null, false, 'edge1');
+     */
+    shapes.duplexEdge = function(p0, p1, seq, isRNA, tagName) {
+        p0 = p0.clone(); p1 = p1.clone();
+        var len = p0.distanceTo(p1);
+        var nBp = Math.max(6, Math.round(len / shapes.DUPLEX_RISE));
+        seq = (seq && seq.length >= nBp) ? seq.slice(0, nBp) : _randomSeq(nBp, isRNA);
+        var elems = edit.createStrand(seq, true, isRNA || false);
+        var valid = elems.filter(Boolean);
+        if (valid.length === 0) return [];
+        _orientDuplexToEdge(valid, p0, p1);
+        if (tagName != null) llmTracker.tag(valid, tagName, null, 'duplex');
+        render();
+        return valid;
+    };
+
+    /**
+     * Route duplexes along a polyline outline and auto-ligate the vertices.
+     *
+     * @param {THREE.Vector3[]|number[][]} points  Corner positions.
+     * @param {Object} [opts]
+     *   {boolean} closed=true     Connect last point back to first.
+     *   {string}  seq             Cycled per edge (auto if omitted).
+     *   {boolean} isRNA=false
+     *   {string}  tag='outline'   Edge tags: tag_e0…; whole shape = alias tag.
+     *   {boolean} ligate=true     Auto-connect meeting ends at vertices.
+     *   {number}  threshold=1.5   Max end-to-end distance for ligation (units).
+     * @returns {BasicElement[]} elems, with .edges=[names], .ligated=n,
+     *                           .pairs=[{aId,bId,dist}]
+     *
+     * Example — duplex triangle, auto-connected:
+     *   shapes.outline([new THREE.Vector3(0,0,0), new THREE.Vector3(12,0,0),
+     *                   new THREE.Vector3(6,10.4,0)],
+     *                  {tag:'tri1'});
+     */
+    shapes.outline = function(points, opts) {
+        opts = opts || {};
+        var pts = (points || []).map(function(p) {
+            return (p instanceof THREE.Vector3) ? p.clone()
+                 : new THREE.Vector3(p[0], p[1], p[2]);
+        });
+        if (pts.length < 2) {
+            notify('shapes.outline: need at least 2 points', 'warning');
+            return [];
+        }
+        var closed = opts.closed !== false;
+        var n = closed ? pts.length : pts.length - 1;
+        var all = [], edgeNames = [];
+        var tag = (opts.tag != null) ? opts.tag : null;
+        for (var i = 0; i < n; i++) {
+            var e = shapes.duplexEdge(pts[i], pts[(i + 1) % pts.length],
+                                      opts.seq || null, opts.isRNA || false, null);
+            if (tag) {
+                var en = tag + '_e' + i;
+                llmTracker.tag(e, en, null, 'edge');
+                edgeNames.push(en);
+            }
+            all = all.concat(e);
+        }
+        var lig = { ligated: 0, pairs: [] };
+        if (opts.ligate !== false && all.length) {
+            lig = _ligateEndsGreedy(all, opts.threshold || 1.5, false);
+        }
+        if (tag) llmTracker.alias(tag, edgeNames);
+        else if (all.length) llmTracker.tag(all, 'outline', null, 'wireframe');
+        all.edges = edgeNames;
+        all.ligated = lig.ligated;
+        all.pairs = lig.pairs;
+        render();
+        return all;
+    };
+
+    /**
+     * Equilateral duplex triangle (single outline call convenience wrapper).
+     *
+     * @param {THREE.Vector3} center
+     * @param {THREE.Vector3} normal
+     * @param {number}  sideLen     Edge length in oxDNA units.
+     * @param {string}  [seq]
+     * @param {boolean} [isRNA]
+     * @param {string}  [tag='triDuplex']
+     * @returns {BasicElement[]} (with .edges/.ligated, see outline)
+     *
+     * Example:
+     *   shapes.triangleDuplex(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1),
+     *                         12, null, false, 'tri1');
+     */
+    shapes.triangleDuplex = function(center, normal, sideLen, seq, isRNA, tag) {
+        sideLen = sideLen || 12;
+        normal = normal ? normal.clone().normalize() : new THREE.Vector3(0, 0, 1);
+        var upGuess = (Math.abs(normal.y) < 0.9) ? new THREE.Vector3(0, 1, 0)
+                                                  : new THREE.Vector3(1, 0, 0);
+        var u = new THREE.Vector3().crossVectors(normal, upGuess).normalize();
+        var v = new THREE.Vector3().crossVectors(normal, u).normalize();
+        var R = sideLen / Math.sqrt(3); // circumradius
+        var pts = [];
+        for (var k = 0; k < 3; k++) {
+            var th = (2 * Math.PI * k) / 3;
+            pts.push(center.clone()
+                .addScaledVector(u, Math.cos(th) * R)
+                .addScaledVector(v, Math.sin(th) * R));
+        }
+        return shapes.outline(pts, { tag: (tag != null ? tag : 'triDuplex'),
+                                     seq: seq || null, isRNA: isRNA || false });
+    };
+
+    /**
+     * Pure geometry helper: edge-sharing triangular lattice in a plane.
+     * No scene changes — testable, reusable, and handy for custom builders.
+     *
+     * Basis vectors u,v meet at 60°, so cells V(i,j),V(i+1,j),V(i,j+1) are
+     * equilateral. Lattice centroid is placed at `center`.
+     *
+     * @param {number} nx, ny       Unit cells along u / v (>= 1).
+     * @param {number} sideLen      Triangle edge length (oxDNA units).
+     * @param {THREE.Vector3} [center]
+     * @param {THREE.Vector3} [normal]
+     * @returns {{verts: THREE.Vector3[], edges: [[a,b]], cells: [{verts:[a,b,c], up}],
+     *            origin, u, v}}
+     */
+    shapes.triLattice = function(nx, ny, sideLen, center, normal) {
+        nx = Math.max(1, nx || 1); ny = Math.max(1, ny || 1);
+        sideLen = sideLen || 12;
+        center = center ? center.clone() : new THREE.Vector3(0, 0, 0);
+        normal = normal ? normal.clone().normalize() : new THREE.Vector3(0, 0, 1);
+        var upGuess = (Math.abs(normal.y) < 0.9) ? new THREE.Vector3(0, 1, 0)
+                                                  : new THREE.Vector3(1, 0, 0);
+        var u = new THREE.Vector3().crossVectors(normal, upGuess).normalize();
+        // v = u rotated +60° about normal.
+        var v = u.clone().applyAxisAngle
+            ? u.clone().applyAxisAngle(normal, Math.PI / 3)
+            : u.clone(); // (Vector3.applyAxisAngle always exists in three.js)
+        function V(i, j, origin) {
+            return origin.clone()
+                .addScaledVector(u, i * sideLen)
+                .addScaledVector(v, j * sideLen);
+        }
+        // Raw origin at V(0,0), then recenter on centroid.
+        var origin = new THREE.Vector3(0, 0, 0);
+        var raw = [];
+        for (var j = 0; j <= ny; j++)
+            for (var i = 0; i <= nx; i++)
+                raw.push(V(i, j, origin));
+        var c = new THREE.Vector3(0, 0, 0);
+        raw.forEach(function(p) { c.add(p); });
+        c.divideScalar(raw.length);
+        origin = center.clone().sub(c);
+        function idx(i, j) { return j * (nx + 1) + i; }
+        var verts = [];
+        for (var jj = 0; jj <= ny; jj++)
+            for (var ii = 0; ii <= nx; ii++)
+                verts.push(V(ii, jj, origin));
+        var edgeMap = {}, edges = [];
+        function addEdge(a, b) {
+            var key = a < b ? a + '-' + b : b + '-' + a;
+            if (!edgeMap[key]) { edgeMap[key] = true; edges.push([Math.min(a,b), Math.max(a,b)]); }
+        }
+        var cells = [];
+        for (var cj = 0; cj < ny; cj++) {
+            for (var ci = 0; ci < nx; ci++) {
+                var a = idx(ci, cj), b = idx(ci + 1, cj), d = idx(ci, cj + 1), e2 = idx(ci + 1, cj + 1);
+                var up = [a, b, d], dn = [e2, b, d];
+                cells.push({ verts: up, up: true });
+                cells.push({ verts: dn, up: false });
+                addEdge(a, b); addEdge(b, d); addEdge(d, a);
+                addEdge(e2, b); addEdge(b, d); addEdge(d, e2);
+            }
+        }
+        return { verts: verts, edges: edges, cells: cells, origin: origin, u: u, v: v };
+    };
+
+    /**
+     * Extend edge-sharing triangles into a layered crystal slab.
+     *
+     * Each layer is a unique-edge triangular lattice (no doubled edges):
+     * one duplex per lattice edge, auto-ligated at shared vertices.
+     * Layers stack along `normal` with `layerGap` and an optional per-layer
+     * twist (screw offset à la tensegrity-triangle R3 stacking, cf. Seeman;
+     * Zhang et al. 2018 origami tensegrity triangle).
+     *
+     * Registry: edges `${tag}_L${l}_e${k}` (kind 'edge'),
+     * cells `${tag}_L${l}_c${i}` (aliases of 3 edges),
+     * layers `${tag}_L${l}` (aliases of cells),
+     * whole crystal `${tag}` (alias of layers).
+     *
+     * @param {THREE.Vector3} center
+     * @param {THREE.Vector3} normal
+     * @param {number} sideLen      Triangle edge length (oxDNA units).
+     * @param {number} nx, ny       Unit cells per layer.
+     * @param {number} nz           Layers.
+     * @param {Object} [opts]
+     *   {string}  tag='crystal'
+     *   {string}  seq / {boolean} isRNA
+     *   {number}  layerGap=(sideLen*0.5)   Inter-layer spacing (units).
+     *   {number}  twistDeg=0               Extra rotation per layer about normal.
+     *   {number[]} shift=[0,0]             Extra in-plane shift per layer (units).
+     *   {number}  threshold=2.0            Vertex ligation distance.
+     * @returns {BasicElement[]} (.edges/.cells/.layers/.ligated)
+     *
+     * Example — 2×2×2 crystal of 12-unit triangles:
+     *   shapes.triangleCrystal(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1),
+     *                          12, 2, 2, 2, {tag:'xtal1'});
+     */
+    shapes.triangleCrystal = function(center, normal, sideLen, nx, ny, nz, opts) {
+        opts = opts || {};
+        sideLen = sideLen || 12;
+        nx = Math.max(1, nx || 1); ny = Math.max(1, ny || 1); nz = Math.max(1, nz || 1);
+        center = center ? center.clone() : new THREE.Vector3(0, 0, 0);
+        normal = normal ? normal.clone().normalize() : new THREE.Vector3(0, 0, 1);
+        var tag = opts.tag || 'crystal';
+        var layerGap = (opts.layerGap != null) ? opts.layerGap : sideLen * 0.5;
+        var twistDeg = opts.twistDeg || 0;
+        var shift = opts.shift || [0, 0];
+        var threshold = opts.threshold || 2.0;
+
+        var upGuess = (Math.abs(normal.y) < 0.9) ? new THREE.Vector3(0, 1, 0)
+                                                  : new THREE.Vector3(1, 0, 0);
+        var su = new THREE.Vector3().crossVectors(normal, upGuess).normalize();
+        var sv = new THREE.Vector3().crossVectors(normal, su).normalize();
+
+        var all = [], layerAliases = [], cellNamesAll = [], edgeNamesAll = [];
+        for (var l = 0; l < nz; l++) {
+            var lat = shapes.triLattice(nx, ny, sideLen, center, normal);
+            var off = normal.clone().multiplyScalar(l * layerGap)
+                .addScaledVector(su, (shift[0] || 0) * l)
+                .addScaledVector(sv, (shift[1] || 0) * l);
+            var tw = (twistDeg * l) * Math.PI / 180;
+            var layerCenter = center.clone().add(off);
+            var P = lat.verts.map(function(p) {
+                var q = p.clone().add(off);
+                if (tw) {
+                    var rel = q.clone().sub(layerCenter);
+                    rel.applyAxisAngle(normal, tw);
+                    q = layerCenter.clone().add(rel);
+                }
+                return q;
+            });
+            var edgeNames = [], layerElems = [];
+            lat.edges.forEach(function(eb, k) {
+                var en = tag + '_L' + l + '_e' + k;
+                var e = shapes.duplexEdge(P[eb[0]], P[eb[1]],
+                                          opts.seq || null, opts.isRNA || false, null);
+                llmTracker.tag(e, en, null, 'edge');
+                edgeNames.push(en);
+                edgeNamesAll.push(en);
+                layerElems = layerElems.concat(e);
+            });
+            var cellNames = [];
+            lat.cells.forEach(function(cell, ci) {
+                var cn = tag + '_L' + l + '_c' + ci;
+                // Cell member edges: find edge names whose endpoint pairs match.
+                var want = {};
+                [[cell.verts[0], cell.verts[1]],
+                 [cell.verts[1], cell.verts[2]],
+                 [cell.verts[2], cell.verts[0]]].forEach(function(pr) {
+                    var a = Math.min(pr[0], pr[1]), b = Math.max(pr[0], pr[1]);
+                    want[a + '-' + b] = true;
+                });
+                var members = [];
+                lat.edges.forEach(function(eb, k) {
+                    if (want[eb[0] + '-' + eb[1]]) members.push(edgeNames[k]);
+                });
+                llmTracker.alias(cn, members);
+                cellNames.push(cn);
+                cellNamesAll.push(cn);
+            });
+            var layerAlias = tag + '_L' + l;
+            llmTracker.alias(layerAlias, cellNames);
+            layerAliases.push(layerAlias);
+            all = all.concat(layerElems);
+        }
+        var lig = { ligated: 0, pairs: [] };
+        if (all.length) lig = _ligateEndsGreedy(all, threshold, false);
+        llmTracker.alias(tag, layerAliases);
+        all.edges = edgeNamesAll;
+        all.cells = cellNamesAll;
+        all.layers = layerAliases;
+        all.ligated = lig.ligated;
+        all.pairs = lig.pairs;
+        notify('triangleCrystal "' + tag + '": ' + edgeNamesAll.length + ' edges, ' +
+               cellNamesAll.length + ' cells, ' + nz + ' layer(s), ' +
+               lig.ligated + ' vertex connection(s)', 'success');
+        render();
+        return all;
     };
 
     return shapes;

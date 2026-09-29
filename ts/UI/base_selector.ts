@@ -111,11 +111,19 @@ canvas.addEventListener('mousedown', event => { //if mouse is pressed down
 					updateView(sys);
 					break;
 				case "Cluster" :
-                    sys.strands.forEach(strand=>strand.forEach(e=>{
-                        if(e.clusterId == nucleotide.clusterId) {
-                            e.toggle()
-                        }
-                    }));
+                    // Unclustered (or noise) nucleotides have no group to
+                    // expand to: without this guard, `e.clusterId ==
+                    // nucleotide.clusterId` would match EVERY other
+                    // unclustered element in the system and toggle them all.
+                    if (nucleotide.clusterId == null || nucleotide.clusterId < 0) {
+                        nucleotide.toggle();
+                    } else {
+                        sys.strands.forEach(strand=>strand.forEach(e=>{
+                            if(e.clusterId === nucleotide.clusterId) {
+                                e.toggle()
+                            }
+                        }));
+                    }
                     updateView(sys);
 					break;
 

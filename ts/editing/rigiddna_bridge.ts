@@ -41,6 +41,12 @@ interface RigidDnaRelaxOptions {
     b?: number;
     repulsion?: number;
     repulsionOffset?: number;
+    // Repulsion ramp: linear ramp of the cluster-sphere repulsion constant
+    // from `repulsion` at step 0 down to `repulsionEnd` at the last step.
+    // Undefined (or equal to repulsion) reproduces the old fixed-repulsion
+    // behavior exactly -- the C++ side only ramps when it reads an explicit
+    // repulsion_end= that differs (see RigidBodySim.cpp's repulsion_* members).
+    repulsionEnd?: number;
     // bond_distance / legacy r0: fixed target (bondDistance alone) or a
     // linear ramp from bondDistance -> bondDistanceEnd (both given and
     // different). Left undefined entirely, the C++ side falls back to its
@@ -223,6 +229,13 @@ const RigidDnaBridge = {
             }
             if (opts.kStart !== undefined) lines.push(`k_start=${opts.kStart}`);
             if (opts.kIncrement !== undefined) lines.push(`k_increment=${opts.kIncrement}`);
+            // repulsion_end: only when explicitly set and different from the
+            // start value, so an unset/blank field keeps the old fixed-k
+            // behavior exactly (and older engine builds simply ignore the
+            // unknown key -- readInput() has no else clause).
+            if (opts.repulsionEnd !== undefined && opts.repulsionEnd !== (opts.repulsion ?? 1500)) {
+                lines.push(`repulsion_end=${opts.repulsionEnd}`);
+            }
             if (opts.breakLength !== undefined) lines.push(`break_length=${opts.breakLength}`);
             if (opts.planar) {
                 lines.push(`planar=true`);

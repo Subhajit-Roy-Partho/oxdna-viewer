@@ -321,6 +321,10 @@ function parseOxViewString(s) {
     if (data.systems) {
         // Keep track if new clusters
         let newClusterMap = new Map();
+        // Restore user-assigned cluster labels saved by makeOxViewJsonFile.
+        // File cluster ids are remapped to fresh ids below (newClusterMap),
+        // so labels are re-keyed through the same map afterwards.
+        const savedClusterNames = data.clusterNames || {};
         // Go through and add each system
         data.systems.forEach(sysData => {
             let sys = new System(sysStartId + sysData.id, elements.getNextId());
@@ -485,6 +489,17 @@ function parseOxViewString(s) {
                 view.coloringMode.set("Custom");
             }
         });
+        // Re-key saved cluster labels through the same file-id -> fresh-id
+        // remap used for the elements above, so names follow their
+        // clusters across a save/load round-trip.
+        Object.keys(savedClusterNames).forEach(fileId => {
+            const freshId = newClusterMap.get(parseInt(fileId));
+            if (freshId !== undefined && typeof clusterNames !== "undefined") {
+                clusterNames[freshId] = savedClusterNames[fileId];
+            }
+        });
+        if (typeof refreshClusterList !== "undefined")
+            refreshClusterList();
         // Center the newly added systems as one
         // Needs to be done after all systems are added to the scene
         centerAndPBC(

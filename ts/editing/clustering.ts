@@ -3,10 +3,125 @@
  */
 function clearClusters() {
     clusterCounter = 0 // Cluster counter
+    clusterNames = {}; // Cluster id -> user label (rename UI + .oxview persistence)
     elements.forEach(element => {
         delete element.clusterId;
     });
     view.coloringMode.set("Strand"); // Then color by strand
+    refreshClusterList();
+}
+
+/**
+ * User-assigned labels for native (numeric) clusters. Keyed by cluster id.
+ * The default display label for an unlabeled cluster is `Cluster <id>`.
+ * Persisted in .oxview files as a top-level `clusterNames` map (old readers
+ * ignore the unknown field; new readers handle its absence).
+ */
+var clusterNames: { [id: number]: string } = {};
+
+/** Display label for a cluster id (user label, or `Cluster <id>` fallback). */
+function getClusterLabel(id: number): string {
+    return clusterNames[id] || `Cluster ${id}`;
+}
+
+/**
+ * Rename a cluster. The new name must be non-empty and not already used by
+ * another cluster. Returns true on success.
+ */
+function renameCluster(id: number, name: string): boolean {
+    name = (name || "").trim();
+    if (!name) {
+        notify("Cluster name cannot be empty", "warning");
+        return false;
+    }
+    for (const other of Object.keys(clusterNames)) {
+        if (parseInt(other) !== id && clusterNames[other] === name) {
+            notify(`Another cluster is already named "${name}"`, "warning");
+            return false;
+        }
+    }
+    clusterNames[id] = name;
+    refreshClusterList();
+    render();
+    return true;
+}
+
+/** Every cluster currently present in the scene, with label + size. */
+function listClusters(): { id: number, label: string, size: number }[] {
+    const sizes = new Map<number, number>();
+    elements.forEach(e => {
+        if (typeof e.clusterId === 'number' && e.clusterId >= 0) {
+            sizes.set(e.clusterId, (sizes.get(e.clusterId) || 0) + 1);
+        }
+    });
+    return Array.from(sizes.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([id, size]) => ({ id, label: getClusterLabel(id), size }));
+}
+
+/**
+ * Select every element of one cluster (replaces the selection unless
+ * keepPrev is set). Works from the clustering window list and from code.
+ */
+function selectCluster(id: number, keepPrev?: boolean) {
+    const elems: BasicElement[] = [];
+    elements.forEach(e => {
+        if (e.clusterId === id) elems.push(e);
+    });
+    if (elems.length === 0) {
+        notify(`Cluster ${id} (${getClusterLabel(id)}) is empty or does not exist`, "warning");
+        return;
+    }
+    api.selectElements(elems, keepPrev);
+}
+
+/**
+ * Rebuild the cluster list in the clustering window (label inputs + select
+ * buttons). No-op when the window is not open. Called after every mutation
+ * that changes cluster membership or labels.
+ */
+function refreshClusterList() {
+    const list = document.getElementById("clusterList");
+    if (!list) return;
+    const clusters = listClusters();
+    list.innerHTML = "";
+    if (clusters.length === 0) {
+        list.innerHTML = `<p class="text-muted text-small">No clusters yet.</p>`;
+        return;
+    }
+    clusters.forEach(c => {
+        const row = document.createElement("div");
+        row.className = "group";
+        row.style.display = "flex";
+        row.style.gap = "6px";
+        row.style.alignItems = "center";
+        const badge = document.createElement("span");
+        badge.textContent = `#${c.id} · ${c.size} nt`;
+        badge.style.minWidth = "90px";
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = clusterNames[c.id] || "";
+        input.placeholder = `Cluster ${c.id}`;
+        input.title = "Rename cluster (Enter to apply)";
+        input.style.flex = "1";
+        input.addEventListener("keydown", (ev) => {
+            if ((ev as KeyboardEvent).key === "Enter") {
+                renameCluster(c.id, (ev.target as HTMLInputElement).value);
+            }
+        });
+        input.addEventListener("change", (ev) => {
+            renameCluster(c.id, (ev.target as HTMLInputElement).value);
+        });
+        const sel = document.createElement("button");
+        sel.className = "button small";
+        sel.textContent = "Select";
+        sel.title = `Select all elements of ${getClusterLabel(c.id)}`;
+        sel.addEventListener("click", () => selectCluster(c.id));
+        row.appendChild(badge);
+        row.appendChild(input);
+        row.appendChild(sel);
+        list.appendChild(row);
+    });
 }
 
 /**
@@ -19,7 +134,7 @@ function calculateClusters() {
     view.longCalculation(
         ()=>{dbscan(minPts, epsilon)}, // Run this
         "Calculating clusters, please be patient...", // Tell the user
-        ()=>{view.coloringMode.set("Cluster")} // Then color by cluster
+        ()=>{view.coloringMode.set("Cluster"); refreshClusterList();} // Then color by cluster
     );
 }
 
@@ -89,6 +204,7 @@ function selectionToCluster() {
             element.clusterId = clusterCounter;
         });
         view.coloringMode.set("Cluster"); // Then color by cluster
+        refreshClusterList();
     } else {
         notify("First make a selection of elements you want to include in the cluster");
     }
@@ -124,4 +240,5 @@ function clusterAndForcesFromClusterTopology(line: string) {
     }
     forceHandler.set(forces)
     view.coloringMode.set("Cluster");
+    refreshClusterList();
 }
