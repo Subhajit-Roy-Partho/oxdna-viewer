@@ -76,6 +76,16 @@ canvas {
     max-height: 90%;
 }
 
+/* The rigidDNA relax panel must stay above the WebGL canvas (canvas is
+ * position:absolute, z-index:1). Metro's own .window rule is z-index:1 and
+ * only loses to the rule above by stylesheet order, so pin this panel
+ * explicitly -- without it a stylesheet reorder would drop the whole relax
+ * UI behind the 3D scene. Positioning is left to Metro (no position
+ * override here, so window dragging keeps working). */
+#rigidDNAWindow {
+    z-index: 1000;
+}
+
 
 /* 96 well plate table definitions */
 table.plate96{

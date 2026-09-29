@@ -139,6 +139,13 @@ const RigidDnaBridge = {
                 lines.push(`k_start=${opts.kStart}`);
             if (opts.kIncrement !== undefined)
                 lines.push(`k_increment=${opts.kIncrement}`);
+            // repulsion_end: only when explicitly set and different from the
+            // start value, so an unset/blank field keeps the old fixed-k
+            // behavior exactly (and older engine builds simply ignore the
+            // unknown key -- readInput() has no else clause).
+            if (opts.repulsionEnd !== undefined && opts.repulsionEnd !== (opts.repulsion ?? 1500)) {
+                lines.push(`repulsion_end=${opts.repulsionEnd}`);
+            }
             if (opts.breakLength !== undefined)
                 lines.push(`break_length=${opts.breakLength}`);
             if (opts.planar) {

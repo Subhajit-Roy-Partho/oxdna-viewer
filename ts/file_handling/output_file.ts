@@ -427,7 +427,12 @@ function makeOxViewJsonFile(name? : string, space?: string | number) {
         box: box.toArray(),
         systems: systems,
         forces: forceHandler.forces,
-        selections : selectionListHandler.serialize()
+        selections : selectionListHandler.serialize(),
+        // User-assigned cluster labels (clusterNames in clustering.ts).
+        // Plain JSON map, file cluster id -> label. Old readers ignore this
+        // unknown field; oxDNA .top/.dat cannot carry it (fixed column
+        // format), so names only survive .oxview round-trips.
+        clusterNames: (typeof clusterNames !== "undefined") ? clusterNames : {}
     }, null, space));
 }
 
@@ -487,7 +492,10 @@ function makeUNFOutput(name: string) {
         }
         let groups: unfGroup[] = [];
         for (let i = 0; i < clusterCounter; i++) {
-            groups.push(new unfGroup(`group${i}`, i, []));
+            // Prefer the user's cluster label (clustering.ts) when one exists.
+            const label = (typeof clusterNames !== "undefined" && clusterNames[i + 1])
+                ? clusterNames[i + 1] : `group${i}`;
+            groups.push(new unfGroup(label, i, []));
         }
         systems.forEach(sys =>sys.strands.forEach(strand=>strand.forEach(e=>{
                 // Cluster ids are 1-based throughout oxView (0-based WASM

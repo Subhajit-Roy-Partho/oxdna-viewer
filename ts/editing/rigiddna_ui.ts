@@ -82,6 +82,14 @@ function applyRigidDnaConf(confText: string, newElementIDs: Map<BasicElement, nu
     }
     touchedSystems.forEach(sys => sys.callAllUpdates());
     document.dispatchEvent(new Event('nextConfigLoaded'));
+    // callAllUpdates() only flags the instance buffers as dirty -- nothing
+    // reaches the screen until the WebGL scene is re-rendered. The chunked
+    // live-preview loop used to await a bare rAF here without ever calling
+    // render(), so the browser composited the stale frame and the structure
+    // appeared frozen mid-run (notably on small designs like an icosahedron
+    // where each chunk finishes fast). Render synchronously now; the caller
+    // yields afterwards so the compositor gets a chance to present it.
+    render();
 }
 
 /** Reads a number input, treating an empty/unparseable value as "not set" (undefined) rather than NaN/0 -- for optional fields whose absence should leave the underlying C++ default in place. */
@@ -97,9 +105,12 @@ function rigidDnaOptionalNumber(id: string): number | undefined {
  * a RigidDnaRelaxOptions, matching every key RigidBodySim.cpp's readInput()
  * accepts (see rigiddna_bridge.ts's doc comments and the parameters
  * reference at https://subhajit-roy-partho.github.io/rigidDNA/parameters.html).
- * Fields left at their default/blank value are simply omitted, so the C++
- * side's own defaults apply untouched -- e.g. leaving "Bond distance" blank
- * reproduces today's cluster_size-dependent default exactly.
+ * The window's own defaults apply here (bond distance 0.7 even when the
+ * field is cleared to blank; repulsion ramping down to the "Ramp down
+ * repulsion to" value unless that field is cleared) -- the C++ side's own
+ * cluster_size-dependent bond_distance default only survives for callers
+ * that leave bondDistance undefined entirely (e.g. headless
+ * space.relaxRigidDna without it, which now also defaults it to 0.7).
  */
 function collectRigidDnaRelaxOptions(): RigidDnaRelaxOptions {
     const opts: RigidDnaRelaxOptions = {
@@ -119,12 +130,17 @@ function collectRigidDnaRelaxOptions(): RigidDnaRelaxOptions {
     const breakLength = rigidDnaOptionalNumber('rigidDnaBreakLength');
     if (breakLength) opts.breakLength = breakLength;
 
-    const bondDistance = rigidDnaOptionalNumber('rigidDnaBondDistance');
-    if (bondDistance !== undefined) {
-        opts.bondDistance = bondDistance;
-        const bondDistanceEnd = rigidDnaOptionalNumber('rigidDnaBondDistanceEnd');
-        if (bondDistanceEnd !== undefined) opts.bondDistanceEnd = bondDistanceEnd;
-    }
+    // Blank = 0.7 default (close to the real ~0.75su backbone bond); the
+    // C++ side's own cluster_size-dependent default only applies to callers
+    // that bypass this collector and leave bondDistance undefined entirely.
+    opts.bondDistance = rigidDnaOptionalNumber('rigidDnaBondDistance') ?? 0.7;
+    const bondDistanceEnd = rigidDnaOptionalNumber('rigidDnaBondDistanceEnd');
+    if (bondDistanceEnd !== undefined) opts.bondDistanceEnd = bondDistanceEnd;
+
+    // Blank = no repulsion ramp (old fixed-repulsion behavior); the window
+    // prefills 100 so the default run ramps 1500 -> 100 over the whole run.
+    const repulsionEnd = rigidDnaOptionalNumber('rigidDnaRepulsionEnd');
+    if (repulsionEnd !== undefined) opts.repulsionEnd = repulsionEnd;
 
     if (view.getInputBool('rigidDnaKRampEnable')) {
         opts.kStart = view.getInputNumber('rigidDnaKStart');
@@ -178,7 +194,7 @@ function collectRigidDnaRelaxOptions(): RigidDnaRelaxOptions {
  * the task notes this was written against), we take the simpler, safer route:
  * fall back to today's single non-chunked call whenever any of these are in
  * play, and only use chunked live-preview for the common case (fixed k, fixed
- * bond_distance, no volume exclusion, no in-relax reclustering). Momentum
+ * bond_distance, fixed repulsion, no volume exclusion, no in-relax reclustering). Momentum
  * being reset to zero at each chunk boundary in the *chunked* path is an
  * accepted, intentional approximation for these non-ramping cases -- this is
  * a heavily-damped relaxation, not a real dynamics trajectory, and restarting
@@ -189,6 +205,9 @@ function rigidDnaRequiresSingleRun(opts: RigidDnaRelaxOptions): string[] {
     if (opts.kIncrement) reasons.push('spring ramping (k_start/k_increment)');
     if (opts.bondDistanceEnd !== undefined && opts.bondDistance !== undefined && opts.bondDistanceEnd !== opts.bondDistance) {
         reasons.push('bond_distance ramp');
+    }
+    if (opts.repulsionEnd !== undefined && opts.repulsionEnd !== (opts.repulsion ?? 1500)) {
+        reasons.push('repulsion ramp');
     }
     if (opts.volumeExclusion) reasons.push('volume exclusion');
     if (opts.recluster) reasons.push('recluster (geometry reclustering inside the relax step)');
@@ -294,6 +313,33 @@ function runRigidDnaClearClusters() {
 }
 
 /**
+ * Cooperative-cancel state for an in-flight relaxation. The WASM engine
+ * itself runs to completion once invoked (a single chunk/step-batch cannot
+ * be preempted mid-flight), so Stop takes effect at the next chunk boundary
+ * (chunked path) or by discarding the result instead of applying it
+ * (single-shot path) -- either way no partial/corrupt state is left behind
+ * because only fully-applied chunk outputs ever touch the live scene.
+ */
+let rigidDnaRelaxCancelled = false;
+let rigidDnaRelaxRunning = false;
+
+/** Enables/disables the Run/Stop buttons to reflect whether a run is in flight. */
+function setRigidDnaRunButtons(running: boolean) {
+    const run = document.getElementById('rigidDnaRunBtn') as HTMLButtonElement | null;
+    const stop = document.getElementById('rigidDnaStopBtn') as HTMLButtonElement | null;
+    if (run) run.disabled = running;
+    if (stop) stop.disabled = !running;
+}
+
+/** "Stop" button: requests a clean abort of the currently running relaxation. */
+function stopRigidDnaRelax() {
+    if (!rigidDnaRelaxRunning) { notify('No rigidDNA relaxation is running.'); return; }
+    rigidDnaRelaxCancelled = true;
+    rigidDnaLog('Stop requested -- finishing the current chunk, then stopping (already-applied chunks stay applied).');
+    notify('Stopping rigidDNA relaxation after the current chunk...');
+}
+
+/**
  * Runs the relaxation as a sequence of short chunks against the live scene,
  * so the user can watch the structure move instead of seeing nothing until
  * the whole run finishes. Each chunk is an independent rigid_body_sim
@@ -319,6 +365,10 @@ async function runRigidDnaRelaxChunked(
     let currentDat = datText;
 
     while (stepsDone < totalSteps) {
+        if (rigidDnaRelaxCancelled) {
+            rigidDnaLog(`Stopped by user at step ${stepsDone}/${totalSteps} -- scene keeps the last applied chunk.`);
+            return false;
+        }
         const chunkSteps = Math.min(chunkSize, totalSteps - stepsDone);
         const t0 = performance.now();
         const result = await RigidDnaBridge.relax(topText, currentDat, {
@@ -344,9 +394,16 @@ async function runRigidDnaRelaxChunked(
             chunkSize = Math.max(5, Math.min(5000, Math.round(stepsPerMs * TARGET_CHUNK_MS)));
         }
 
-        // Yield to the browser so it actually repaints the scene update above
+        // Yield to the browser so it actually presents the scene update above
         // before the next (synchronous, potentially blocking) chunk runs.
-        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+        // applyRigidDnaConf() already called render(), so the fresh frame is
+        // in the canvas backing store; a *double* rAF guarantees the main
+        // thread stays free across a full frame boundary, giving the
+        // compositor a chance to present it. (A single rAF resolves in the
+        // pre-paint callback phase, after which the next chunk would block
+        // the very paint it was waiting for -- the original "live preview
+        // shows nothing until the end" bug.)
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     }
     return true;
 }
@@ -354,6 +411,7 @@ async function runRigidDnaRelaxChunked(
 /** "Run rigidDNA Relaxation" button */
 async function runRigidDnaRelax() {
     if (elements.size === 0) { notify('Load a structure first.'); return; }
+    if (rigidDnaRelaxRunning) { notify('A rigidDNA relaxation is already running -- Stop it first.'); return; }
 
     const log = document.getElementById('rigidDnaLog');
     if (log) log.textContent = '';
@@ -362,28 +420,63 @@ async function runRigidDnaRelax() {
     const totalSteps = opts.steps ?? 2000;
     const { topText, datText, newElementIDs } = exportSceneForRigidDna();
 
+    // A single rigid cluster has no inter-cluster springs or repulsion, so
+    // the relax is a whole-body no-op by construction -- this is the usual
+    // reason a small design (e.g. an icosahedron merged into one cluster by
+    // auto-cluster) "shows no visible change". Catch it up front instead of
+    // burning thousands of steps on a guaranteed no-op.
+    const nClusters = new Set(resolveRigidDnaClusterIds(newElementIDs)).size;
+    rigidDnaLog(`Relaxing ${elements.size} particle(s) in ${nClusters} cluster(s), ${totalSteps} step(s)...`);
+    if (nClusters < 2) {
+        notify('Only one rigid cluster -- nothing can move. Split the design into 2+ clusters first (e.g. Auto-cluster with a finer granularity).', 'alert');
+        return;
+    }
+
+    rigidDnaRelaxRunning = true;
+    rigidDnaRelaxCancelled = false;
+    setRigidDnaRunButtons(true);
+
     const livePreviewRequested = view.getInputBool('rigidDnaLivePreview');
     const singleRunReasons = rigidDnaRequiresSingleRun(opts);
 
-    if (livePreviewRequested && singleRunReasons.length === 0) {
-        notify('Running rigidDNA relaxation with live preview (WASM, in your browser)...');
-        await runRigidDnaRelaxChunked(topText, datText, newElementIDs, opts, totalSteps);
+    try {
+        if (livePreviewRequested && singleRunReasons.length === 0) {
+            notify('Running rigidDNA relaxation with live preview (WASM, in your browser)...');
+            const completed = await runRigidDnaRelaxChunked(topText, datText, newElementIDs, opts, totalSteps);
+            if (rigidDnaRelaxCancelled || !completed) {
+                notify('rigidDNA relaxation stopped -- scene keeps the last applied chunk.');
+            } else {
+                notify('rigidDNA relaxation complete -- structure updated.');
+            }
+            return;
+        }
+
+        if (livePreviewRequested && singleRunReasons.length > 0) {
+            rigidDnaLog(`Live preview disabled for this run (${singleRunReasons.join(', ')} need${singleRunReasons.length === 1 ? 's' : ''} a single continuous pass to stay physically correct) -- running all ${totalSteps} steps in one shot...`);
+        }
+        notify('Running rigidDNA relaxation -- this runs entirely in your browser (WASM), no server round-trip...');
+
+        const result = await RigidDnaBridge.relax(topText, datText, { ...opts, onLog: rigidDnaLog });
+
+        if (!result.ok || !result.lastConf) {
+            notify(`rigidDNA relaxation failed: ${result.error || 'unknown error'}`, 'alert');
+            return;
+        }
+
+        // The single-shot WASM call cannot be preempted mid-flight, but a
+        // Stop requested while it was running still takes effect: discard
+        // the result instead of applying it, so Stop always means "the
+        // scene does not change past the last chunk you saw".
+        if (rigidDnaRelaxCancelled) {
+            rigidDnaLog('Run discarded -- Stop was requested while the single-shot pass was in flight; scene unchanged.');
+            notify('rigidDNA relaxation stopped -- scene unchanged.');
+            return;
+        }
+
+        applyRigidDnaConf(result.lastConf, newElementIDs);
         notify('rigidDNA relaxation complete -- structure updated.');
-        return;
+    } finally {
+        rigidDnaRelaxRunning = false;
+        setRigidDnaRunButtons(false);
     }
-
-    if (livePreviewRequested && singleRunReasons.length > 0) {
-        rigidDnaLog(`Live preview disabled for this run (${singleRunReasons.join(', ')} need${singleRunReasons.length === 1 ? 's' : ''} a single continuous pass to stay physically correct) -- running all ${totalSteps} steps in one shot...`);
-    }
-    notify('Running rigidDNA relaxation -- this runs entirely in your browser (WASM), no server round-trip...');
-
-    const result = await RigidDnaBridge.relax(topText, datText, { ...opts, onLog: rigidDnaLog });
-
-    if (!result.ok || !result.lastConf) {
-        notify(`rigidDNA relaxation failed: ${result.error || 'unknown error'}`, 'alert');
-        return;
-    }
-
-    applyRigidDnaConf(result.lastConf, newElementIDs);
-    notify('rigidDNA relaxation complete -- structure updated.');
 }

@@ -689,6 +689,10 @@
                         <span class="mif-list mif-2x"></span>
                         <span class="caption">Selections</span>
                     </button>
+                    <button class="ribbon-button" onclick="view.toggleWindow('structureLedgerWindow', ledgerSetup)" title="List every named structure with position, size and direction; select a region to inspect it.">
+                        <span class="mif-table mif-2x"></span>
+                        <span class="caption">Ledger</span>
+                    </button>
                     <button class="ribbon-button" onclick="view.toggleWindow('distanceWindow', distanceSetup)" title="Distance information window.">
                         <span class="mif-settings-ethernet mif-2x"></span>
                         <span class="caption">Distance</span>
@@ -763,7 +767,7 @@
                 </div>
 
                 <div class="tight group">
-                    <button class="ribbon-button" onclick="view.toggleWindow('clusteringWindow')">
+                    <button class="ribbon-button" onclick="view.toggleWindow('clusteringWindow', refreshClusterList);refreshClusterList()">
                         <span class="mif-cloudy4 mif-3x"></span>
                         <span class="caption">Clustering</span>
                     </button>
@@ -947,6 +951,10 @@
                     <div style="height: 18px;">
                         <input type="checkbox" id="marker3pToggle" onchange="api.update3primeMarkers()"
                         data-role="switch" data-caption="3' markers">
+                    </div>
+                    <div style="height: 18px;">
+                        <input type="checkbox" id="gridToggle" onchange="space.grid(this.checked)"
+                        data-role="switch" data-caption="Grid" checked title="Show/hide the 3-D reference grid under the scene (GridHelper + XYZ axes)">
                     </div>
                 </div>
                 <div class="group">
@@ -1412,7 +1420,7 @@
                         <span class="mif-palette mif-2x"></span>
                     </button>
                 </div>
-                <button class="image-button outline" onclick="view.toggleWindow('clusteringWindow');document.getElementById('selection-options-drop').classList.toggle('show');">
+                <button class="image-button outline" onclick="view.toggleWindow('clusteringWindow', refreshClusterList);refreshClusterList();document.getElementById('selection-options-drop').classList.toggle('show');">
                     <span class="mif-cloudy4 mif-1x"></span>
                     <span class="caption">Clustering</span>
                 </button>
@@ -1599,6 +1607,7 @@
         <script src="./ts/api/transform_api.js"></script>
         <script src="./ts/api/llm_tracker_api.js"></script>
         <script src="./ts/api/shapes_api.js"></script>
+        <script src="./ts/api/spatial_api.js"></script>
         <!-- LLM Chat -->
         <script src="./ts/llm_chat.js"></script>
         <!-- Agent AI (multi-agent pipeline) -->

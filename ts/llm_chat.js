@@ -4,12 +4,25 @@
  */
 
 const LLM_CONFIG = {
-    get baseURL() { return (window.OXVIEW_CONFIG || {}).llmBaseURL || "https://nano-gpt.com/api/v1"; },
-    get model()   { return (window.OXVIEW_CONFIG || {}).llmModel   || "z-ai/glm-5.3:thinking"; },
+    // NanoCanvas parity: the same nano-gpt endpoint/model defaults, and the
+    // same browser-localStorage keys NanoCanvas's LLMPanel uses (nc_ai_*),
+    // so a key saved in either tool works in the other. Precedence:
+    // oxView key → OXVIEW_CONFIG/tsconfig → NanoCanvas key → '' (chat shows fix hint).
+    get baseURL() {
+        return (window.OXVIEW_CONFIG || {}).llmBaseURL
+            || localStorage.getItem('nc_ai_url')
+            || "https://nano-gpt.com/api/v1";
+    },
+    get model() {
+        return (window.OXVIEW_CONFIG || {}).llmModel
+            || localStorage.getItem('nc_ai_model')
+            || "z-ai/glm-5.3:thinking";
+    },
     // Key comes from ts/config.js (gitignored), the 🔑 button (localStorage), or web-config.js.
     get apiKey()  {
         return localStorage.getItem('oxview_llm_api_key')
             || (window.OXVIEW_CONFIG || {}).llmApiKey
+            || localStorage.getItem('nc_ai_key')
             || '';
     }
 };
@@ -523,6 +536,12 @@ shapes.helix(center, axis, radius, risePerBase, turns, nBases, seq?, isRNA?, tag
 shapes.spiral(center, normal, startR, endR, turns, nBases, seq?, isRNA?, tag?)
 shapes.pointCloud(points: THREE.Vector3[], seq?, isRNA?, tag?)
 shapes.basesForLength(len, spacing?=1) → recommended base count
+Duplex builders (real B-DNA duplexes, auto-ligated at vertices — prefer for DNA design):
+shapes.duplexEdge(p0, p1, seq?, isRNA?, tag?)
+shapes.outline(points, {closed?, seq?, isRNA?, tag?, ligate?, threshold?}) → elems (.edges/.ligated/.pairs)
+shapes.triangleDuplex(center, normal, sideLen, seq?, isRNA?, tag?)
+shapes.triLattice(nx, ny, sideLen, center?, normal?) → pure geometry {verts, edges, cells}
+shapes.triangleCrystal(center, normal, sideLen, nx, ny, nz, {tag?, seq?, isRNA?, layerGap?, twistDeg?, shift?, threshold?})
 
 // A 3D star with 5 points in the XY plane, named 'star1':
 shapes.star(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1), 10, 4, 5, 6, null, false, 'star1');
@@ -531,23 +550,42 @@ render();
 ════════════════════════════════════════
 space.* — SPATIAL AWARENESS & OBJECT-ADDRESSED TRANSFORMS
 ════════════════════════════════════════
-Objects are named groups (from a shapes.* tag, llmTracker.tag, a clusterId number,
-'selection', or 'system0'/'system1'…). space.* survives the per-block scope reset
+Objects are named groups (from a shapes.* tag, llmTracker.tag/alias, a clusterId
+number or 'cluster7' string, 'selection', or 'system0'/'system1'…). space.* survives the per-block scope reset
 because names are global — ALWAYS move/rotate by name, never by re-capturing arrays.
+A labelled 3-D reference grid exists (Red=X, Green=Y, Blue=Z; 1 cell = 3 units ≈
+one duplex diameter ≈ 2.5 nm; tick sprites read X:+15 etc.). It auto-shows when the
+chat opens; toggle any time with space.grid().
 
 space.describe()                         → text digest of every object (also auto-shown each turn)
-space.digest()                           → structured {objects:[{name,count,centroid,bbox,size,axis,color}], box}
+space.digest()                           → structured {objects:[{name,kind,count,centroid,bbox,size,axis,color}], box, grid}
+space.list()                             → [names]
+space.info(name)                         → full live record (name,kind,count,centroid,bbox,size,axis,color,members?) | null
 space.get(name)                          → BasicElement[]
-space.centroid(name) / space.bbox(name) / space.size(name)
+space.centroid(name) / space.bbox(name) / space.size(name) / space.axis(name)
 space.moveTo(name, x, y, z)              → put object's centroid at (x,y,z)
 space.moveBy(name, dx, dy, dz)
 space.rotate(name, axis, deg, pivot?)    → axis: [x,y,z] or 'x'|'y'|'z'; pivot: undefined(centroid) | 'origin' | [x,y,z] | otherName
-space.align(name, localAxis, worldDir)   → rotate so the object's principal axis points along worldDir
+space.align(name, worldDir)              → rotate so the object's principal axis points along worldDir ('x'|'y'|'z'|…)
 space.place(name, {near, dir, gap})      → move so its bbox sits 'gap' units from object 'near' along dir ([x,y,z] or 'x'|'-x')
+space.snapToGrid(name, cell?=3)          → snap centroid to the reference lattice
+space.duplicate(name, {offset?, newName?}) → copy via InstanceCopy, translate, tag copy
+space.rename(old, new) / space.deleteObject(name)
+space.select(name, keepPrev?)            → select region (user sees highlight)
+space.focus(name)                        → select + fly camera there (user inspects region)
+space.frameAll()                         → fit whole scene in view
+space.listClusters()                     → [{id,label,size}] ALL native clusters (DBSCAN/rigidDNA/manual), not just tags
+space.selectCluster(id, keepPrev?) / space.nameCluster(id, name) / space.clusterSelection(name?) → selection→cluster, returns id
+space.autoClusterRigidDna()              → async helix-geometry clustering (rigidDNA window section 1, headless)
+space.relaxRigidDna({steps?,dt?,k?,b?,repulsion?,...}) → async rigidDNA relax + apply to scene (headless, single run)
 space.distance(a, b) / space.gap(a, b)   → centroid distance / min bbox gap (negative = overlapping)
 space.overlaps(a, b)                     → bool
+space.angleBetween(a, b)                 → degrees between principal axes
+space.findNicks(threshold?=1.0)          → [{aId,bId,dist}] 5'/3' end pairs (query only)
+space.ligateNearby(threshold?=1.5)        → {ligated, pairs} auto-connect nearby ends
+space.countAll() / space.exportScene()   → {objects,totalNucleotides,totalStrands} / JSON digest string
 space.snapshotImage(scale?)             → PNG dataURL of the viewport
-space.show()                             → snapshot + display it in this chat
+space.show(name?)                        → focus (if named) + snapshot + display it in this chat
 space.grid(on?) / space.toggleGrid()     → reference grid + XYZ axes
 
 // Build two stars and stand them side by side, 3 units apart, then show it:
@@ -556,6 +594,68 @@ shapes.star(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1), 10, 4, 6, 6, nul
 space.place('starB', {near:'starA', dir:'x', gap:3});
 space.rotate('starB', 'y', 90);
 space.show();
+
+════════════════════════════════════════
+llmTracker.* — STRUCTURE REGISTRY (name, direction, position per cluster)
+════════════════════════════════════════
+Every shapes.* tag lands here. Entries carry kind ('shape'|'duplex'|'edge'|
+'wireframe'|'copy'|'group'), live centroid/bbox/size, principal direction,
+colour, provenance and timestamps. Group aliases (e.g. a whole crystal) resolve
+to the union of their members without re-clustering. The user browses the same
+data in the "Ledger" ribbon window (view.toggleWindow('structureLedgerWindow')):
+each row shows name/kind/count/position/size/direction with Select + Inspect.
+
+llmTracker.tag(elems, name?, color?, kind?) → clusterId
+llmTracker.alias(name, [memberNames])       → group existing names (crystal = layers = cells = edges)
+llmTracker.resolve(name) / getByName(name)  → BasicElement[] (alias-aware, live)
+llmTracker.getByClusterId(cid) / getAll()
+llmTracker.list()                           → [{name, clusterId, size, kind}]
+llmTracker.listDetailed()                   → full live spatial records (what the Ledger shows)
+llmTracker.info(name) / describe()          → one record | null / multi-line text
+llmTracker.selectByName(name, keepPrev?) / llmTracker.focus(name)
+llmTracker.colorByName(name, color) / llmTracker.rename(old, new)
+llmTracker.deleteByName(name)               → alias name removes alias only; entry removes elements
+llmTracker.clear() / status()
+
+════════════════════════════════════════
+shapes.* — DUPLEX OUTLINES & CRYSTALS (real B-DNA, auto-connected)
+════════════════════════════════════════
+Single-strand sketch shapes (line/circle/polygon/triangle/square/star/cube/
+tetrahedron/sphere/helix/spiral/pointCloud) place nucleotides along paths.
+The duplex builders below instead create ideal B-DNA duplexes
+(edit.createStrand seq,true), orient each along its edge via the PCA helix
+axis, and auto-ligate meeting ends at vertices (greedy closest 5'/3' pairing —
+the viewer figures out where to connect by itself). Edge length → base pairs
+at 0.4 units/bp (min 6 bp/edge). Relax the result with oxDNA afterwards.
+
+shapes.duplexEdge(p0, p1, seq?, isRNA?, tag?)   → one duplex along p0→p1 (kind 'duplex')
+shapes.outline(points, {closed?, seq?, isRNA?, tag?, ligate?, threshold?})
+    → duplex wireframe; edges tagged tag_e0… (kind 'edge'), whole = alias tag.
+      Returns elems with .edges=[names], .ligated=n, .pairs=[{aId,bId,dist}].
+shapes.triangleDuplex(center, normal, sideLen, seq?, isRNA?, tag?)
+    → equilateral duplex triangle (outline convenience wrapper).
+shapes.triLattice(nx, ny, sideLen, center?, normal?)
+    → pure geometry {verts, edges:[[a,b]], cells:[{verts:[a,b,c], up}]}; no scene change.
+shapes.triangleCrystal(center, normal, sideLen, nx, ny, nz,
+                       {tag?, seq?, isRNA?, layerGap?, twistDeg?, shift?, threshold?})
+    → layered crystal slab: one duplex per UNIQUE lattice edge (no doubling),
+      auto-ligated at shared vertices; registry edges tag_L{l}_e{k}, cell aliases
+      tag_L{l}_c{i} (3 edges each), layer aliases tag_L{l}, whole alias tag.
+      layerGap default sideLen*0.5; twistDeg rotates each layer about the normal
+      (120° + shift mimics tensegrity-triangle R3 screw stacking).
+
+WORKFLOW — triangle first, then grow the crystal (always verify each step):
+  // 1. Small duplex triangle from a bare prompt like "make a triangle":
+  var tri = shapes.triangleDuplex(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1), 12, null, false, 'tri1');
+  notify('tri1: ' + tri.length + ' nt, ' + tri.ligated + ' vertex connections');
+  space.show('tri1');
+  // 2. Sanity-check before growing: connected? overlapping anything?
+  //    (tri.ligated should be 3 for a closed triangle; space.overlaps vs others false)
+  // 3. Extend to a crystal slab reusing the same edge length:
+  shapes.triangleCrystal(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1), 12, 2, 2, 2, {tag:'xtal1'});
+  space.describe();            // per-edge / per-cell / per-layer ledger digest
+  space.overlaps('tri1', 'xtal1');
+  space.show('xtal1');
 
 ════════════════════════════════════════
 NANOCANVAS INTEGRATION (when embedded in integration page)
