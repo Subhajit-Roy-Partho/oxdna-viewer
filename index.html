@@ -1269,9 +1269,21 @@
         <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#2a2a3e; border-radius:10px 10px 0 0; border-bottom:1px solid #444;">
             <span style="color:#e0e0ff; font-weight:bold; font-size:14px;">🤖 oxView AI Assistant</span>
             <div>
+                <button onclick="llmChat.setApiKey()" title="Set API key" style="background:none; border:none; color:#aaa; cursor:pointer; font-size:15px; margin-right:6px;">🔑</button>
                 <button onclick="llmChat.clearHistory()" title="Clear chat" style="background:none; border:none; color:#aaa; cursor:pointer; font-size:16px; margin-right:6px;">🗑</button>
                 <button onclick="llmChat.toggle()" style="background:none; border:none; color:#aaa; cursor:pointer; font-size:18px;">✕</button>
             </div>
+        </div>
+        <div style="padding:8px 10px; border-bottom:1px solid #444; background:#23233a; flex-shrink:0;">
+            <div style="display:flex; gap:6px;">
+                <input id="llm-model-input" type="text" placeholder="model id — type or pick" title="Model — type any model id, or ⟳ Models then pick from the list" onchange="llmChat.onModelInput(this.value)"
+                    style="flex:1; min-width:0; background:#12121e; color:#e0e0ff; border:1px solid #555; border-radius:6px; padding:6px 8px; font-size:12px; outline:none;">
+                <button id="llm-models-refresh" onclick="llmChat.refreshModels()" title="GET {baseURL}/models and pick from the returned data[].id list"
+                    style="background:#3a3a5c; color:#e0e0ff; border:1px solid #555; border-radius:6px; padding:6px 10px; cursor:pointer; font-size:12px; white-space:nowrap;">⟳ Models</button>
+            </div>
+            <select id="llm-model-picker" onchange="llmChat.pickModel(this.value)" title="Pick a model — writes back to the model field above"
+                style="display:none; width:100%; margin-top:6px; background:#12121e; color:#e0e0ff; border:1px solid #555; border-radius:6px; padding:6px 8px; font-size:12px; outline:none;"></select>
+            <div id="llm-models-error" style="display:none; color:#ff8080; font-size:11px; margin-top:4px;"></div>
         </div>
         <div id="llm-chat-log" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;">
             <div class="llm-msg llm-msg-system" style="color:#888; font-size:12px; text-align:center;">Ask me to create, edit, or modify your DNA/RNA structure. Try: "create 20 helix duplex"</div>
@@ -1345,6 +1357,17 @@
             <div class="agent-pipeline-stage" id="agent-stage-observer">🔍 Observe</div>
             <div style="color:#374151; line-height:24px;">→</div>
             <div class="agent-pipeline-stage" id="agent-stage-summarizer">📝 Summarize</div>
+        </div>
+        <div style="padding:8px 10px; background:#111827; border-bottom:1px solid #374151; flex-shrink:0;">
+            <div style="display:flex; gap:6px;">
+                <input id="agent-model-input" type="text" placeholder="model id — type or pick" title="Model — type any model id, or ⟳ Models then pick from the list" onchange="agentChat.onModelInput(this.value)"
+                    style="flex:1; min-width:0; background:#0a0f1e; color:#e2e8f0; border:1px solid #374151; border-radius:6px; padding:6px 8px; font-size:12px; outline:none;">
+                <button id="agent-models-refresh" onclick="agentChat.refreshModels()" title="GET {baseURL}/models and pick from the returned data[].id list"
+                    style="background:#1f2937; color:#e2e8f0; border:1px solid #374151; border-radius:6px; padding:6px 10px; cursor:pointer; font-size:12px; white-space:nowrap;">⟳ Models</button>
+            </div>
+            <select id="agent-model-picker" onchange="agentChat.pickModel(this.value)" title="Pick a model — writes back to the model field above"
+                style="display:none; width:100%; margin-top:6px; background:#0a0f1e; color:#e2e8f0; border:1px solid #374151; border-radius:6px; padding:6px 8px; font-size:12px; outline:none;"></select>
+            <div id="agent-models-error" style="display:none; color:#f87171; font-size:11px; margin-top:4px;"></div>
         </div>
         <!-- Message log -->
         <div id="agent-chat-log" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px;">

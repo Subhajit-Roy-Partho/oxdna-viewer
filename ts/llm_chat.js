@@ -810,6 +810,7 @@ const llmChat = {
         panel.style.display = this.isOpen ? 'flex' : 'none';
         if (this.isOpen) {
             document.getElementById('llm-chat-input').focus();
+            this.initModelUI();
             // Show the reference grid + axes so positions are legible.
             try { if (window.space) space.grid(true); } catch (_) {}
         }
@@ -984,6 +985,128 @@ const llmChat = {
         this.renderMessage('system', 'Chat cleared. History reset.');
     },
 
+    // ─────────────────────────────────────────────────────────────
+    // Model fetch-and-pick (direct browser fetch, no backend).
+    // Persists to 'nc_ai_model' — the same localStorage key
+    // LLM_CONFIG.model already reads. The free-text input stays as
+    // the fallback so custom model IDs remain typeable.
+    // ─────────────────────────────────────────────────────────────
+    initModelUI() {
+        try {
+            var input = document.getElementById('llm-model-input');
+            if (input && !input.value) input.value = LLM_CONFIG.model;
+        } catch (_) {}
+    },
+
+    onModelInput(value) {
+        try { localStorage.setItem('nc_ai_model', (value || '').trim()); } catch (_) {}
+    },
+
+    pickModel(id) {
+        if (!id) return;
+        try { localStorage.setItem('nc_ai_model', id); } catch (_) {}
+        var input = document.getElementById('llm-model-input');
+        if (input) input.value = id;
+    },
+
+    setApiKey() {
+        var current = LLM_CONFIG.apiKey;
+        var input = prompt(
+            'Enter your API key.\nIt will be saved in localStorage.\nLeave blank to clear.',
+            current
+        );
+        if (input === null) return; // cancelled
+        if (input.trim()) {
+            try { localStorage.setItem('oxview_llm_api_key', input.trim()); } catch (_) {}
+            this.renderMessage('system', '🔑 API key saved.');
+        } else {
+            try { localStorage.removeItem('oxview_llm_api_key'); } catch (_) {}
+            this.renderMessage('system', '🔑 API key cleared.');
+        }
+    },
+
+    async refreshModels() {
+        var errEl = document.getElementById('llm-models-error');
+        var btn = document.getElementById('llm-models-refresh');
+        var picker = document.getElementById('llm-model-picker');
+        var showErr = function (msg) {
+            if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+            llmChat.renderMessage('error', msg);
+        };
+        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        if (!LLM_CONFIG.apiKey) {
+            showErr('No API key set — the /models call needs Authorization: Bearer <key>. Set one with the 🔑 button first.');
+            return;
+        }
+        var url = LLM_CONFIG.baseURL.replace(/\/+$/, '') + '/models';
+        if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+        try {
+            var response = await fetch(url, {
+                headers: { 'Authorization': 'Bearer ' + LLM_CONFIG.apiKey }
+            });
+            if (!response.ok) {
+                var errText = '';
+                try { errText = await response.text(); } catch (_) {}
+                var detail = errText;
+                try {
+                    var parsed = JSON.parse(errText);
+                    detail = (parsed.error && parsed.error.message) || errText;
+                } catch (_) {}
+                if (detail && detail.length > 300) detail = detail.substring(0, 300) + '…';
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error('🔑 API key rejected (HTTP ' + response.status + '). '
+                        + 'Set a valid key with the 🔑 button (stored as oxview_llm_api_key in localStorage).'
+                        + (detail ? ' Provider says: ' + detail : ''));
+                }
+                throw new Error('API error ' + response.status + ' from ' + url + '.'
+                    + (detail ? ' ' + detail : ' Check llmBaseURL in ts/config.js.'));
+            }
+            var data = await response.json();
+            var ids = [];
+            if (data && Array.isArray(data.data)) {
+                data.data.forEach(function (m) {
+                    if (m && m.id && ids.indexOf(m.id) === -1) ids.push(m.id);
+                });
+                ids.sort();
+            }
+            if (ids.length === 0) {
+                throw new Error('The /models response contained no data[].id entries — '
+                    + 'check llmBaseURL in ts/config.js points at an OpenAI-compatible endpoint.');
+            }
+            if (picker) {
+                picker.innerHTML = '';
+                var placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = 'Pick a model… (' + ids.length + ')';
+                picker.appendChild(placeholder);
+                ids.forEach(function (id) {
+                    var opt = document.createElement('option');
+                    opt.value = id;
+                    opt.textContent = id;
+                    picker.appendChild(opt);
+                });
+                var cur = '';
+                try { cur = localStorage.getItem('nc_ai_model') || ''; } catch (_) {}
+                if (ids.indexOf(cur) !== -1) picker.value = cur;
+                picker.style.display = 'block';
+            }
+            this.renderMessage('system', 'Loaded ' + ids.length + ' models from ' + url + '.');
+        } catch (err) {
+            if (err && (err instanceof TypeError)) {
+                // fetch() rejects with TypeError on network failure / CORS block.
+                showErr('Network error: could not reach ' + url + '. '
+                    + 'The provider may block browser CORS requests, or you may be offline — '
+                    + 'check llmBaseURL in ts/config.js and that the provider permits CORS from this page. ('
+                    + err.message + ')');
+            } else {
+                showErr('Error: ' + err.message);
+            }
+            console.error('LLM /models fetch error:', err);
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '⟳ Models'; }
+        }
+    },
+
     handleKeydown(event) {
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
@@ -995,3 +1118,4 @@ const llmChat = {
 // Expose for spatial_api's space.show() and other modules (top-level const is
 // not automatically a window property in classic scripts).
 try { window.llmChat = llmChat; } catch (e) {}
+try { llmChat.initModelUI(); } catch (e) {}
