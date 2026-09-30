@@ -814,11 +814,104 @@ function agentEscapeHtml(s) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Chat threads — browser-localStorage persistence (UI + storage
+// only; no backend, no key material stored here).
+// Store: oxview_agent_threads = [{id,title,createdAt,updatedAt,
+//   messages:[{type,text}]}], active id in
+//   oxview_agent_active_thread. Quota-guarded (message/thread
+//   caps, oldest-first pruning, prune-and-retry); a corrupt store
+//   degrades to an empty list and never breaks the panel.
+// Classic script (no bundler): agentThread-prefixed globals avoid
+// colliding with llm_chat.js, loaded on the same page.
+// ─────────────────────────────────────────────────────────────
+const AGENT_THREADS_KEY = 'oxview_agent_threads';
+const AGENT_ACTIVE_THREAD_KEY = 'oxview_agent_active_thread';
+const AGENT_MAX_THREADS = 20;
+const AGENT_MAX_MESSAGES_PER_THREAD = 300;
+
+function agentMakeThreadId() {
+    return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function agentMakeThread(title) {
+    var now = Date.now();
+    return { id: agentMakeThreadId(), title: title || 'New chat', createdAt: now, updatedAt: now, messages: [] };
+}
+
+function agentSanitizeThreads(value) {
+    if (!Array.isArray(value)) return [];
+    var out = [];
+    for (var i = 0; i < value.length && out.length < AGENT_MAX_THREADS; i++) {
+        var t = value[i];
+        if (!t || typeof t.id !== 'string' || !Array.isArray(t.messages)) continue;
+        var msgs = [];
+        for (var j = 0; j < t.messages.length; j++) {
+            var m = t.messages[j];
+            if (!m || typeof m.text !== 'string') continue;
+            msgs.push({
+                type: (typeof m.type === 'string') ? m.type : 'system',
+                text: m.text.slice(0, 4000)
+            });
+        }
+        out.push({
+            id: t.id,
+            title: (typeof t.title === 'string' && t.title.trim()) ? t.title.slice(0, 80) : 'Untitled',
+            createdAt: (typeof t.createdAt === 'number') ? t.createdAt : Date.now(),
+            updatedAt: (typeof t.updatedAt === 'number') ? t.updatedAt : Date.now(),
+            messages: msgs
+        });
+    }
+    return out;
+}
+
+function agentLoadThreads() {
+    try {
+        var raw = localStorage.getItem(AGENT_THREADS_KEY);
+        if (!raw) return [];
+        return agentSanitizeThreads(JSON.parse(raw));
+    } catch (_) {
+        return [];
+    }
+}
+
+function agentPruneThreads(threads) {
+    var capped = threads.map(function (t) {
+        return {
+            id: t.id, title: t.title, createdAt: t.createdAt, updatedAt: t.updatedAt,
+            messages: t.messages.slice(-AGENT_MAX_MESSAGES_PER_THREAD)
+        };
+    });
+    capped.sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+    return capped.slice(0, AGENT_MAX_THREADS);
+}
+
+// Returns true on success, false on quota/corrupt failure. Never throws.
+function agentSaveThreads(threads) {
+    try {
+        localStorage.setItem(AGENT_THREADS_KEY, JSON.stringify(agentPruneThreads(threads)));
+        return true;
+    } catch (_) {
+        try {
+            // Quota hit: keep only the newest half and retry once.
+            var pruned = agentPruneThreads(threads).slice(0, Math.max(1, Math.floor(AGENT_MAX_THREADS / 2)));
+            localStorage.setItem(AGENT_THREADS_KEY, JSON.stringify(pruned));
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Main agentChat object
 // ─────────────────────────────────────────────────────────────
 const agentChat = {
     isOpen: false,
     isRunning: false,
+    threads: [],
+    activeThreadId: null,
+    threadLog: [],
+    _threadsReady: false,
 
     // Halt the pipeline between steps and abort the in-flight fetch.
     // Safe no-op when idle. Completed steps stay applied (never reverted).
@@ -841,6 +934,7 @@ const agentChat = {
             document.getElementById('agent-chat-input').focus();
             this._updateKeyStatus();
             this.initModelUI();
+            try { this.initThreads(); } catch (_) {}
             try { if (window.space) space.grid(true); } catch (_) {}
         }
     },
@@ -886,7 +980,10 @@ const agentChat = {
 
     clearLog() {
         document.getElementById('agent-chat-log').innerHTML = '';
-        this._log('system', 'Log cleared. Ready for a new task.');
+        this.threadLog = [];
+        try { this.persistThreads(); } catch (_) {}
+        // Marker is display-only, kept out of the saved thread.
+        this._renderEntry('system', 'Log cleared. Ready for a new task.');
     },
 
     // ─────────────────────────────────────────────────────────────
@@ -995,24 +1092,223 @@ const agentChat = {
         }
     },
 
-    _log(type, text) {
+    // Display-only DOM builder (no persistence). Used by _log/_logCode
+    // and by thread restore, which must not re-persist entries.
+    _renderEntry(type, text) {
         const log = document.getElementById('agent-chat-log');
-        const el = document.createElement('div');
-        el.className = `agent-msg agent-msg-${type}`;
-        el.textContent = text;
+        if (!log) return null;
+        var el;
+        if (type === 'code') {
+            el = document.createElement('div');
+            el.className = 'agent-msg agent-msg-code';
+            el.innerHTML = `<pre>${agentEscapeHtml(text)}</pre>`;
+        } else {
+            el = document.createElement('div');
+            el.className = `agent-msg agent-msg-${type}`;
+            el.textContent = text;
+        }
         log.appendChild(el);
         log.scrollTop = log.scrollHeight;
         return el;
     },
 
-    _logCode(code) {
-        const log = document.getElementById('agent-chat-log');
-        const el = document.createElement('div');
-        el.className = 'agent-msg agent-msg-code';
-        el.innerHTML = `<pre>${agentEscapeHtml(code)}</pre>`;
-        log.appendChild(el);
-        log.scrollTop = log.scrollHeight;
+    _log(type, text, transient) {
+        const el = this._renderEntry(type, text);
+        // Transient progress rows ("Planning steps...", "Generating
+        // code...") are removed/replaced before the step ends — they
+        // are display-only and stay out of the saved thread.
+        if (!transient) {
+            this.threadLog.push({ type, text: (text || '').slice(0, 4000) });
+            if (this.threadLog.length > AGENT_MAX_MESSAGES_PER_THREAD) {
+                this.threadLog = this.threadLog.slice(-AGENT_MAX_MESSAGES_PER_THREAD);
+            }
+            try { this.persistThreads(); } catch (_) {}
+        }
         return el;
+    },
+
+    _logCode(code) {
+        const el = this._renderEntry('code', code);
+        this.threadLog.push({ type: 'code', text: (code || '').slice(0, 4000) });
+        if (this.threadLog.length > AGENT_MAX_MESSAGES_PER_THREAD) {
+            this.threadLog = this.threadLog.slice(-AGENT_MAX_MESSAGES_PER_THREAD);
+        }
+        try { this.persistThreads(); } catch (_) {}
+        return el;
+    },
+
+    // ─────────────────────────────────────────────────────────
+    // Threads: New / Open / Delete / Rename over the
+    // localStorage store above. Autosaved on every logged message
+    // via persistThreads(); the active thread is restored on reload.
+    // ─────────────────────────────────────────────────────────
+    initThreads() {
+        try {
+            if (this._threadsReady) { try { this.persistThreads(); } catch (_) {} }
+            var ts = agentLoadThreads();
+            var aid = null;
+            try { aid = localStorage.getItem(AGENT_ACTIVE_THREAD_KEY); } catch (_) {}
+            var has = function (id) { return ts.some(function (t) { return t.id === id; }); };
+            if (!aid || !has(aid)) {
+                if (ts.length) {
+                    var sorted = ts.slice().sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+                    aid = sorted[0].id;
+                } else {
+                    var t0 = agentMakeThread('Chat 1');
+                    ts = [t0];
+                    aid = t0.id;
+                    agentSaveThreads(ts);
+                }
+                try { localStorage.setItem(AGENT_ACTIVE_THREAD_KEY, aid); } catch (_) {}
+            }
+            this.threads = ts;
+            this.activeThreadId = aid;
+            var active = null;
+            ts.forEach(function (t) { if (t.id === aid) active = t; });
+            // Adopt saved messages only when this client has nothing
+            // newer in memory (e.g. first load / reload).
+            if (!this._threadsReady || !this.threadLog.length) {
+                this.threadLog = active
+                    ? active.messages.map(function (m) { return { type: m.type, text: m.text }; })
+                    : [];
+            }
+            this._threadsReady = true;
+            this.renderThreadList();
+            this.renderActiveThread();
+        } catch (_) {}
+    },
+
+    persistThreads() {
+        try {
+            if (!this.activeThreadId) return false;
+            var self = this;
+            var firstUser = null;
+            this.threadLog.forEach(function (m) {
+                if (!firstUser && m && m.type === 'user' && m.text) firstUser = m.text;
+            });
+            this.threads = this.threads.map(function (t) {
+                if (t.id !== self.activeThreadId) return t;
+                var title = t.title;
+                if (/^(New chat|Chat \d+|Untitled)$/.test(title) && firstUser) {
+                    title = firstUser.trim().slice(0, 48) || title;
+                }
+                return {
+                    id: t.id, title: title, createdAt: t.createdAt, updatedAt: Date.now(),
+                    messages: self.threadLog.slice(-AGENT_MAX_MESSAGES_PER_THREAD).map(function (m) {
+                        return { type: m.type, text: (m.text || '').slice(0, 4000) };
+                    })
+                };
+            });
+            try { localStorage.setItem(AGENT_ACTIVE_THREAD_KEY, this.activeThreadId); } catch (_) {}
+            return agentSaveThreads(this.threads);
+        } catch (_) { return false; }
+    },
+
+    renderThreadList() {
+        try {
+            var sel = document.getElementById('agent-thread-list');
+            if (!sel) return;
+            var self = this;
+            sel.innerHTML = '';
+            var ordered = this.threads.slice().sort(function (a, b) { return a.createdAt - b.createdAt; });
+            ordered.forEach(function (t) {
+                var opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = (t.id === self.activeThreadId ? '● ' : '○ ') + t.title + ' (' + t.messages.length + ')';
+                sel.appendChild(opt);
+            });
+            sel.value = this.activeThreadId || '';
+        } catch (_) {}
+    },
+
+    renderActiveThread() {
+        try {
+            var log = document.getElementById('agent-chat-log');
+            if (!log || !this.threadLog.length) return;
+            log.innerHTML = '';
+            var self = this;
+            this.threadLog.forEach(function (m) { self._renderEntry(m.type, m.text); });
+        } catch (_) {}
+    },
+
+    newThread() {
+        try {
+            this.persistThreads();
+            var t = agentMakeThread('Chat ' + (this.threads.length + 1));
+            this.threads = agentPruneThreads(this.threads.concat([t]));
+            this.activeThreadId = t.id;
+            this.threadLog = [];
+            this.persistThreads();
+            this.renderThreadList();
+            var log = document.getElementById('agent-chat-log');
+            if (log) {
+                log.innerHTML = '';
+                this._renderEntry('system', 'New thread started. History is saved in this browser only.');
+            }
+        } catch (_) {}
+    },
+
+    openThread(id) {
+        try {
+            if (!id || id === this.activeThreadId) return;
+            var found = null;
+            this.threads.forEach(function (t) { if (t.id === id) found = t; });
+            if (!found) return;
+            this.persistThreads();
+            this.activeThreadId = id;
+            this.threadLog = found.messages.map(function (m) { return { type: m.type, text: m.text }; });
+            this.persistThreads();
+            this.renderThreadList();
+            var log = document.getElementById('agent-chat-log');
+            if (log) {
+                log.innerHTML = '';
+                if (this.threadLog.length) {
+                    this.renderActiveThread();
+                } else {
+                    this._renderEntry('system', 'Thread "' + found.title + '" opened — no saved messages yet.');
+                }
+            }
+        } catch (_) {}
+    },
+
+    deleteThread() {
+        try {
+            var id = this.activeThreadId;
+            if (!id) return;
+            var title = '';
+            this.threads.forEach(function (t) { if (t.id === id) title = t.title; });
+            if (!confirm('Delete thread "' + title + '" with its saved messages?')) return;
+            this.threads = this.threads.filter(function (t) { return t.id !== id; });
+            if (!this.threads.length) this.threads = [agentMakeThread('Chat 1')];
+            var sorted = this.threads.slice().sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+            this.activeThreadId = sorted[0].id;
+            var self = this;
+            var active = null;
+            this.threads.forEach(function (t) { if (t.id === self.activeThreadId) active = t; });
+            this.threadLog = active
+                ? active.messages.map(function (m) { return { type: m.type, text: m.text }; })
+                : [];
+            this.persistThreads();
+            this.renderThreadList();
+            this.renderActiveThread();
+        } catch (_) {}
+    },
+
+    renameThread() {
+        try {
+            var id = this.activeThreadId;
+            if (!id) return;
+            var cur = '';
+            this.threads.forEach(function (t) { if (t.id === id) cur = t.title; });
+            var name = prompt('Rename thread:', cur);
+            if (name === null) return;
+            name = (name.trim() || 'Untitled').slice(0, 80);
+            this.threads = this.threads.map(function (t) {
+                return t.id === id ? { id: t.id, title: name, createdAt: t.createdAt, updatedAt: Date.now(), messages: t.messages } : t;
+            });
+            agentSaveThreads(this.threads);
+            this.renderThreadList();
+        } catch (_) {}
     },
 
     _setStage(stage) {
@@ -1055,7 +1351,7 @@ const agentChat = {
         try {
             // ── Stage 1: Plan ──────────────────────────────────
             this._setStage('planner');
-            const planningEl = this._log('planner', '🗂 Planning steps...');
+            const planningEl = this._log('planner', '🗂 Planning steps...', true);
 
             let steps;
             try {
@@ -1088,7 +1384,7 @@ const agentChat = {
                     // Execute
                     this._setStage('executor');
                     const attemptSuffix = attempt > 0 ? ` (retry ${attempt}/${AGENT_MAX_RETRIES - 1})` : '';
-                    const execEl = this._log('executor', `⚙️ Generating code${attemptSuffix}...`);
+                    const execEl = this._log('executor', `⚙️ Generating code${attemptSuffix}...`, true);
 
                     try {
                         lastCode = await agentExecutor(step, attempt > 0 ? retryContext : '');
@@ -1113,7 +1409,7 @@ const agentChat = {
 
                     // Observe
                     this._setStage('observer');
-                    const obsEl = this._log('observer', '🔍 Verifying result...');
+                    const obsEl = this._log('observer', '🔍 Verifying result...', true);
 
                     let observation;
                     try {
@@ -1148,7 +1444,7 @@ const agentChat = {
                 this._log('system', `⏹ Stopped — ${doneCount}/${steps.length} steps completed; completed steps kept.`);
             } else {
                 this._setStage('summarizer');
-                const sumEl = this._log('summarizer', '📝 Summarizing...');
+                const sumEl = this._log('summarizer', '📝 Summarizing...', true);
 
                 try {
                     const summary = await agentSummarizer(task, stepResults);
@@ -1186,3 +1482,4 @@ const agentChat = {
 
 try { window.agentChat = agentChat; } catch (e) {}
 try { agentChat.initModelUI(); } catch (e) {}
+try { agentChat.initThreads(); } catch (e) {}
