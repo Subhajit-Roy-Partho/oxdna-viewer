@@ -956,6 +956,23 @@
                         <input type="checkbox" id="gridToggle" onchange="space.grid(this.checked)"
                         data-role="switch" data-caption="Grid" checked title="Show/hide the 3-D reference grid under the scene (GridHelper + XYZ axes)">
                     </div>
+                    <div style="height: 18px; white-space: nowrap;" title="Grid size (extent, 0 = auto-fit), plane offset along its normal, and plane normal">
+                        <label for="gridSize">Size</label>
+                        <input type="number" id="gridSize" value="0" min="0" step="3" style="width: 4em;"
+                            title="Grid extent in oxDNA units (0 = auto-fit to scene); rebuilds live"
+                            onchange="space.grid(true, {size: parseFloat(this.value)})">
+                        <label for="gridOffset">Off</label>
+                        <input type="number" id="gridOffset" value="0" step="1" style="width: 3.5em;"
+                            title="Shift of the grid plane along its normal (default 0)"
+                            onchange="space.grid(true, {offset: parseFloat(this.value)})">
+                        <label for="gridNormal">&#8869;</label>
+                        <select id="gridNormal" title="Grid plane normal (Y = classic ground plane)"
+                            onchange="space.grid(true, {normal: this.value})">
+                            <option value="y" selected>Y</option>
+                            <option value="x">X</option>
+                            <option value="z">Z</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="group">
                     <div id="coloringMode" class="ribbon-toggle-group toggleGroup_w2">

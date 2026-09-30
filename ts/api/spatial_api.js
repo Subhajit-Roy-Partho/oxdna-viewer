@@ -31,7 +31,7 @@
  *     (ledgerSetup/ledgerRefresh/ledgerSelect/ledgerFocus as globals).
  *
  * Quick reference:
- *   space.grid(on?) / space.toggleGrid()          → reference grid + XYZ axes
+ *   space.grid(on?, {size, offset, normal}) / space.toggleGrid()          → reference grid + XYZ axes
  *   space.describe()                              → text digest of every object
  *   space.digest()                                → structured JSON-safe digest
  *   space.list()                                  → [names]
@@ -74,6 +74,9 @@ window.space = (function() {
 
     var _gridGroup = null;
     var _gridVisible = false;
+    var _gridSize = 0;      // extent in oxDNA units; 0 = auto-fit to scene
+    var _gridOffset = 0;    // shift of the grid plane along its normal; default 0
+    var _gridNormal = 'y';  // grid plane normal: 'x' | 'y' (classic ground plane) | 'z'
 
     // ── small utilities ────────────────────────────────────────────────────────
 
@@ -233,17 +236,31 @@ window.space = (function() {
         return bb;
     }
 
+    function _normGridNormal(n) {
+        var s = String(n == null ? 'y' : n).toLowerCase();
+        return (s === 'x' || s === 'z') ? s : 'y';
+    }
+
     function _buildGrid() {
         _removeGrid();
         var bb = _sceneBox();
         var size = bb.max.clone().sub(bb.min);
-        var maxDim = Math.max(size.x, size.z, GRID_MIN_EXTENT);
-        var extent = Math.ceil(maxDim / GRID_CELL) * GRID_CELL;
-        var divisions = Math.min(Math.round(extent / GRID_CELL), GRID_MAX_DIVISIONS);
+        var extent;
+        if (_gridSize > 0) {
+            extent = _gridSize;
+        } else {
+            var maxDim = Math.max(size.x, size.z, GRID_MIN_EXTENT);
+            extent = Math.ceil(maxDim / GRID_CELL) * GRID_CELL;
+        }
+        var divisions = Math.min(Math.max(1, Math.round(extent / GRID_CELL)), GRID_MAX_DIVISIONS);
         var cell = extent / divisions;
 
         _gridGroup = new THREE.Group();
         _gridGroup.name = 'spaceGrid';
+        // GridHelper lies in XZ (normal +Y); rotate the group 90° to get
+        // a YZ (normal X) or XY (normal Z) plane.
+        if (_gridNormal === 'x') _gridGroup.rotation.z = Math.PI / 2;
+        else if (_gridNormal === 'z') _gridGroup.rotation.x = Math.PI / 2;
 
         var grid = new THREE.GridHelper(extent, divisions, 0x888888, 0x444444);
         _gridGroup.add(grid);
@@ -260,13 +277,18 @@ window.space = (function() {
             var lz = _textSprite('Z:' + (v >= 0 ? '+' : '') + v, AXIS_COLORS.z);
             if (lz) { lz.position.set(0, 0.5, i * cell); _gridGroup.add(lz); }
         }
-        var yo = _textSprite('Y up', AXIS_COLORS.y);
+        var yo = _textSprite(_gridNormal.toUpperCase() + ' up', AXIS_COLORS[_gridNormal]);
         if (yo) { yo.position.set(0, extent / 4, 0); _gridGroup.add(yo); }
 
-        // Sit just under the scene, centred on it in X/Z.
+        // Sit just under the scene, centred on it; offset shifts the plane
+        // along its normal. Local +Y of the group is the plane normal, so
+        // the offset rides the group's rotation automatically.
         var cx = (bb.min.x + bb.max.x) / 2;
+        var cy = (bb.min.y + bb.max.y) / 2;
         var cz = (bb.min.z + bb.max.z) / 2;
-        _gridGroup.position.set(cx, bb.min.y - GRID_CELL, cz);
+        if (_gridNormal === 'x') _gridGroup.position.set(bb.min.x - GRID_CELL + _gridOffset, cy, cz);
+        else if (_gridNormal === 'z') _gridGroup.position.set(cx, cy, bb.min.z - GRID_CELL + _gridOffset);
+        else _gridGroup.position.set(cx, bb.min.y - GRID_CELL + _gridOffset, cz);
         try {
             scene.add(_gridGroup);
             render();
@@ -312,28 +334,52 @@ window.space = (function() {
     /**
      * Show (on=true), hide (on=false) or toggle (omitted) the reference grid.
      * Rebuilt from the live scene bbox on every show, so it always fits.
+     * opts (optional): {size?, offset?, normal?} — size is the grid extent in
+     * oxDNA units (0/omitted = auto-fit), offset shifts the plane along its
+     * normal (default 0), normal is 'x'|'y'|'z' (default 'y', classic ground
+     * plane; 'x'/'z' rotate the helper group 90°). Passing opts rebuilds the
+     * grid live when visible. The first argument may also be the opts object
+     * itself (implies on=true).
      * Keeps the View-menu "Grid" switch (#gridToggle) in sync when present,
      * so chat auto-show (llm_chat/agent_chat) and the Structure Ledger
      * toggle button don't leave the checkbox lying.
      */
-    space.grid = function(on) {
+    space.grid = function(on, opts) {
+        if (on != null && typeof on === 'object') { opts = on; on = true; }
         if (on == null) on = !_gridVisible;
+        opts = opts || {};
+        if (opts.size != null) {
+            var sz = parseFloat(opts.size);
+            _gridSize = (isFinite(sz) && sz > 0) ? sz : 0;
+        }
+        if (opts.offset != null) {
+            var off = parseFloat(opts.offset);
+            _gridOffset = isFinite(off) ? off : 0;
+        }
+        if (opts.normal != null) _gridNormal = _normGridNormal(opts.normal);
         _gridVisible = !!on;
         if (_gridVisible) _buildGrid();
         else _removeGrid();
         try {
             var cb = document.getElementById('gridToggle');
             if (cb) cb.checked = _gridVisible;
+            var si = document.getElementById('gridSize');
+            if (si) si.value = _gridSize;
+            var oi = document.getElementById('gridOffset');
+            if (oi) oi.value = _gridOffset;
+            var ns = document.getElementById('gridNormal');
+            if (ns) ns.value = _gridNormal;
         } catch(_) {}
         return _gridVisible;
     };
 
-    /** Toggle the reference grid. */
+    /** Toggle the reference grid (keeps current size/offset/normal). */
     space.toggleGrid = function() { return space.grid(!_gridVisible); };
 
     /** Current grid state. */
     space.gridState = function() {
-        return { visible: _gridVisible, cell: GRID_CELL, cellNm: 2.5 };
+        return { visible: _gridVisible, cell: GRID_CELL, cellNm: 2.5,
+                 size: _gridSize, offset: _gridOffset, normal: _gridNormal };
     };
 
     // ── digest / describe ──
@@ -389,7 +435,8 @@ window.space = (function() {
         return {
             objects: objects,
             box: boxArr,
-            grid: { visible: _gridVisible, cell: GRID_CELL, cellNm: 2.5 },
+            grid: { visible: _gridVisible, cell: GRID_CELL, cellNm: 2.5,
+                    size: _gridSize, offset: _gridOffset, normal: _gridNormal },
             hint: 'Units are oxDNA units (1 unit ≈ 0.85 nm). Grid cell = 3 units ≈ one duplex diameter.'
         };
     };
