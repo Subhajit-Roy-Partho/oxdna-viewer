@@ -618,6 +618,12 @@ const AGENT_FETCH_TIMEOUT_MS = 120000;
 const AGENT_FETCH_MAX_RETRIES = 3;
 const AGENT_FETCH_BACKOFF_BASE_MS = 1000;
 
+// Stop support: agentChat.stop() sets agentStopRequested and aborts the
+// in-flight attempt; run() checks the flag between steps so nothing new
+// starts after a stop. Completed steps stay applied (never reverted).
+var agentStopRequested = false;
+var agentActiveFetchController = null;
+
 function agentFetchIsRetryableStatus(status) {
     return status === 429 || (status >= 500 && status <= 599);
 }
@@ -637,6 +643,11 @@ async function agentChatFetchJson(url, apiKey, body, opts) {
     var attempt = 0;
     var lastErr = null;
     while (true) {
+        if (agentStopRequested) {
+            var _agentStopErr = new Error('STOPPED_BY_USER');
+            _agentStopErr._agentStopped = true;
+            throw _agentStopErr;
+        }
         var controller = null;
         var timer = null;
         try {
@@ -644,6 +655,7 @@ async function agentChatFetchJson(url, apiKey, body, opts) {
                 controller = new AbortController();
                 timer = setTimeout(function () { controller.abort(); }, timeoutMs);
             }
+            agentActiveFetchController = controller;
             var response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -654,6 +666,7 @@ async function agentChatFetchJson(url, apiKey, body, opts) {
                 signal: controller ? controller.signal : undefined
             });
             if (timer) clearTimeout(timer);
+            agentActiveFetchController = null;
             if (response.ok) {
                 return await response.json();
             }
@@ -678,7 +691,15 @@ async function agentChatFetchJson(url, apiKey, body, opts) {
             lastErr._agentStatus = response.status;
         } catch (err) {
             if (timer) clearTimeout(timer);
-            if (err && err.name === 'AbortError') {
+            agentActiveFetchController = null;
+            if (err && err._agentStopped) {
+                throw err;
+            } else if (err && err.name === 'AbortError') {
+                if (agentStopRequested) {
+                    var _agentAbortStop = new Error('STOPPED_BY_USER');
+                    _agentAbortStop._agentStopped = true;
+                    throw _agentAbortStop;
+                }
                 lastErr = new Error('Request timed out after ' + Math.round(timeoutMs / 1000) + 's — '
                     + 'retrying (attempt ' + (attempt + 1) + '/' + (maxRetries + 1) + ').');
                 lastErr._agentRetryable = true;
@@ -798,6 +819,19 @@ function agentEscapeHtml(s) {
 const agentChat = {
     isOpen: false,
     isRunning: false,
+
+    // Halt the pipeline between steps and abort the in-flight fetch.
+    // Safe no-op when idle. Completed steps stay applied (never reverted).
+    stop() {
+        if (!this.isRunning) return;
+        agentStopRequested = true;
+        try { if (agentActiveFetchController) agentActiveFetchController.abort(); } catch (_) {}
+    },
+
+    _updateStopBtn() {
+        var btn = document.getElementById('agent-chat-stop');
+        if (btn) btn.disabled = !this.isRunning;
+    },
 
     toggle() {
         const panel = document.getElementById('agent-chat-panel');
@@ -1013,6 +1047,8 @@ const agentChat = {
         input.disabled = true;
         sendBtn.disabled = true;
         this.isRunning = true;
+        agentStopRequested = false;
+        this._updateStopBtn();
 
         this._log('user', task);
 
@@ -1038,6 +1074,7 @@ const agentChat = {
 
             // ── Stage 2 & 3: Execute + Observe each step ───────
             for (let i = 0; i < steps.length; i++) {
+                if (agentStopRequested) break;
                 const step = steps[i];
                 this._log('divider', `── Step ${i + 1} / ${steps.length} ──────────────────────`);
                 this._log('system', `▶ ${step}`);
@@ -1047,6 +1084,7 @@ const agentChat = {
                 let retryContext = '';
 
                 for (let attempt = 0; attempt < AGENT_MAX_RETRIES; attempt++) {
+                    if (agentStopRequested) break;
                     // Execute
                     this._setStage('executor');
                     const attemptSuffix = attempt > 0 ? ` (retry ${attempt}/${AGENT_MAX_RETRIES - 1})` : '';
@@ -1100,34 +1138,47 @@ const agentChat = {
                     }
                 }
 
+                if (agentStopRequested) break;
                 stepResults.push({ step, success, code: lastCode });
             }
 
             // ── Stage 4: Summarize ──────────────────────────────
-            this._setStage('summarizer');
-            const sumEl = this._log('summarizer', '📝 Summarizing...');
+            if (agentStopRequested) {
+                const doneCount = stepResults.filter(s => s.success).length;
+                this._log('system', `⏹ Stopped — ${doneCount}/${steps.length} steps completed; completed steps kept.`);
+            } else {
+                this._setStage('summarizer');
+                const sumEl = this._log('summarizer', '📝 Summarizing...');
 
-            try {
-                const summary = await agentSummarizer(task, stepResults);
-                sumEl.remove();
-                this._log('summary', '📝 ' + summary);
-            } catch (e) {
-                sumEl.textContent = `📝 Summary error: ${e.message}`;
-                sumEl.className = 'agent-msg agent-msg-error';
+                try {
+                    const summary = await agentSummarizer(task, stepResults);
+                    sumEl.remove();
+                    this._log('summary', '📝 ' + summary);
+                } catch (e) {
+                    sumEl.textContent = `📝 Summary error: ${e.message}`;
+                    sumEl.className = 'agent-msg agent-msg-error';
+                }
             }
 
         } catch (err) {
-            this._log('error', `❌ ${err.message}`);
-            console.error('Agent pipeline error:', err);
+            if (err && (err.message === 'STOPPED_BY_USER' || err._agentStopped)) {
+                this._log('system', '⏹ Stopped — completed steps kept, nothing new started.');
+            } else {
+                this._log('error', `❌ ${err.message}`);
+                console.error('Agent pipeline error:', err);
 
-            if (err.message.includes('QUOTA_ERROR') || err.message.includes('AUTH_ERROR')) {
-                this._log('error', '⚠ Your API key may be exhausted or invalid. Check your Anthropic account at console.anthropic.com.');
+                if (err.message.includes('QUOTA_ERROR') || err.message.includes('AUTH_ERROR')) {
+                    this._log('error', '⚠ Your API key may be exhausted or invalid. Check your Anthropic account at console.anthropic.com.');
+                }
             }
         } finally {
             this._setStage(null);
             this.isRunning = false;
+            agentStopRequested = false;
+            agentActiveFetchController = null;
             input.disabled = false;
             sendBtn.disabled = false;
+            this._updateStopBtn();
             input.focus();
         }
     }

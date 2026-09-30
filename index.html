@@ -1310,6 +1310,8 @@
                 style="flex:1; background:#12121e; color:#e0e0ff; border:1px solid #555; border-radius:6px; padding:8px 10px; font-size:13px; outline:none;">
             <button id="llm-chat-send" onclick="llmChat.sendMessage()"
                 style="background:#5a5af0; color:#fff; border:none; border-radius:6px; padding:8px 14px; cursor:pointer; font-size:13px; font-weight:bold;">Send</button>
+            <button id="llm-chat-stop" onclick="llmChat.stop()" disabled title="Stop the in-flight request (keeps anything already applied)"
+                style="background:#3a3a5c; color:#e0e0ff; border:1px solid #555; border-radius:6px; padding:8px 12px; cursor:pointer; font-size:13px; font-weight:bold;">⏹ Stop</button>
         </div>
     </div>
     <style>
@@ -1397,6 +1399,8 @@
                 style="flex:1; background:#0a0f1e; color:#e2e8f0; border:1px solid #374151; border-radius:6px; padding:8px 10px; font-size:13px; outline:none;">
             <button id="agent-chat-send" onclick="agentChat.run()"
                 style="background:#4f46e5; color:#fff; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; font-size:13px; font-weight:bold; white-space:nowrap;">▶ Run</button>
+            <button id="agent-chat-stop" onclick="agentChat.stop()" disabled title="Stop the pipeline between steps (keeps completed steps)"
+                style="background:#1f2937; color:#e2e8f0; border:1px solid #374151; border-radius:6px; padding:8px 12px; cursor:pointer; font-size:13px; font-weight:bold; white-space:nowrap;">⏹ Stop</button>
         </div>
     </div>
 
