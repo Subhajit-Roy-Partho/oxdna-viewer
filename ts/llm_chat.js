@@ -821,10 +821,103 @@ async function llmChatFetchJson(url, apiKey, body, opts) {
 }
 
 
+// ─────────────────────────────────────────────────────────────
+// Chat threads — browser-localStorage persistence (UI + storage
+// only; no backend, no key material stored here).
+// Store: oxview_llm_threads = [{id,title,createdAt,updatedAt,
+//   messages:[{role,content}]}], active id in
+//   oxview_llm_active_thread. Quota-guarded (message/thread caps,
+//   oldest-first pruning, prune-and-retry); a corrupt store
+//   degrades to an empty list and never breaks the panel.
+// Classic script (no bundler): llmThread-prefixed globals avoid
+// colliding with agent_chat.js, loaded on the same page.
+// ─────────────────────────────────────────────────────────────
+const LLM_THREADS_KEY = 'oxview_llm_threads';
+const LLM_ACTIVE_THREAD_KEY = 'oxview_llm_active_thread';
+const LLM_MAX_THREADS = 20;
+const LLM_MAX_MESSAGES_PER_THREAD = 300;
+
+function llmMakeThreadId() {
+    return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function llmMakeThread(title) {
+    var now = Date.now();
+    return { id: llmMakeThreadId(), title: title || 'New chat', createdAt: now, updatedAt: now, messages: [] };
+}
+
+function llmSanitizeThreads(value) {
+    if (!Array.isArray(value)) return [];
+    var out = [];
+    for (var i = 0; i < value.length && out.length < LLM_MAX_THREADS; i++) {
+        var t = value[i];
+        if (!t || typeof t.id !== 'string' || !Array.isArray(t.messages)) continue;
+        var msgs = [];
+        for (var j = 0; j < t.messages.length; j++) {
+            var m = t.messages[j];
+            if (!m || typeof m.content !== 'string') continue;
+            msgs.push({
+                role: (typeof m.role === 'string') ? m.role : 'assistant',
+                content: m.content.slice(0, 4000)
+            });
+        }
+        out.push({
+            id: t.id,
+            title: (typeof t.title === 'string' && t.title.trim()) ? t.title.slice(0, 80) : 'Untitled',
+            createdAt: (typeof t.createdAt === 'number') ? t.createdAt : Date.now(),
+            updatedAt: (typeof t.updatedAt === 'number') ? t.updatedAt : Date.now(),
+            messages: msgs
+        });
+    }
+    return out;
+}
+
+function llmLoadThreads() {
+    try {
+        var raw = localStorage.getItem(LLM_THREADS_KEY);
+        if (!raw) return [];
+        return llmSanitizeThreads(JSON.parse(raw));
+    } catch (_) {
+        return [];
+    }
+}
+
+function llmPruneThreads(threads) {
+    var capped = threads.map(function (t) {
+        return {
+            id: t.id, title: t.title, createdAt: t.createdAt, updatedAt: t.updatedAt,
+            messages: t.messages.slice(-LLM_MAX_MESSAGES_PER_THREAD)
+        };
+    });
+    capped.sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+    return capped.slice(0, LLM_MAX_THREADS);
+}
+
+// Returns true on success, false on quota/corrupt failure. Never throws.
+function llmSaveThreads(threads) {
+    try {
+        localStorage.setItem(LLM_THREADS_KEY, JSON.stringify(llmPruneThreads(threads)));
+        return true;
+    } catch (_) {
+        try {
+            // Quota hit: keep only the newest half and retry once.
+            var pruned = llmPruneThreads(threads).slice(0, Math.max(1, Math.floor(LLM_MAX_THREADS / 2)));
+            localStorage.setItem(LLM_THREADS_KEY, JSON.stringify(pruned));
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+}
+
+
 const llmChat = {
     isOpen: false,
     history: [],
     isRunning: false,
+    threads: [],
+    activeThreadId: null,
+    _threadsReady: false,
 
     // Stop the in-flight run: aborts the LLM fetch; if the response
     // already arrived, sendMessage() skips code execution. Safe no-op
@@ -847,18 +940,191 @@ const llmChat = {
         if (this.isOpen) {
             document.getElementById('llm-chat-input').focus();
             this.initModelUI();
+            try { this.initThreads(); } catch (_) {}
             // Show the reference grid + axes so positions are legible.
             try { if (window.space) space.grid(true); } catch (_) {}
         }
     },
 
+    // ─────────────────────────────────────────────────────────
+    // Threads: New / Open / Delete / Rename over the
+    // localStorage store above. Autosaved on every message via
+    // persistThreads(); the active thread is restored on reload.
+    // ─────────────────────────────────────────────────────────
+    initThreads() {
+        try {
+            if (this._threadsReady) { try { this.persistThreads(); } catch (_) {} }
+            var ts = llmLoadThreads();
+            var aid = null;
+            try { aid = localStorage.getItem(LLM_ACTIVE_THREAD_KEY); } catch (_) {}
+            var has = function (id) { return ts.some(function (t) { return t.id === id; }); };
+            if (!aid || !has(aid)) {
+                if (ts.length) {
+                    var sorted = ts.slice().sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+                    aid = sorted[0].id;
+                } else {
+                    var t0 = llmMakeThread('Chat 1');
+                    ts = [t0];
+                    aid = t0.id;
+                    llmSaveThreads(ts);
+                }
+                try { localStorage.setItem(LLM_ACTIVE_THREAD_KEY, aid); } catch (_) {}
+            }
+            this.threads = ts;
+            this.activeThreadId = aid;
+            var active = null;
+            ts.forEach(function (t) { if (t.id === aid) active = t; });
+            // Adopt saved messages only when this client has nothing
+            // newer in memory (e.g. first load / reload).
+            if (!this._threadsReady || !this.history.length) {
+                this.history = active ? active.messages.map(function (m) { return { role: m.role, content: m.content }; }) : [];
+            }
+            this._threadsReady = true;
+            this.renderThreadList();
+            this.renderActiveThread();
+        } catch (_) {}
+    },
+
+    persistThreads() {
+        try {
+            if (!this.activeThreadId) return false;
+            var self = this;
+            var firstUser = null;
+            this.history.forEach(function (m) {
+                if (!firstUser && m && m.role === 'user' && m.content) firstUser = m.content;
+            });
+            this.threads = this.threads.map(function (t) {
+                if (t.id !== self.activeThreadId) return t;
+                var title = t.title;
+                if (/^(New chat|Chat \d+|Untitled)$/.test(title) && firstUser) {
+                    title = firstUser.trim().slice(0, 48) || title;
+                }
+                return {
+                    id: t.id, title: title, createdAt: t.createdAt, updatedAt: Date.now(),
+                    messages: self.history.slice(-LLM_MAX_MESSAGES_PER_THREAD).map(function (m) {
+                        return { role: m.role, content: (m.content || '').slice(0, 4000) };
+                    })
+                };
+            });
+            try { localStorage.setItem(LLM_ACTIVE_THREAD_KEY, this.activeThreadId); } catch (_) {}
+            return llmSaveThreads(this.threads);
+        } catch (_) { return false; }
+    },
+
+    renderThreadList() {
+        try {
+            var sel = document.getElementById('llm-thread-list');
+            if (!sel) return;
+            var self = this;
+            sel.innerHTML = '';
+            var ordered = this.threads.slice().sort(function (a, b) { return a.createdAt - b.createdAt; });
+            ordered.forEach(function (t) {
+                var opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = (t.id === self.activeThreadId ? '● ' : '○ ') + t.title + ' (' + t.messages.length + ')';
+                sel.appendChild(opt);
+            });
+            sel.value = this.activeThreadId || '';
+        } catch (_) {}
+    },
+
+    renderActiveThread() {
+        try {
+            var log = document.getElementById('llm-chat-log');
+            if (!log || !this.history.length) return;
+            log.innerHTML = '';
+            var self = this;
+            this.history.forEach(function (m) { self.renderMessage(m.role, m.content); });
+        } catch (_) {}
+    },
+
+    newThread() {
+        try {
+            this.persistThreads();
+            var t = llmMakeThread('Chat ' + (this.threads.length + 1));
+            this.threads = llmPruneThreads(this.threads.concat([t]));
+            this.activeThreadId = t.id;
+            this.history = [];
+            this.persistThreads();
+            this.renderThreadList();
+            var log = document.getElementById('llm-chat-log');
+            if (log) {
+                log.innerHTML = '';
+                this.renderMessage('system', 'New thread started. History is saved in this browser only.');
+            }
+        } catch (_) {}
+    },
+
+    openThread(id) {
+        try {
+            if (!id || id === this.activeThreadId) return;
+            var found = null;
+            this.threads.forEach(function (t) { if (t.id === id) found = t; });
+            if (!found) return;
+            this.persistThreads();
+            this.activeThreadId = id;
+            this.history = found.messages.map(function (m) { return { role: m.role, content: m.content }; });
+            this.persistThreads();
+            this.renderThreadList();
+            var log = document.getElementById('llm-chat-log');
+            if (log) {
+                log.innerHTML = '';
+                if (this.history.length) {
+                    this.renderActiveThread();
+                } else {
+                    this.renderMessage('system', 'Thread "' + found.title + '" opened — no saved messages yet.');
+                }
+            }
+        } catch (_) {}
+    },
+
+    deleteThread() {
+        try {
+            var id = this.activeThreadId;
+            if (!id) return;
+            var title = '';
+            this.threads.forEach(function (t) { if (t.id === id) title = t.title; });
+            if (!confirm('Delete thread "' + title + '" with its saved messages?')) return;
+            this.threads = this.threads.filter(function (t) { return t.id !== id; });
+            if (!this.threads.length) this.threads = [llmMakeThread('Chat 1')];
+            var sorted = this.threads.slice().sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+            this.activeThreadId = sorted[0].id;
+            var self = this;
+            var active = null;
+            this.threads.forEach(function (t) { if (t.id === self.activeThreadId) active = t; });
+            this.history = active ? active.messages.slice() : [];
+            this.persistThreads();
+            this.renderThreadList();
+            this.renderActiveThread();
+        } catch (_) {}
+    },
+
+    renameThread() {
+        try {
+            var id = this.activeThreadId;
+            if (!id) return;
+            var cur = '';
+            this.threads.forEach(function (t) { if (t.id === id) cur = t.title; });
+            var name = prompt('Rename thread:', cur);
+            if (name === null) return;
+            name = (name.trim() || 'Untitled').slice(0, 80);
+            this.threads = this.threads.map(function (t) {
+                return t.id === id ? { id: t.id, title: name, createdAt: t.createdAt, updatedAt: Date.now(), messages: t.messages } : t;
+            });
+            llmSaveThreads(this.threads);
+            this.renderThreadList();
+        } catch (_) {}
+    },
+
     addMessage(role, content) {
         this.history.push({ role, content });
         this.renderMessage(role, content);
+        try { this.persistThreads(); } catch (_) {}
     },
 
     renderMessage(role, content) {
         const log = document.getElementById('llm-chat-log');
+        if (!log) return;
         const msg = document.createElement('div');
         msg.className = `llm-msg llm-msg-${role}`;
         msg.textContent = content;
@@ -868,6 +1134,7 @@ const llmChat = {
 
     renderCode(code) {
         const log = document.getElementById('llm-chat-log');
+        if (!log) return;
         const msg = document.createElement('div');
         msg.className = 'llm-msg llm-msg-code';
         msg.textContent = '▶ ' + code;
@@ -878,6 +1145,7 @@ const llmChat = {
     renderImage(dataUrl) {
         if (!dataUrl) return;
         const log = document.getElementById('llm-chat-log');
+        if (!log) return;
         const msg = document.createElement('div');
         msg.className = 'llm-msg llm-msg-system';
         const img = document.createElement('img');
@@ -981,6 +1249,7 @@ const llmChat = {
             }
 
             this.history.push({ role: 'assistant', content: rawContent });
+            try { this.persistThreads(); } catch (_) {}
 
             // Safety check — if the extracted text has no JS-like tokens the model
             // returned prose instead of code; show a friendly error instead of a
@@ -1039,6 +1308,7 @@ const llmChat = {
         this.history = [];
         document.getElementById('llm-chat-log').innerHTML = '';
         this.renderMessage('system', 'Chat cleared. History reset.');
+        try { this.persistThreads(); } catch (_) {}
     },
 
     // ─────────────────────────────────────────────────────────────
@@ -1175,3 +1445,4 @@ const llmChat = {
 // not automatically a window property in classic scripts).
 try { window.llmChat = llmChat; } catch (e) {}
 try { llmChat.initModelUI(); } catch (e) {}
+try { llmChat.initThreads(); } catch (e) {}
