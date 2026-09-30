@@ -711,6 +711,12 @@ const LLM_FETCH_TIMEOUT_MS = 120000;
 const LLM_FETCH_MAX_RETRIES = 3;
 const LLM_FETCH_BACKOFF_BASE_MS = 1000;
 
+// Stop support: llmChat.stop() sets llmStopRequested and aborts the
+// in-flight attempt; the retry loop checks the flag so no new attempt
+// starts after a stop. Scene changes already applied are never reverted.
+var llmStopRequested = false;
+var llmActiveFetchController = null;
+
 function llmFetchIsRetryableStatus(status) {
     return status === 429 || (status >= 500 && status <= 599);
 }
@@ -728,6 +734,11 @@ async function llmChatFetchJson(url, apiKey, body, opts) {
     var attempt = 0;
     var lastErr = null;
     while (true) {
+        if (llmStopRequested) {
+            var _llmStopErr = new Error('STOPPED_BY_USER');
+            _llmStopErr._llmStopped = true;
+            throw _llmStopErr;
+        }
         var controller = null;
         var timer = null;
         try {
@@ -735,6 +746,7 @@ async function llmChatFetchJson(url, apiKey, body, opts) {
                 controller = new AbortController();
                 timer = setTimeout(function () { controller.abort(); }, timeoutMs);
             }
+            llmActiveFetchController = controller;
             var response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -745,6 +757,7 @@ async function llmChatFetchJson(url, apiKey, body, opts) {
                 signal: controller ? controller.signal : undefined
             });
             if (timer) clearTimeout(timer);
+            llmActiveFetchController = null;
             if (response.ok) {
                 return await response.json();
             }
@@ -769,7 +782,15 @@ async function llmChatFetchJson(url, apiKey, body, opts) {
             lastErr._llmStatus = response.status;
         } catch (err) {
             if (timer) clearTimeout(timer);
-            if (err && err.name === 'AbortError') {
+            llmActiveFetchController = null;
+            if (err && err._llmStopped) {
+                throw err;
+            } else if (err && err.name === 'AbortError') {
+                if (llmStopRequested) {
+                    var _llmAbortStop = new Error('STOPPED_BY_USER');
+                    _llmAbortStop._llmStopped = true;
+                    throw _llmAbortStop;
+                }
                 lastErr = new Error('Request timed out after ' + Math.round(timeoutMs / 1000) + 's — '
                     + 'retrying (attempt ' + (attempt + 1) + '/' + (maxRetries + 1) + ').');
                 lastErr._llmRetryable = true;
@@ -803,6 +824,21 @@ async function llmChatFetchJson(url, apiKey, body, opts) {
 const llmChat = {
     isOpen: false,
     history: [],
+    isRunning: false,
+
+    // Stop the in-flight run: aborts the LLM fetch; if the response
+    // already arrived, sendMessage() skips code execution. Safe no-op
+    // when idle. Applied scene changes are never reverted.
+    stop() {
+        if (!this.isRunning) return;
+        llmStopRequested = true;
+        try { if (llmActiveFetchController) llmActiveFetchController.abort(); } catch (_) {}
+    },
+
+    _updateStopBtn() {
+        var btn = document.getElementById('llm-chat-stop');
+        if (btn) btn.disabled = !this.isRunning;
+    },
 
     toggle() {
         const panel = document.getElementById('llm-chat-panel');
@@ -857,6 +893,7 @@ const llmChat = {
     },
 
     async sendMessage() {
+        if (this.isRunning) return;
         const input = document.getElementById('llm-chat-input');
         const sendBtn = document.getElementById('llm-chat-send');
         const userText = input.value.trim();
@@ -865,6 +902,9 @@ const llmChat = {
         input.value = '';
         input.disabled = true;
         sendBtn.disabled = true;
+        this.isRunning = true;
+        llmStopRequested = false;
+        this._updateStopBtn();
 
         this.addMessage('user', userText);
 
@@ -899,6 +939,14 @@ const llmChat = {
                 temperature: 0.1,
                 max_tokens: 16000
             });
+
+            // Stop arrived after the response: skip code execution entirely.
+            // Anything already applied to the scene stays applied (no revert).
+            if (llmStopRequested) {
+                thinking.remove();
+                this.renderMessage('system', '⏹ Stopped — response discarded, nothing executed.');
+                return;
+            }
 
             const msg = (data.choices && data.choices[0] && data.choices[0].message) || {};
             // Thinking models sometimes leave content empty and put everything in
@@ -970,11 +1018,19 @@ const llmChat = {
             if (log.lastChild && log.lastChild.textContent === '...') {
                 log.lastChild.remove();
             }
-            this.renderMessage('error', 'Error: ' + err.message);
-            console.error('LLM fetch error:', err);
+            if (err && (err.message === 'STOPPED_BY_USER' || err._llmStopped)) {
+                this.renderMessage('system', '⏹ Stopped.');
+            } else {
+                this.renderMessage('error', 'Error: ' + err.message);
+                console.error('LLM fetch error:', err);
+            }
         } finally {
+            this.isRunning = false;
+            llmStopRequested = false;
+            llmActiveFetchController = null;
             input.disabled = false;
             sendBtn.disabled = false;
+            this._updateStopBtn();
             input.focus();
         }
     },
