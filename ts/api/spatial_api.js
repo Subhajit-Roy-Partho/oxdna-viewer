@@ -801,6 +801,11 @@ window.space = (function() {
             }
             if (relaxOpts.steps == null) relaxOpts.steps = 2000;
             if (relaxOpts.bondDistance == null) relaxOpts.bondDistance = 0.7;
+            // Window defaults: stiff spring (k scaled with b) and repulsion ramping to 0.
+            if (relaxOpts.k == null) relaxOpts.k = 1000;
+            if (relaxOpts.b == null) relaxOpts.b = 2;
+            if (relaxOpts.repulsionEnd == null) relaxOpts.repulsionEnd = 0;
+            if (relaxOpts.repulsionRampSteps == null) relaxOpts.repulsionRampSteps = 200;
             notify('Running rigidDNA relaxation (WASM, ' + relaxOpts.steps + ' steps)...');
             var exp = exportSceneForRigidDna();
             var result = await RigidDnaBridge.relax(exp.topText, exp.datText, relaxOpts);
