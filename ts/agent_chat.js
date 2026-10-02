@@ -38,24 +38,22 @@ const AGENT_CONFIG = {
     }
 };
 
-// Send-to-maintainer (Telegram) bot-token default. Intentional public
-// default per maintainer decision (bot @SubhoGilaBot, name Gila) so
-// contact works out of the box; the exposure tradeoff was explicitly
-// accepted. Precedence (user-set values keep winning):
-//   ts/config.js gitignored override (OXVIEW_CONFIG.telegramBotToken)
-//   → localStorage user value ('oxview_telegram_bot_token', then
-//     NanoCanvas-shared 'nc_telegram_bot_token')
-//   → built-in default below.
-// The target chat ID intentionally has NO default — it stays empty
-// until the user pastes one.
-const TELEGRAM_BOT_TOKEN_DEFAULT =
-    "8794105541:AAGcw_74574BVbvAexrqhfHUJZVM1DtHlmw";
-function resolveTelegramBotToken() {
-    return (window.OXVIEW_CONFIG || {}).telegramBotToken
-        || localStorage.getItem('oxview_telegram_bot_token')
-        || localStorage.getItem('nc_telegram_bot_token')
-        || TELEGRAM_BOT_TOKEN_DEFAULT;
-};
+// Send-to-maintainer (Telegram) bot-token resolver. ts/llm_chat.js (loaded
+// first) already defines the global resolveTelegramBotToken(); this file used
+// to redeclare `const TELEGRAM_BOT_TOKEN_DEFAULT` too, and two classic scripts
+// sharing the global scope cannot both declare a top-level const -- the second
+// one threw "SyntaxError: Identifier 'TELEGRAM_BOT_TOKEN_DEFAULT' has already
+// been declared" and agent_chat.js never ran. Only define the resolver here as
+// a fallback for when this file is loaded on its own (precedence is the same:
+// OXVIEW_CONFIG.telegramBotToken -> localStorage -> built-in default).
+if (typeof resolveTelegramBotToken !== 'function') {
+    var resolveTelegramBotToken = function () {
+        return (window.OXVIEW_CONFIG || {}).telegramBotToken
+            || localStorage.getItem('oxview_telegram_bot_token')
+            || localStorage.getItem('nc_telegram_bot_token')
+            || "8794105541:AAGcw_74574BVbvAexrqhfHUJZVM1DtHlmw";
+    };
+}
 
 const AGENT_MAX_RETRIES = 3;
 
