@@ -112,16 +112,14 @@ const RigidDnaBridge = {
             const lines = [
                 `steps=${opts.steps ?? 2000}`,
                 `dt=${opts.dt ?? 0.01}`,
-                `k=${opts.k ?? 10}`,
-                `b=${opts.b ?? 0.2}`,
+                `k=${opts.k ?? 1000}`,
+                `b=${opts.b ?? 2}`,
                 `repulsion=${opts.repulsion ?? 1500}`,
                 `repulsion_offset=${opts.repulsionOffset ?? 0}`,
                 `topology=/rd/topology.top`,
                 `conf_file=/rd/conf.dat`,
                 `last_conf=/rd/last_conf.dat`,
                 `recluster=${opts.recluster ? 'true' : 'false'}`,
-                `cluster_mode=${opts.clusterMode ?? 'auto'}`,
-                `bundle_size=${opts.bundleSize ?? 1}`,
                 `cluster_angle_deg=${opts.clusterAngleDeg ?? 10}`,
                 `cluster_max_merge_dist=${opts.clusterMaxMergeDist ?? 10}`,
                 `print_conf_interval=0`,
@@ -146,8 +144,18 @@ const RigidDnaBridge = {
             if (opts.repulsionEnd !== undefined && opts.repulsionEnd !== (opts.repulsion ?? 1500)) {
                 lines.push(`repulsion_end=${opts.repulsionEnd}`);
             }
-            if (opts.breakLength !== undefined)
-                lines.push(`break_length=${opts.breakLength}`);
+            if (opts.repulsionRampSteps && opts.repulsionEnd !== undefined) {
+                lines.push(`repulsion_ramp_steps=${Math.round(opts.repulsionRampSteps)}`);
+            }
+            // Granularity keys only matter when reclustering; the engine now
+            // treats them as an explicit choice (implying recluster, or
+            // warning under recluster=false), so send them only when used.
+            if (opts.recluster) {
+                lines.push(`cluster_mode=${opts.clusterMode ?? 'auto'}`);
+                lines.push(`bundle_size=${opts.bundleSize ?? 1}`);
+                if (opts.breakLength !== undefined)
+                    lines.push(`break_length=${opts.breakLength}`);
+            }
             if (opts.planar) {
                 lines.push(`planar=true`);
                 if (opts.planeNormal)

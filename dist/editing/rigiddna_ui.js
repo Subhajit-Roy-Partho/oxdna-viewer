@@ -137,6 +137,9 @@ function collectRigidDnaRelaxOptions() {
     const repulsionEnd = rigidDnaOptionalNumber('rigidDnaRepulsionEnd');
     if (repulsionEnd !== undefined)
         opts.repulsionEnd = repulsionEnd;
+    const repulsionRampSteps = rigidDnaOptionalNumber('rigidDnaRepulsionRampSteps');
+    if (repulsionRampSteps)
+        opts.repulsionRampSteps = repulsionRampSteps;
     if (view.getInputBool('rigidDnaKRampEnable')) {
         opts.kStart = view.getInputNumber('rigidDnaKStart');
         opts.kIncrement = view.getInputNumber('rigidDnaKIncrement');

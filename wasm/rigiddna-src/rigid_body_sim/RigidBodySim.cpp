@@ -305,14 +305,22 @@ public:
   double repulsion_k;
   double repulsion_offset;
   // Repulsion ramp: optionally scale the cluster-sphere repulsion constant
-  // down over the run, from `repulsion` at step 0 to `repulsion_end` at the
-  // last step -- lets overlapping clusters separate early (strong repulsion)
-  // without that same strength fighting bond tightening late in the run.
-  // Mirrors the bond_distance ramp pattern: unset (or equal to repulsion)
-  // reproduces the old fixed-repulsion behavior exactly.
-  double repulsion_end = 0.0;      // target value at the last step; only used when repulsion_is_ramp
+  // down over the run, from `repulsion` at step 0 to `repulsion_end`,
+  // letting overlapping clusters separate early (strong repulsion) without
+  // that strength fighting bond tightening later. By default the ramp is
+  // linear across the whole run; `repulsion_ramp_steps=N` makes it reach
+  // `repulsion_end` by step N instead (and hold there), i.e. a rapid drop
+  // that leaves the rest of the run to spring/damping relaxation.
+  // Unset (or equal to repulsion) reproduces the old fixed behavior exactly.
+  double repulsion_end = 0.0;       // only used when repulsion_is_ramp
   bool repulsion_is_ramp = false;
-  double repulsion_k_current = 0.0; // working value for the current step, set in initRigidBodies() and advanced in stepPhysics()
+  long long repulsion_ramp_steps = 0; // 0 = ramp spans the whole run
+  double repulsion_k_current = 0.0; // working value for the current step
+  // Step at which the repulsion ramp reaches repulsion_end.
+  long long repulsion_ramp_end_step() const {
+    long long n = (repulsion_ramp_steps > 0) ? repulsion_ramp_steps : (long long)steps;
+    return std::max(1LL, std::min(n, std::max(1LL, (long long)steps)));
+  }
   double dt = 0.005; // Time step
 
   // bond_distance (r0, the spring's target rest length for every
@@ -411,6 +419,13 @@ public:
   // HelixClustering.hpp. `cluster_size`, if given, overrides `cluster_mode`.
   std::string cluster_mode = "auto";
   int bundle_size = 1;
+  // Selection bookkeeping: which clustering keys the input file actually
+  // set, so an explicit choice is never silently ignored (see
+  // finalizeClusters()) and `cluster_size` can reliably win over
+  // `cluster_mode` no matter which key comes first in the file.
+  std::string cluster_size_key;        // raw value of cluster_size=, "" if absent
+  bool cluster_selection_given = false; // cluster_size/cluster_mode/bundle_size/break_length present
+  bool recluster_given = false;         // recluster= present at all (true OR false)
   bool needs_clustering = false;   // set once the topology is read
   int n_strands = 0;
   int n_clusters_in_file = 0;
@@ -502,10 +517,6 @@ public:
           repulsion_k = std::stod(val);
         else if (key == "repulsion_offset")
           repulsion_offset = std::stod(val);
-        else if (key == "repulsion_end") {
-          repulsion_end = std::stod(val);
-          repulsion_is_ramp = true;
-        }
         else if (key == "r0" || key == "bond_distance") {
           // Accept either one value (fixed r0 for the whole run) or two
           // comma-separated values (linear ramp start,end -- see the
@@ -546,24 +557,35 @@ public:
           trajectory_precision = std::stoi(val);
         else if (key == "num_threads")
           num_threads = std::stoi(val);
-        else if (key == "recluster")
+        else if (key == "repulsion_end") {
+          repulsion_end = std::stod(val);
+          repulsion_is_ramp = true;
+        } else if (key == "repulsion_ramp_steps") {
+          repulsion_ramp_steps = std::stoll(val);
+        }
+        else if (key == "recluster") {
           recluster = (val == "true" || val == "True" || val == "TRUE" || val == "1");
+          recluster_given = true;
+        }
         else if (key == "cluster_angle_deg")
           cluster_angle_deg = std::stod(val);
         else if (key == "cluster_max_merge_dist")
           cluster_max_merge_dist = std::stod(val);
-        else if (key == "cluster_mode")
+        else if (key == "cluster_mode") {
           cluster_mode = val;
-        else if (key == "bundle_size")
+          cluster_selection_given = true;
+        } else if (key == "bundle_size") {
           bundle_size = std::stoi(val);
-        else if (key == "break_length")
+          cluster_selection_given = true;
+        } else if (key == "break_length") {
           break_length = std::stod(val);
-        else if (key == "cluster_size") {
-          // Primary, documented alias: cluster_size=large|helix.
-          if (val == "large") cluster_mode = "auto";
-          else if (val == "helix") cluster_mode = "helix";
-          else std::cerr << "Warning: cluster_size expects 'large' or 'helix', got: " << val
-                          << " -- use cluster_mode=auto|helix|bundle directly for other options." << std::endl;
+          if (break_length > 0.0) cluster_selection_given = true;
+        } else if (key == "cluster_size") {
+          // Primary, documented alias: cluster_size=large|helix|bundle.
+          // Resolved after the whole file is read (see below) so it
+          // overrides cluster_mode regardless of key order, as documented.
+          cluster_size_key = val;
+          cluster_selection_given = true;
         }
         else if (key == "volume_exclusion")
           volume_exclusion = (val == "true" || val == "True" || val == "TRUE" || val == "1");
@@ -603,6 +625,23 @@ public:
           energy_log_file = val;
       }
     }
+
+    // cluster_size overrides cluster_mode regardless of key order.
+    if (!cluster_size_key.empty()) {
+      if (cluster_size_key == "large") cluster_mode = "auto";
+      else if (cluster_size_key == "helix") cluster_mode = "helix";
+      else if (cluster_size_key == "bundle") cluster_mode = "bundle";
+      else std::cerr << "Warning: cluster_size expects 'large', 'helix' or 'bundle', got: "
+                     << cluster_size_key << " -- keeping cluster_mode=" << cluster_mode << "." << std::endl;
+    }
+    if (cluster_mode != "auto" && cluster_mode != "helix" && cluster_mode != "bundle") {
+      std::cerr << "Warning: unknown cluster_mode '" << cluster_mode
+                << "' (expected auto|helix|bundle) -- falling back to auto." << std::endl;
+      cluster_mode = "auto";
+    }
+    if (bundle_size > 1 && cluster_mode != "bundle")
+      std::cerr << "Warning: bundle_size=" << bundle_size << " has no effect unless "
+                << "cluster_mode=bundle (or cluster_size=bundle)." << std::endl;
   }
 
   // Reads a topology in either format:
@@ -703,6 +742,26 @@ public:
   // Otherwise just builds `clusters` from the ids already read from the
   // topology file.
   void finalizeClusters() {
+    // An explicit clustering choice (cluster_size / cluster_mode /
+    // bundle_size / break_length) on a topology that already carries
+    // cluster ids used to be silently ignored unless recluster=true was
+    // ALSO set -- while still changing the bond_distance default, so the
+    // run looked configured for e.g. one-cluster-per-helix but used the
+    // file's old clusters. Selecting a granularity now implies reclustering
+    // unless the input explicitly says recluster=false (then say so loudly).
+    if (!needs_clustering && !recluster && cluster_selection_given) {
+      if (recluster_given) {
+        std::cerr << "Warning: cluster_size/cluster_mode/bundle_size/break_length were given "
+                  << "but recluster=false, so the cluster ids already in the topology are used "
+                  << "as-is and those settings are IGNORED." << std::endl;
+        cluster_mode = "auto"; // don't let an ignored choice steer the bond_distance default
+      } else {
+        std::cout << "Clustering options given and the topology already has cluster ids: "
+                  << "implying recluster=true so the chosen granularity actually applies "
+                  << "(set recluster=false to keep the file's clusters)." << std::endl;
+        recluster = true;
+      }
+    }
     if (needs_clustering || recluster) {
       std::vector<helixcluster::NucleotideView> nt(particles.size());
       for (size_t i = 0; i < particles.size(); ++i) {
@@ -848,10 +907,7 @@ public:
       bond_distance_start = bond_distance_end = (cluster_mode == "helix") ? 0.75 : 2.0;
     }
     r0_current = bond_distance_start;
-
-    // Starting value for the (optionally ramped) repulsion constant. With
-    // no repulsion_end= given (or one equal to repulsion), this stays at
-    // repulsion_k, so behavior is unchanged unless the user opts into ramping.
+    // Starting value for the (optionally ramped) repulsion constant.
     repulsion_k_current = repulsion_k;
 
     // Resolve volume_exclusion_start's default (steps/2) now that `steps`
@@ -886,7 +942,7 @@ public:
               << (repulsion_is_ramp
                       ? (std::to_string(repulsion_k) + " -> " +
                          std::to_string(repulsion_end) + " by step " +
-                         std::to_string(steps))
+                         std::to_string(repulsion_ramp_end_step()))
                       : (std::to_string(repulsion_k) + " fixed"))
               << (volume_exclusion
                       ? (" | volume_exclusion type=" + std::to_string(volume_exclusion_type) +
@@ -1256,11 +1312,11 @@ public:
       r0_current = bond_distance_start;
     }
 
-    // Advance the repulsion ramp the same way (no-op unless repulsion_end=
-    // was requested): linear from repulsion_k at step 0 to repulsion_end at
-    // the last step, held there after (t clamps at 1.0).
+    // Advance the repulsion ramp (no-op unless repulsion_end= was given):
+    // linear from repulsion_k at step 0 to repulsion_end at the ramp's end
+    // step (repulsion_ramp_steps, or the last step), held there after.
     if (repulsion_is_ramp && steps > 0) {
-      double t = std::min(1.0, (double)current_step / (double)steps);
+      double t = std::min(1.0, (double)current_step / (double)repulsion_ramp_end_step());
       repulsion_k_current = repulsion_k + (repulsion_end - repulsion_k) * t;
     } else {
       repulsion_k_current = repulsion_k;

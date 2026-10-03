@@ -80,11 +80,11 @@
     </div>
     <div class="cell-3">
         <label>k (spring)</label>
-        <input type="number" value="10" id="rigidDnaK" min="0">
+        <input type="number" value="1000" id="rigidDnaK" min="0" title="Cross-cluster spring constant. Default raised from 10 to 1000; keep b ~= 0.2*sqrt(k/10) (1000 -> 2.0) so the run settles instead of ringing.">
     </div>
     <div class="cell-3">
         <label>b (damping)</label>
-        <input type="number" value="0.2" id="rigidDnaB" step="0.01" min="0">
+        <input type="number" value="2" id="rigidDnaB" step="0.01" min="0" title="Damping. Scale with k: b ~= 0.2*sqrt(k/10).">
     </div>
 </div>
 <div class="row">
@@ -100,11 +100,17 @@
 <div class="row">
     <div class="cell-6">
         <label>Ramp down repulsion to (blank = off)</label>
-        <input type="number" value="100" id="rigidDnaRepulsionEnd" title="If set, the cluster-sphere repulsion constant ramps linearly from Repulsion at step 0 down to this value at the last step, letting overlapping clusters separate early without fighting bond tightening late in the run" min="0">
+        <input type="number" value="0" id="rigidDnaRepulsionEnd" title="If set, the cluster-sphere repulsion constant ramps linearly from Repulsion at step 0 down to this value at the last step, letting overlapping clusters separate early without fighting bond tightening late in the run" min="0">
     </div>
     <div class="cell-6">
         <label>Bond distance (su, blank = 0.7)</label>
         <input type="number" value="0.7" id="rigidDnaBondDistance" title="Fixed rest length for cross-cluster springs. Defaults to 0.7 (close to the real ~0.75su backbone bond) -- clear the field for the engine's own cluster_size-dependent auto default (2.0 for Auto/Bundle granularity, 0.75 for one-cluster-per-helix) -- see rigidDNA docs' bond_distance section." min="0" step="0.01" placeholder="0.7">
+    </div>
+</div>
+<div class="row">
+    <div class="cell-6">
+        <label>Repulsion drop completes by step (blank = whole run)</label>
+        <input type="number" value="200" id="rigidDnaRepulsionRampSteps" title="The repulsion ramp reaches its end value at this step and holds there, so repulsion falls rapidly early on and the springs do the rest. Blank/0 = spread linearly over the whole run. Needs a rebuilt engine (repulsion_ramp_steps); older builds ignore it." min="0" step="1">
     </div>
 </div>
 <div class="row">

@@ -141,6 +141,8 @@ function collectRigidDnaRelaxOptions(): RigidDnaRelaxOptions {
     // prefills 100 so the default run ramps 1500 -> 100 over the whole run.
     const repulsionEnd = rigidDnaOptionalNumber('rigidDnaRepulsionEnd');
     if (repulsionEnd !== undefined) opts.repulsionEnd = repulsionEnd;
+    const repulsionRampSteps = rigidDnaOptionalNumber('rigidDnaRepulsionRampSteps');
+    if (repulsionRampSteps) opts.repulsionRampSteps = repulsionRampSteps;
 
     if (view.getInputBool('rigidDnaKRampEnable')) {
         opts.kStart = view.getInputNumber('rigidDnaKStart');
