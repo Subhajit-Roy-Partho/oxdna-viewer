@@ -59,9 +59,17 @@ node render.mjs --input /path/to/relaxed.oxview --out /tmp/relaxed.png
 2. Opens `index.html?f=<input>[&g=<dat>]`, reusing the viewer's own
    URL-param loader (`readFilesFromURLParams → handleFiles`), so file
    dispatch is identical to drag-and-drop in the UI.
-3. Waits for the explicit readiness signal (≥1 system with nucleotides;
-   bounded by `--timeout`, non-zero exit + stderr on failure).
-4. Hides axis arrows (unless `--arrows`), sets background, fits the camera
-   to the structure's bounding sphere, applies `--rotate`, renders, and
-   captures the WebGL canvas via `toDataURL` (pure canvas pixels — no UI
-   chrome). WebGL runs on SwiftShader; no GPU needed.
+3. Waits for the explicit readiness signal (≥1 system with nucleotides,
+   then monomer count stable across polls so progressive loading can't
+   cause a partial-structure fit; bounded by `--timeout`, non-zero exit +
+   stderr on failure).
+4. Hides axis arrows (unless `--arrows`), freezes controls damping, fits
+   the camera to the structure's bounding sphere from a fixed canonical
+   direction (identical commands frame identically), applies `--rotate`,
+   then sets the background (opaque WebGL clear color), waits for a
+   stable frame (settled camera + non-blank canvas, pose/count
+   re-verified at capture; re-fits instead of screenshotting a wrong
+   frame), and captures the WebGL canvas via `toDataURL` (pure canvas
+   pixels — no UI chrome). WebGL runs on SwiftShader; no GPU needed.
+   Chromium picker prefers full Chromium builds (headless-shell has no
+   WebGL); `CHROME_PATH` overrides, system browsers are fallback.

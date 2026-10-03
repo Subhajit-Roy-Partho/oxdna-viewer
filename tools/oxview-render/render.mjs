@@ -199,27 +199,37 @@ function loadPlaywright() {
 function findChrome() {
   if (process.env.CHROME_PATH && fs.existsSync(process.env.CHROME_PATH)) return process.env.CHROME_PATH;
   const cache = path.join(os.homedir(), ".cache", "ms-playwright");
-  const cands = [];
-  for (const sub of ["chromium_headless_shell", "chromium"]) {
-    if (!fs.existsSync(cache)) continue;
+  // Full Chromium builds first (WebGL via SwiftShader works), system
+  // browsers next, headless-shell last: chrome-headless-shell has no WebGL
+  // so every render fails with "Error creating WebGL context".
+  const full = [];
+  const shell = [];
+  if (fs.existsSync(cache)) {
     for (const d of fs.readdirSync(cache)) {
-      if (!d.startsWith(sub)) continue;
-      const exe = sub === "chromium"
-        ? path.join(cache, d, "chrome-linux64", "chrome")
-        : path.join(cache, d, "chrome-headless-shell-linux64", "chrome-headless-shell");
-      if (fs.existsSync(exe)) cands.push(exe);
+      if (d.startsWith("chromium_headless_shell")) {
+        const exe = path.join(cache, d, "chrome-headless-shell-linux64", "chrome-headless-shell");
+        if (fs.existsSync(exe)) shell.push(exe);
+      } else if (d.startsWith("chromium")) {
+        for (const sub of ["chrome-linux64/chrome", "chrome-linux/chrome"]) {
+          const exe = path.join(cache, d, sub);
+          if (fs.existsSync(exe)) { full.push(exe); break; }
+        }
+      }
     }
   }
   // Also accept a system chromium if the cache is absent.
-  for (const sys of ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome"]) {
-    if (fs.existsSync(sys)) cands.push(sys);
+  const sys = [];
+  for (const s of ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome"]) {
+    if (fs.existsSync(s)) sys.push(s);
   }
-  if (!cands.length) {
-    fail(1, "no Chromium found. Install one with `npx playwright install chromium` " +
-      "(or set CHROME_PATH to a chrome/chromium binary).");
+  for (const bucket of [full, sys, shell]) {
+    if (bucket.length) {
+      bucket.sort().reverse();
+      return bucket[0];
+    }
   }
-  cands.sort().reverse();
-  return cands[0];
+  fail(1, "no Chromium found. Install one with `npx playwright install chromium` " +
+    "(or set CHROME_PATH to a chrome/chromium binary).");
 }
 
 // ------------------------------------------------------------------- main --
@@ -286,16 +296,32 @@ try {
       (consoleErrors.length ? `\nConsole errors:\n${consoleErrors.slice(0, 5).join("\n")}` : ""));
   }
 
-  // 3. Scene setup: background, axes/box, selection.
-  const setupNote = await page.evaluate(({ background, arrows, box, select }) => {
+  // 2b. Full-load gate: the loader adds nucleotides progressively, so
+  // "≥1 monomer" (step 2) can fire on a partial structure — fitting then
+  // would compute a tiny bounding sphere (close-up framing). Wait until
+  // the total monomer count stops growing. (Cheap polls, no renders.)
+  try {
+    await page.waitForFunction(
+      () => {
+        var n = systems.reduce(function (a, s) { return a + s.getMonomers().length; }, 0);
+        var st = window.__oxvrLoad || (window.__oxvrLoad = { n: -1, stable: 0 });
+        if (st.n === n) st.stable++;
+        else { st.n = n; st.stable = 0; }
+        return n > 0 && st.stable >= 4;
+        // eslint-disable-next-line no-undef
+      },
+      null, { timeout: o.timeout, polling: 500 });
+  } catch {
+    fail(1, `structure kept changing for ${o.timeout} ms waiting for ${inputAbs} to finish loading. ` +
+      `Page errors:\n${pageErrors.join("\n") || "(none)"}` +
+      (consoleErrors.length ? `\nConsole errors:\n${consoleErrors.slice(0, 5).join("\n")}` : ""));
+  }
+
+  // 3. Scene setup: axes/box, selection. (Background/clear-color is applied
+  // AFTER the camera fit in step 5, so no racing render can capture a
+  // transparent/black frame.)
+  const setupNote = await page.evaluate(({ arrows, box, select }) => {
     const notes = [];
-    try { api.setBackgroundColor(background); } catch (e) { notes.push("background: " + e.message); }
-    try {
-      // Make the WebGL clear color opaque so the captured PNG carries real
-      // background pixels (the default clear is transparent; CSS bg alone
-      // would leave the PNG alpha channel empty). Headless-only, ephemeral.
-      renderer.setClearColor(new THREE.Color(background), 1);
-    } catch (e) { notes.push("clearcolor: " + e.message); }
     try { setArrowsVisibility(!!arrows); }
     catch (e) { notes.push("arrows: " + e.message); }
     try { if (typeof boxObj !== "undefined" && boxObj) boxObj.visible = !!box; }
@@ -312,50 +338,161 @@ try {
         else { clearSelection(); api.selectElements(picked.flatMap((s) => s.getMonomers()), true); }
       }
     } catch (e) { notes.push("select: " + e.message); }
-    render();
+    // No render() here: the fit/background/probe steps below each render,
+    // and every render costs seconds under SwiftShader.
     return notes.join("; ");
     // eslint-disable-next-line no-undef
-  }, { background: o.background, arrows: o.arrows, box: o.box, select: o.select });
+  }, { arrows: o.arrows, box: o.box, select: o.select });
   if (setupNote) process.stderr.write(`oxview-render: setup notes: ${setupNote}\n`);
 
-  // 4. Fit camera to structure, apply rotation, render.
-  await page.evaluate(([rx, ry, rz]) => {
-    let cx = 0, cy = 0, cz = 0, n = 0, r2 = 0;
-    const pts = [];
-    for (const sys of systems) {
-      for (const m of sys.getMonomers()) {
-        const p = m.getPos();
-        pts.push(p); cx += p.x; cy += p.y; cz += p.z; n++;
+  // 4-6. Fit camera, apply background, and wait for a stable frame — in a
+  // bounded re-fit loop. The viewer's loader can reposition the camera
+  // AFTER our fit (timing varies per run); a single one-shot fit + fixed
+  // sleep then nondeterministically catches a mid-flight or blank frame.
+  // Re-fitting until the settle gate passes makes the result deterministic.
+  // Total bounded by --timeout.
+  //
+  // Performance note: each full render() costs seconds under SwiftShader,
+  // so the settle polls below are deliberately cheap (camera pose only, no
+  // rendering); a single render + pixel probe runs once the pose is stable.
+  const t0 = Date.now();
+  let settled = false;
+  let attempts = 0;
+  while (!settled && Date.now() - t0 < o.timeout) {
+    attempts++;
+    // 4. Freeze controls damping, then fit camera to structure and rotate.
+    // The viewer's rAF loop calls controls.update() continuously, so any
+    // residual damping drift would race the fit and produce random zoom.
+    // (No render() here — later renders supersede it; renders are slow.)
+    await page.evaluate(([rx, ry, rz]) => {
+      try {
+        controls.staticMoving = true;
+        if ("enableDamping" in controls) controls.enableDamping = false;
+      } catch (e) { /* controls stay as-is; fit below still applies */ }
+      let cx = 0, cy = 0, cz = 0, n = 0, r2 = 0;
+      const pts = [];
+      for (const sys of systems) {
+        for (const m of sys.getMonomers()) {
+          const p = m.getPos();
+          pts.push(p); cx += p.x; cy += p.y; cz += p.z; n++;
+        }
       }
-    }
-    const c = new THREE.Vector3(cx / n, cy / n, cz / n);
-    for (const p of pts) r2 = Math.max(r2, p.distanceToSquared(c));
-    const radius = Math.sqrt(r2) || 10;
-    const vfov = (camera.fov || 45) * Math.PI / 180;
-    const aspect = window.innerWidth / window.innerHeight;
-    const eff = Math.min(vfov, 2 * Math.atan(Math.tan(vfov / 2) * aspect));
-    const dist = (radius / Math.tan(eff / 2)) * 1.25;
-    const dir = camera.position.clone().sub(controls.target);
-    if (dir.lengthSq() < 1e-6) dir.set(1, 0.3, 0.4);
-    dir.normalize().applyEuler(new THREE.Euler(
-      rx * Math.PI / 180, ry * Math.PI / 180, rz * Math.PI / 180));
-    controls.target.copy(c);
-    camera.position.copy(c).addScaledVector(dir, dist);
-    camera.near = Math.max(dist / 1000, 0.1);
-    camera.far = dist * 100 + radius * 10;
-    camera.updateProjectionMatrix();
-    controls.update();
-    render();
-    // eslint-disable-next-line no-undef
-  }, o.rot);
+      const c = new THREE.Vector3(cx / n, cy / n, cz / n);
+      for (const p of pts) r2 = Math.max(r2, p.distanceToSquared(c));
+      const radius = Math.sqrt(r2) || 10;
+      const vfov = (camera.fov || 45) * Math.PI / 180;
+      const aspect = window.innerWidth / window.innerHeight;
+      const eff = Math.min(vfov, 2 * Math.atan(Math.tan(vfov / 2) * aspect));
+      const dist = (radius / Math.tan(eff / 2)) * 1.25;
+      // Fixed canonical view direction (not the loader's leftover camera
+      // pose, which varies run to run): mostly-+y 3/4 tilt, so identical
+      // commands frame identically. --rotate orbits on top.
+      const dir = new THREE.Vector3(0.35, 1, 0.45);
+      dir.normalize().applyEuler(new THREE.Euler(
+        rx * Math.PI / 180, ry * Math.PI / 180, rz * Math.PI / 180));
+      controls.target.copy(c);
+      camera.position.copy(c).addScaledVector(dir, dist);
+      camera.near = Math.max(dist / 1000, 0.1);
+      camera.far = dist * 100 + radius * 10;
+      camera.updateProjectionMatrix();
+      controls.update();
+      window.__oxvrFit = {
+        key: [camera.position.x, camera.position.y, camera.position.z,
+          controls.target.x, controls.target.y, controls.target.z].map(function (v) {
+            return v.toFixed(4);
+          }).join(","),
+        count: systems.reduce(function (a, s) { return a + s.getMonomers().length; }, 0),
+      };
+      // eslint-disable-next-line no-undef
+    }, o.rot);
 
-  await page.waitForTimeout(600);
-  const canvasBox = await page.locator("#threeCanvas").evaluate((el) => {
-    render();
-    return { w: el.width, h: el.height, url: el.toDataURL("image/png") };
-  });
-  fs.mkdirSync(path.dirname(path.resolve(o.out)), { recursive: true });
-  fs.writeFileSync(path.resolve(o.out), Buffer.from(canvasBox.url.split(",")[1], "base64"));
+    // 5. Background AFTER the fit (opaque clear so the PNG carries real
+    // background pixels; the default clear is transparent).
+    await page.evaluate((background) => {
+      api.setBackgroundColor(background);
+      // Make the WebGL clear color opaque so the captured PNG carries real
+      // background pixels (the default clear is transparent; CSS bg alone
+      // would leave the PNG alpha channel empty). Headless-only, ephemeral.
+      renderer.setClearColor(new THREE.Color(background), 1);
+      render();
+      // eslint-disable-next-line no-undef
+    }, o.background);
+
+    // 6a. Cheap pose-stability gate (no rendering per poll): proceed once
+    // camera position + controls target are unchanged for consecutive polls.
+    // Reset stability state so the previous attempt's key cannot leak in.
+    await page.evaluate(() => {
+      window.__oxvrStable = { key: "", n: 0 };
+      // eslint-disable-next-line no-undef
+    });
+    const remaining = o.timeout - (Date.now() - t0);
+    if (remaining < 5000) break;
+    try {
+      await page.waitForFunction((need) => {
+        var p = camera.position, t = controls.target;
+        var key = [p.x, p.y, p.z, t.x, t.y, t.z].map(function (v) {
+          return v.toFixed(4);
+        }).join(",");
+        var st = window.__oxvrStable || (window.__oxvrStable = { key: "", n: 0 });
+        st.n = (st.key === key) ? st.n + 1 : 1;
+        st.key = key;
+        return st.n >= need;
+        // eslint-disable-next-line no-undef
+      }, 5, { timeout: Math.min(15000, remaining - 4000), polling: 200 });
+    } catch {
+      // Camera still moving (e.g. the loader repositioned it after our
+      // fit) — loop around and re-fit.
+      continue;
+    }
+
+    // 6b. Single render + pixel probe + capture: the canvas must carry
+    // opaque, non-uniform pixels (background + structure actually drawn).
+    // Capturing here (rather than in a separate evaluate) saves a full
+    // multi-second SwiftShader render per run. Also verifies the pose and
+    // monomer count still match the fit — anything that moved/added
+    // anything after our fit (loader camera reset, late nucleotides)
+    // invalidates the frame instead of screenshotting a wrong one.
+    const shot = await page.evaluate((background) => {
+      render();
+      var key = [camera.position.x, camera.position.y, camera.position.z,
+        controls.target.x, controls.target.y, controls.target.z].map(function (v) {
+          return v.toFixed(4);
+        }).join(",");
+      var count = systems.reduce(function (a, s) { return a + s.getMonomers().length; }, 0);
+      var fit = window.__oxvrFit || { key: "", count: -1 };
+      var same = (key === fit.key && count === fit.count);
+      var bg = new THREE.Color(background);
+      var br = Math.round(bg.r * 255), bgg = Math.round(bg.g * 255), bb = Math.round(bg.b * 255);
+      var src = document.getElementById("threeCanvas");
+      var cv = window.__oxvrProbe || (window.__oxvrProbe = document.createElement("canvas"));
+      cv.width = 32; cv.height = 32;
+      var ctx = cv.getContext("2d");
+      ctx.drawImage(src, 0, 0, 32, 32);
+      var d = ctx.getImageData(0, 0, 32, 32).data;
+      var opaque = 0, other = 0;
+      for (var i = 0; i < d.length; i += 4) {
+        if (d[i + 3] === 255) opaque++;
+        if (Math.abs(d[i] - br) > 8 || Math.abs(d[i + 1] - bgg) > 8 || Math.abs(d[i + 2] - bb) > 8) other++;
+      }
+      var ok = same && (opaque === d.length / 4 && other > 10);
+      return { same: same, opaque: opaque, total: d.length / 4, other: other,
+        url: ok ? src.toDataURL("image/png") : null };
+      // eslint-disable-next-line no-undef
+    }, o.background);
+    if (shot.url) {
+      fs.mkdirSync(path.dirname(path.resolve(o.out)), { recursive: true });
+      fs.writeFileSync(path.resolve(o.out), Buffer.from(shot.url.split(",")[1], "base64"));
+      settled = true;
+    }
+    // Else blank/transparent frame, or something moved after our fit
+    // (pose/count mismatch) — loop around and re-fit.
+  }
+  if (!settled) {
+    fail(1, `scene did not settle within ${o.timeout} ms after ${attempts} fit attempt(s) ` +
+      `(camera kept moving or canvas stayed blank). ` +
+      `Page errors:\n${pageErrors.join("\n") || "(none)"}` +
+      (consoleErrors.length ? `\nConsole errors:\n${consoleErrors.slice(0, 5).join("\n")}` : ""));
+  }
   const bytes = fs.statSync(path.resolve(o.out)).size;
   if (!bytes) fail(1, `screenshot wrote an empty file to ${o.out}.`);
   console.log(`rendered ${o.out} (${o.width}x${o.height}, ${bytes} bytes) from ${inputAbs}`);
