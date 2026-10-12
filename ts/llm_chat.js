@@ -790,7 +790,7 @@ async function llmChatFetchJson(url, apiKey, body, opts) {
             if (detail && detail.length > 500) detail = detail.substring(0, 500) + '…';
             if (response.status === 401 || response.status === 403) {
                 throw new Error('🔑 API key rejected (HTTP ' + response.status + '). '
-                    + 'Set a valid key with the 🔑 button (stored as oxview_llm_api_key in localStorage) '
+                    + 'Set a valid key in Model & settings (stored as oxview_llm_api_key in localStorage) '
                     + 'or llmApiKey in ts/config.js.' + (detail ? ' Provider says: ' + detail : ''));
             }
             lastErr = new Error(response.status === 429
@@ -1144,6 +1144,8 @@ const llmChat = {
     renderMessage(role, content) {
         const log = document.getElementById('llm-chat-log');
         if (!log) return;
+        const welcome = log.querySelector('.ai-welcome');
+        if (welcome) welcome.remove();
         const msg = document.createElement('div');
         msg.className = `llm-msg llm-msg-${role}`;
         msg.textContent = content;
@@ -1156,7 +1158,14 @@ const llmChat = {
         if (!log) return;
         const msg = document.createElement('div');
         msg.className = 'llm-msg llm-msg-code';
-        msg.textContent = '▶ ' + code;
+        const details = document.createElement('details');
+        details.open = true;
+        const summary = document.createElement('summary');
+        summary.textContent = 'Generated code';
+        const pre = document.createElement('pre');
+        pre.textContent = code;
+        details.append(summary, pre);
+        msg.appendChild(details);
         log.appendChild(msg);
         log.scrollTop = log.scrollHeight;
     },
@@ -1196,7 +1205,9 @@ const llmChat = {
         this.addMessage('user', userText);
 
         if (!LLM_CONFIG.apiKey) {
-            this.renderMessage('error', 'No API key. Add one with the 🔑 button, or set llmApiKey in ts/config.js.');
+            this.renderMessage('error', 'No API key. Open Model & settings to add one.');
+            this.isRunning = false;
+            this._updateStopBtn();
             input.disabled = false; sendBtn.disabled = false; input.focus();
             return;
         }
@@ -1380,7 +1391,7 @@ const llmChat = {
         };
         if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
         if (!LLM_CONFIG.apiKey) {
-            showErr('No API key set — the /models call needs Authorization: Bearer <key>. Set one with the 🔑 button first.');
+            showErr('No API key set. Add one in Model & settings before refreshing models.');
             return;
         }
         var url = LLM_CONFIG.baseURL.replace(/\/+$/, '') + '/models';
@@ -1400,7 +1411,7 @@ const llmChat = {
                 if (detail && detail.length > 300) detail = detail.substring(0, 300) + '…';
                 if (response.status === 401 || response.status === 403) {
                     throw new Error('🔑 API key rejected (HTTP ' + response.status + '). '
-                        + 'Set a valid key with the 🔑 button (stored as oxview_llm_api_key in localStorage).'
+                        + 'Set a valid key in Model & settings (stored as oxview_llm_api_key in localStorage).'
                         + (detail ? ' Provider says: ' + detail : ''));
                 }
                 throw new Error('API error ' + response.status + ' from ' + url + '.'
@@ -1448,12 +1459,12 @@ const llmChat = {
             }
             console.error('LLM /models fetch error:', err);
         } finally {
-            if (btn) { btn.disabled = false; btn.textContent = '⟳ Models'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Refresh models'; }
         }
     },
 
     handleKeydown(event) {
-        if (event.key === 'Enter' && !event.shiftKey) {
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
             event.preventDefault();
             llmChat.sendMessage();
         }
