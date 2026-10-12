@@ -37,7 +37,7 @@ const SYSTEM_EXTS = new Set(["oxview", "top", "pdb", "cif", "mmcif", "xyz", "unf
 function parseArgs(argv) {
   const o = {
     width: 1280, height: 800, rotate: "0,0,0", background: "#ffffff",
-    select: "none", arrows: false, box: false, timeout: 60000, port: 8903,
+    select: "none", arrows: false, box: false, noGrid: false, timeout: 60000, port: 8903,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -59,6 +59,7 @@ function parseArgs(argv) {
       case "--select": o.select = take(a); break;
       case "--arrows": o.arrows = true; break;
       case "--box": o.box = true; break;
+      case "--no-grid": o.noGrid = true; break;
       case "--timeout": o.timeout = parseInt(take(a), 10); break;
       case "--port": o.port = parseInt(take(a), 10); break;
       case "--help": case "-h":
@@ -85,6 +86,7 @@ Options:
   --select SEL        none | all | comma strand indices, e.g. 0,2 (default none)
   --arrows            keep coordinate-axis arrows (default: hidden)
   --box               show simulation box (default: hidden)
+  --no-grid           hide the 3-D reference grid + labelled XYZ axes (default: shown)
   --timeout MS        max wait for structure load (default 60000)
   --port N            scratch static-server port (default 8903; auto-bumps if busy)`;
 
@@ -320,8 +322,10 @@ try {
   // 3. Scene setup: axes/box, selection. (Background/clear-color is applied
   // AFTER the camera fit in step 5, so no racing render can capture a
   // transparent/black frame.)
-  const setupNote = await page.evaluate(({ arrows, box, select }) => {
+  const setupNote = await page.evaluate(({ arrows, box, select, noGrid }) => {
     const notes = [];
+    try { if (noGrid && typeof space !== "undefined") space.grid(false); }
+    catch (e) { notes.push("grid: " + e.message); }
     try { setArrowsVisibility(!!arrows); }
     catch (e) { notes.push("arrows: " + e.message); }
     try { if (typeof boxObj !== "undefined" && boxObj) boxObj.visible = !!box; }
@@ -342,7 +346,7 @@ try {
     // and every render costs seconds under SwiftShader.
     return notes.join("; ");
     // eslint-disable-next-line no-undef
-  }, { arrows: o.arrows, box: o.box, select: o.select });
+  }, { arrows: o.arrows, box: o.box, select: o.select, noGrid: o.noGrid });
   if (setupNote) process.stderr.write(`oxview-render: setup notes: ${setupNote}\n`);
 
   // 4-6. Fit camera, apply background, and wait for a stable frame — in a
