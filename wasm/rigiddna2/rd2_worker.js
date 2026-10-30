@@ -1,4 +1,4 @@
-// Web Worker that hosts the rigidDNA2 WebAssembly module (docs/26_webassembly.md). The page never blocks: the computation is one synchronous call
+// Web Worker that hosts the rigidDNA2 WebAssembly module (docs/29_webassembly.md). The page never blocks: the computation is one synchronous call
 // inside this worker (which itself starts the OpenMP threads as further workers, running this same file); the page cancels by terminating the worker.
 //
 // Messages to the worker:   {type:'init', base, variant:'mt'|'st', threads}      load <base>/rd2_<variant>.js

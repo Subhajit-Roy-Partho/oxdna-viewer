@@ -1,4 +1,4 @@
-// JavaScript side of the WebAssembly build (docs/26_webassembly.md): turns an options object into the command line of rd2_run, runs it on the
+// JavaScript side of the WebAssembly build (docs/29_webassembly.md): turns an options object into the command line of rd2_run, runs it on the
 // in-memory file system of the module and collects the result. Works in a Web Worker (importScripts), in a page and in Node (require).
 (function (root) {
   'use strict';
