@@ -1141,18 +1141,15 @@
                     <span class="title">Forces</span>
                 </div>
                 <div class="group">
-                    <button class="ribbon-button" onclick="view.toggleWindow('rigidDNAWindow', initRigidDnaWindow)" title="Relax a flat caDNAno design via the rigidDNA WASM engine (runs entirely in your browser)">
+                    <button class="ribbon-button" onclick="rigidDnaOpen(1)" title="rigidDNA: relax a structure that is loaded in the viewer (rigid-body engine, runs entirely in your browser)">
                         <img src="img/ico/rigiddna-icon.svg" height="30px">
-                        <span class="caption">rigidDNA</span>
+                        <span class="caption">rigidDNA1</span>
                     </button>
-                    <span class="title">rigidDNA</span>
-                </div>
-                <div class="group">
-                    <button class="ribbon-button" onclick="view.toggleWindow('rigidDNA2Window', initRigidDna2Window)" title="Compute the relaxed 3D structure of a caDNAno / scadnano design in your browser (rigidDNA2 compiled to WebAssembly, runs in a worker)">
+                    <button class="ribbon-button" onclick="rigidDnaOpen(2)" title="rigidDNA2: compute the relaxed 3D structure of a caDNAno / scadnano / oxDNA design in your browser (WebAssembly, runs in a worker)">
                         <img src="img/ico/rigiddna-icon.svg" height="30px">
                         <span class="caption">rigidDNA2</span>
                     </button>
-                    <span class="title">rigidDNA2</span>
+                    <span class="title">rigidDNA</span>
                 </div>
             </div>
             <!-- Separate Protein section-->
@@ -1614,6 +1611,7 @@
         <script src="./dist/editing/rigiddna_ui.js"></script>
         <script src="./dist/editing/rigiddna2_bridge.js"></script>
         <script src="./dist/editing/rigiddna2_ui.js"></script>
+        <script src="./dist/editing/rigiddna_hub.js"></script>
         <script src="./dist/UI/UI.js"></script>
         <script src="./dist/main.js"></script>
         <script src="./dist/model/basicElement.js"></script>

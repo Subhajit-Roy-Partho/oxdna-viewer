@@ -1,7 +1,7 @@
 /**
  * rigiddna2_ui.ts
  *
- * UI glue for windows/rigidDNA2Window.html: choose (or drop) a caDNAno / scadnano design, run the rigidDNA2 WebAssembly pipeline
+ * UI glue for the rigidDNA2 tab of windows/rigidDNAWindow.html: choose (or drop) a caDNAno / scadnano design, run the rigidDNA2 WebAssembly pipeline
  * (rigiddna2_bridge.ts, in a Web Worker, with progress and cancel) and load the relaxed oxDNA .top/.dat through the viewer's ordinary file path
  * (handleFiles), so the result is a normal system in the scene.
  */
@@ -51,7 +51,7 @@ function rd2StageLabel(p) {
         default: return p.text || p.stage;
     }
 }
-/** oncreate callback of view.toggleWindow('rigidDNA2Window', ...) */
+/** oncreate callback of view.createWindow('rigidDNAWindow', ...) via initRigidDnaHub */
 function initRigidDna2Window() {
     const cap = Rd2Engine.capabilities();
     const threads = rd2El('rd2Threads');
@@ -107,7 +107,7 @@ async function rd2Files(files) {
 }
 /**
  * Called by handleFiles for a dropped .json / .sc file: a caDNAno or scadnano design is not something the viewer can read itself, so it is offered
- * to the rigidDNA2 window (which then holds it, ready to run). Returns true when the file was taken.
+ * to the rigidDNA2 tab (which then holds it, ready to run). Returns true when the file was taken.
  */
 async function rd2OfferDesign(file) {
     const lower = file.name.toLowerCase();
@@ -118,15 +118,17 @@ async function rd2OfferDesign(file) {
     }
     if (!isDesign)
         return false;
-    notify(`${file.name} is a DNA origami design: opening the rigidDNA2 window to relax it in your browser.`);
-    const w = document.getElementById('rigidDNA2Window');
+    notify(`${file.name} is a DNA origami design: opening the rigidDNA2 tab to relax it in your browser.`);
+    const w = document.getElementById('rigidDNAWindow');
     if (!w) {
         rd2Pending = file; // taken by initRigidDna2Window once the window exists
-        view.createWindow('rigidDNA2Window', initRigidDna2Window);
+        rigidDnaOpen(2);
     }
     else {
-        if (typeof Metro.window.show === 'function')
+        if (rigidDnaHubTab !== 2 || w.style.display === 'none') {
             Metro.window.show(w);
+            rigidDnaShowTab(2);
+        }
         rd2Files([file]);
     }
     return true;

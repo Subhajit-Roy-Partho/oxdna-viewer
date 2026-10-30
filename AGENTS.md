@@ -33,7 +33,7 @@
 | #9 | Create comprehensive documentation | 2026-06-12 23:30 |
 | #10 | Browser web deployment, non-root Tailscale proxy, postMessage bridge, and unified LLM cross-tool integration | 2026-07-23 08:24 |
 | #11 | Commit the rigidDNA relaxation window's full parameter set + live intermediate relaxation steps (existed uncommitted from an earlier session); remove dead `spatial_api.js` script reference | 2026-09-18 |
-| #12 | rigidDNA2 WebAssembly coupling (branch `rd2-wasm`): `wasm/rigiddna2/` module + worker, `ts/editing/rigiddna2_{bridge,ui}.ts`, `windows/rigidDNA2Window.*`, COOP/COEP in `serve.json`, `coi-serviceworker.js`, `tools/rd2wasm-e2e` | 2026-10-28 |
+| #12 | rigidDNA2 WebAssembly coupling (branch `rd2-wasm`): `wasm/rigiddna2/` module + worker, `ts/editing/rigiddna2_{bridge,ui}.ts`, `windows/rigidDNAWindow.*` (one window, tab rigidDNA1 + tab rigidDNA2; `ts/editing/rigiddna_hub.ts`), COOP/COEP in `serve.json`, `coi-serviceworker.js`, `tools/rd2wasm-e2e` (`e2e.mjs` full run, `tabs.mjs` tab behaviour) | 2026-10-28 |
 
 ---
 

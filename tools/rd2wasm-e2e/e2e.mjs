@@ -80,7 +80,7 @@ try {
   page.on("pageerror", (e) => errors.push(String((e && e.stack) || e)));
   page.on("console", (m) => { if (m.type() === "error") errors.push("console: " + m.text()); });
   await page.goto(`http://127.0.0.1:${o.port}/index.html`, { waitUntil: "load", timeout: 120000 });
-  await page.waitForFunction(() => typeof handleFiles === "function" && typeof initRigidDna2Window === "function", null, { timeout: 120000 });
+  await page.waitForFunction(() => typeof handleFiles === "function" && typeof rigidDnaOpen === "function", null, { timeout: 120000 });
 
   if (o.gpuProbe) {
     rec.webgpu = await page.evaluate(async () => {
@@ -114,10 +114,10 @@ try {
 
   if (o.sw) {   // no headers: the page is not isolated; the window offers the service worker, which reloads the page
     rec.isolatedBefore = await page.evaluate(() => crossOriginIsolated);
-    await page.evaluate(() => view.toggleWindow("rigidDNA2Window", initRigidDna2Window));
+    await page.evaluate(() => rigidDnaOpen(2));
     await page.waitForSelector("#rd2Engine a", { timeout: 30000 });
     await Promise.all([page.waitForNavigation({ waitUntil: "load", timeout: 60000 }), page.click("#rd2Engine a")]);
-    await page.waitForFunction(() => typeof initRigidDna2Window === "function", null, { timeout: 60000 });
+    await page.waitForFunction(() => typeof rigidDnaOpen === "function", null, { timeout: 60000 });
     rec.isolatedAfter = await page.evaluate(() => crossOriginIsolated);
   }
 
@@ -125,7 +125,7 @@ try {
     const text = fs.readFileSync(o.design, "utf8");
     await page.evaluate(({ name, text }) => handleFiles([new File([text], name)]), { name: path.basename(o.design), text });
   } else {
-    await page.evaluate(() => view.toggleWindow("rigidDNA2Window", initRigidDna2Window));
+    await page.evaluate(() => rigidDnaOpen(2));
   }
   await page.waitForSelector("#rd2Input", { state: "attached", timeout: 30000 });
   await page.waitForFunction(() => document.getElementById("rd2Engine").textContent.length > 5, null, { timeout: 30000 });
@@ -172,7 +172,7 @@ try {
   await page.screenshot({ path: o.out + "_ui.png", timeout: 300000 });
   // fit the camera to the structure and close the window for a clean canvas picture
   await page.evaluate(() => {
-    const w = document.getElementById("rigidDNA2Window"); if (w) Metro.window.toggle(w);
+    const w = document.getElementById("rigidDNAWindow"); if (w) Metro.window.toggle(w);
     try { space.grid(false); } catch (e) { /* no grid */ }
     try { setArrowsVisibility(false); } catch (e) { /* ok */ }
     try { if (typeof boxObj !== "undefined" && boxObj) boxObj.visible = false; } catch (e) { /* ok */ }
