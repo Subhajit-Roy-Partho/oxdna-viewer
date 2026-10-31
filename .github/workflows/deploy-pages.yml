@@ -1,7 +1,7 @@
 name: Deploy oxView to GitHub Pages
 
-# Runs on every push to `recovered` (this repo's active branch -- the
-# registered GitHub "default branch" is a stale `master`) and can also be
+# Runs on every push to `master` (this repo's Pages source branch -- the
+# chatbot UI from `recovered` has been merged in) and can also be
 # triggered manually. Rebuilds the TypeScript output and the rigidDNA WASM
 # modules from scratch every time, so neither Emscripten nor a local
 # rigidDNA checkout is ever required on a developer's machine just to keep
@@ -16,7 +16,7 @@ name: Deploy oxView to GitHub Pages
 on:
   push:
     branches:
-      - recovered
+      - master
   workflow_dispatch:
 
 permissions:
