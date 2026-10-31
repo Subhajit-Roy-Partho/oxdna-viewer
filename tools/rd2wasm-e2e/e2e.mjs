@@ -7,7 +7,7 @@
  * structure, plus a JSON record (engine variant, threads, summary, wall times). Nothing is changed in the repo.
  *
  *   node e2e.mjs --design <file.json|.sc> --out <prefix> [--threads N] [--no-isolation] [--sw] [--drop] [--cancel-after MS] [--gpu-probe]
- *                [--route R] [--infer on|off|auto] [--timeout MS] [--port N] [--width W --height H]
+ *                [--route R] [--infer on|off|auto] [--linkers auto|on|off] [--timeout MS] [--port N] [--width W --height H]
  * --drop: hand the design to the viewer's own file handler (what a drop on the page does) instead of the window's file input.
  * --sw: serve without the headers, click "Enable multi-core via service worker" and run after the reload.
  * Needs playwright-core (tools/oxview-render/node_modules or PLAYWRIGHT_CORE) and a Chromium in ~/.cache/ms-playwright (or CHROME_PATH).
@@ -33,6 +33,7 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === "--height") o.height = parseInt(argv[++i], 10);
   else if (a === "--route") o.route = argv[++i];
   else if (a === "--infer") o.infer = argv[++i];
+  else if (a === "--linkers") o.linkers = argv[++i];
   else if (a === "--cancel-after") o.cancelAfter = parseInt(argv[++i], 10);
   else if (a === "--no-isolation") o.noIso = true;
   else if (a === "--sw") { o.sw = true; o.noIso = true; }
@@ -134,10 +135,10 @@ try {
   rec.gpuText = await page.textContent("#rd2Gpu");
   if (o.drop) rec.droppedFileShown = await page.textContent("#rd2File"); else await page.setInputFiles("#rd2Input", o.design);
   await page.waitForFunction(() => !document.getElementById("rd2RunBtn").disabled, null, { timeout: 30000 });
-  await page.evaluate(({ t, route, infer }) => {
+  await page.evaluate(({ t, route, infer, linkers }) => {
     const th = document.getElementById("rd2Threads"); th.value = String(Math.min(t, parseInt(th.max) || 1));
-    document.getElementById("rd2Route").value = route; document.getElementById("rd2Infer").value = infer;
-  }, { t: o.threads, route: o.route, infer: o.infer });
+    document.getElementById("rd2Route").value = route; document.getElementById("rd2Infer").value = infer; if (linkers) document.getElementById("rd2Linkers").value = linkers;
+  }, { t: o.threads, route: o.route, infer: o.infer, linkers: o.linkers });
   rec.threadsUsed = await page.evaluate(() => parseInt(document.getElementById("rd2Threads").value));
   rec.crossOriginIsolated = await page.evaluate(() => crossOriginIsolated);
 

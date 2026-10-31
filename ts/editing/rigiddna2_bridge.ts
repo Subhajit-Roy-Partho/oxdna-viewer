@@ -15,6 +15,7 @@
 interface Rd2Options {
     route?: 'auto' | 'lattice' | 'wireframe' | 'articulated' | 'ring';
     inferStaples?: 'auto' | 'on' | 'off';
+    linkers?: 'auto' | 'on' | 'off';   // poly-T gap linkers of the lattice route; auto: none for a scadnano design
     lattice?: 'auto' | 'square' | 'honeycomb';
     native?: boolean;          // native oxDNA2 relaxation (false: stop after the export)
     nativeIters?: number;

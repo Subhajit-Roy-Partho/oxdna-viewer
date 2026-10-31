@@ -130,6 +130,7 @@ function rd2Options(): Rd2Options {
     return {
         route: rd2El<HTMLSelectElement>('rd2Route').value as Rd2Options['route'],
         inferStaples: rd2El<HTMLSelectElement>('rd2Infer').value as Rd2Options['inferStaples'],
+        linkers: rd2El<HTMLSelectElement>('rd2Linkers').value as Rd2Options['linkers'],
         native: rd2El<HTMLInputElement>('rd2Native').checked,
         threads,
     };
@@ -169,6 +170,12 @@ async function rd2Run() {
 /** "Cancel" button: stops the worker. */
 function rd2Cancel() { if (rd2Running) rd2Engine.cancel(); }
 
+/** Poly-T gap-linker nucleotides the lattice route added (the engine reports them in its notes), so the exported count can be compared with the design. */
+function rd2LinkerText(s: any): string {
+    const m = /(\d+) links? longer than [\d.]+ oxDNA units get (\d+) linker nucleotides/.exec((s.notes || []).join('\n'));
+    return m ? `<b>${m[2]} poly-T nucleotides added</b> in ${m[1]} links (not in the design; choose "None" under Gap-linker nucleotides to export exactly the designed nucleotides)` : 'none (the nucleotides are the designed ones)';
+}
+
 function rd2ShowSummary(r: Rd2Result) {
     const s = r.summary;
     if (!s) return;
@@ -176,6 +183,7 @@ function rd2ShowSummary(r: Rd2Result) {
     rd2El('rd2Summary').innerHTML = '<table class="table compact row-hover">' +
         row('route', `${s.route} <span class="text-muted text-small">(${s.route_reason})</span>`) +
         row('nucleotides', s.nucleotides) +
+        row('gap linkers', rd2LinkerText(s)) +
         row('E / nt (oxDNA2)', s.native_energy_per_nt !== undefined ? s.native_energy_per_nt.toFixed(4) : 'native relaxation off') +
         row('safety gate', s.gate_met ? 'met' : '<b>not met</b>: ' + s.gate_message) +
         row('time', `${s.seconds_total.toFixed(1)} s in the engine, ${r.seconds.toFixed(1)} s with I/O`) + '</table>';
