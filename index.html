@@ -1635,6 +1635,10 @@
         <script src="./ts/api/llm_tracker_api.js"></script>
         <script src="./ts/api/shapes_api.js"></script>
         <script src="./ts/api/spatial_api.js"></script>
+        <!-- NanoCanvas live sync (inert unless an embedding page hands over a MessagePort): shared core, oxView engine, scene adapter -->
+        <script src="./ts/sync/ncsync_core.js"></script>
+        <script src="./ts/sync/ncsync_ox.js"></script>
+        <script src="./dist/sync/ox_sync.js"></script>
         <!-- LLM Chat -->
         <script src="./ts/llm_chat.js"></script>
         <!-- Agent AI (multi-agent pipeline) -->

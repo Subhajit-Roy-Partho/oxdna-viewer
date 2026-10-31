@@ -356,6 +356,7 @@ function parseOxViewString(s: string) {
     let sysStartId = systems.length;
     const createdSystems:System[] = []
     const newElementIds = new Map();
+    const syncPairs: Array<[number, string]> = []; // NanoCanvas live-sync ids carried by the file (monomer.nc)
     // Check if file includes custom colors
     let customColors = false;
     // Parse json string
@@ -435,6 +436,7 @@ function parseOxViewString(s: string) {
                         elements.set(elementData.id, e) // Reuse old ID
                     }
                     newElementIds.set(elementData.id, e.id);
+                    if (elementData.nc) syncPairs.push([e.id, elementData.nc]);
 
                     e.strand = strand;
                     if(strandData.end3 == elementData.id || !('n3' in elementData)) {
@@ -560,6 +562,10 @@ function parseOxViewString(s: string) {
             // Consider all added monomers
             data.systems.flatMap(sysData=>sysData.createdSystem.getMonomers())
         );
+    }
+
+    if (syncPairs.length > 0 && typeof oxSync !== 'undefined') {
+        oxSync.noteLoaded(syncPairs, data.nanocanvasSync);
     }
 
     if (data.forces) {

@@ -208,6 +208,8 @@ abstract class Strand {
         };
         // Specify optional attributes
         if (this.label) json['label'] = this.label;
+        // NanoCanvas live-sync stable strand (oligo) id -- see ts/sync/ncsync_core.js OligoRegistry
+        if (typeof oxSync !== 'undefined') { const oid = oxSync.oidOfStrand(this); if (oid) json['oid'] = oid; }
 
         return json;
     };
