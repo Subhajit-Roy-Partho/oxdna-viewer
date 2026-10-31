@@ -1,3 +1,18 @@
+<style>
+    .rd-tabs { display: flex; gap: 2px; border-bottom: 2px solid #3b82f6; margin-bottom: 8px; position: sticky; top: 0; z-index: 5; background: var(--rd-bg, #fff); }
+    .rd-tab { flex: 1; padding: 6px 10px; border: 0; cursor: pointer; background: rgba(128,128,128,0.15); font-weight: 600; }
+    .rd-tab.rd-active { background: #3b82f6; color: #fff; }
+</style>
+<style>
+    #rd2Drop { border: 2px dashed #888; border-radius: 6px; padding: 14px; text-align: center; cursor: pointer; }
+    #rd2Drop.rd2-over { border-color: #3b82f6; background: rgba(59,130,246,0.08); }
+    #rd2Bar { width: 100%; height: 14px; }
+</style>
+<div class="rd-tabs">
+    <button type="button" id="rdTabBtn1" class="rd-tab rd-active" onclick="rigidDnaShowTab(1)" title="rigidDNA: rigid-body relaxation of a structure already loaded in the viewer">rigidDNA1</button>
+    <button type="button" id="rdTabBtn2" class="rd-tab" onclick="rigidDnaShowTab(2)" title="rigidDNA2: relaxed 3D structure of a caDNAno / scadnano / oxDNA design, computed in your browser">rigidDNA2</button>
+</div>
+<div id="rdPane1" class="rd-pane">
 <div class="d-flex flex-align-center mb-2" style="gap: 10px;">
     <img src="img/ico/rigiddna-icon.svg" height="40px">
     <p class="text-muted mb-0">
@@ -244,3 +259,71 @@
 
 <h2>Log</h2>
 <pre id="rigidDnaLog" style="max-height: 150px; overflow-y: auto; font-size: 11px; background: #1e1e1e; color: #ddd; padding: 6px; white-space: pre-wrap;"></pre>
+
+</div>
+<div id="rdPane2" class="rd-pane" style="display:none">
+<div class="d-flex flex-align-center mb-2" style="gap: 10px;">
+    <img src="img/ico/rigiddna-icon.svg" height="40px">
+    <p class="text-muted mb-0">
+        Computes the relaxed 3D structure of a caDNAno or scadnano design entirely in your browser
+        (rigidDNA2 compiled to WebAssembly, in a background worker): coarse rigid-body relaxation, nucleotide export,
+        native oxDNA2 relaxation and the safety gate. The result opens as a normal system in the viewer.
+    </p>
+</div>
+
+<h2>1. Design</h2>
+<div id="rd2Drop" onclick="document.getElementById('rd2Input').click()" title="Drop a caDNAno .json, a scadnano .sc, or an oxDNA .top with its .dat">
+    <span class="mif-file-upload mif-2x"></span><br>
+    Drop a design here or click to choose<br>
+    <span class="text-muted text-small">caDNAno v2 .json, scadnano .sc, oxDNA .top + .dat</span><br>
+    <b id="rd2File">no file chosen</b>
+</div>
+<input type="file" id="rd2Input" multiple accept=".json,.sc,.top,.dat,.conf" style="display:none" onchange="rd2Choose(this)">
+
+<h2>2. Options</h2>
+<div class="row">
+    <div class="cell-6">
+        <label>Layout route</label>
+        <select id="rd2Route" data-role="select" title="auto decides from the design: ring, wireframe (one helix per edge), articulated (bundles joined by long crossovers) or lattice">
+            <option value="auto">auto (decided from the design)</option>
+            <option value="lattice">lattice</option>
+            <option value="wireframe">wireframe</option>
+            <option value="articulated">articulated</option>
+            <option value="ring">ring</option>
+        </select>
+    </div>
+    <div class="cell-6">
+        <label>Infer staples</label>
+        <select id="rd2Infer" data-role="select" title="a design with a scaffold and no staples gets complementary staples">
+            <option value="auto">auto (scaffold-only designs)</option>
+            <option value="on">on</option>
+            <option value="off">off</option>
+        </select>
+    </div>
+</div>
+<div class="row">
+    <div class="cell-6">
+        <label>Threads</label>
+        <input type="number" id="rd2Threads" value="1" min="1" max="1" step="1" title="OpenMP threads of the multi-core build (needs a cross-origin-isolated page)">
+    </div>
+    <div class="cell-6">
+        <label>&nbsp;</label>
+        <input type="checkbox" id="rd2Native" data-role="checkbox" data-caption="Native oxDNA2 relaxation" checked title="Off: stop after the coarse relaxation and export (faster, not gate-checked)">
+    </div>
+</div>
+<p class="text-muted text-small mb-1" id="rd2Engine"></p>
+<p class="text-muted text-small" id="rd2Gpu"></p>
+
+<h2>3. Run</h2>
+<div class="group">
+    <button class="button primary" id="rd2RunBtn" onclick="rd2Run()" disabled>Relax and load</button>
+    <button class="button alert" id="rd2CancelBtn" onclick="rd2Cancel()" disabled>Cancel</button>
+</div>
+<progress id="rd2Bar" max="1" value="0"></progress>
+<div id="rd2Stage" class="text-small mb-2">Idle.</div>
+<div id="rd2Summary"></div>
+
+<h2>Log</h2>
+<pre id="rd2Log" style="max-height: 150px; overflow-y: auto; font-size: 11px; background: #1e1e1e; color: #ddd; padding: 6px; white-space: pre-wrap;"></pre>
+
+</div>

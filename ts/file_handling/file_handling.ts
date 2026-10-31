@@ -171,6 +171,9 @@ async function handleFiles(files: File[]) {
         const fileName = files[i].name.toLowerCase();
         const ext = fileName.split(".").pop();
 
+        // A caDNAno / scadnano design is computed into a structure by the rigidDNA2 window (WebAssembly) rather than read
+        if ((ext === "sc" || ext === "json") && typeof rd2OfferDesign === "function" && await rd2OfferDesign(files[i])) continue;
+
         // These file types lead to creation of a new system(s)
         if      (ext === "top") { systemFiles.push(new File2reader(files[i], "topology", await identifyTopologyParser(files[i]))); }
         else if (ext === "oxview") { systemFiles.push(new File2reader(files[i], "oxview", readOxViewFile)); }
