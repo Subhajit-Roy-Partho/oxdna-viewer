@@ -266,13 +266,20 @@ var oxSync;
             render();
         }
         _render = null;
+        _updColoring = null;
         abortApply() { const g = window; if (this._render) {
             g.render = this._render;
             this._render = null;
+        } if (this._updColoring) {
+            g.updateColoring = this._updColoring;
+            this._updColoring = null;
         } }
+        // while a delta is applied: no render per edit.* call, and no O(nts) updateColoring per ligation (we colour explicitly; Custom mode ignores strand ids)
         beginApply() { const g = window; if (!this._render) {
             this._render = g.render;
             g.render = () => { };
+            this._updColoring = g.updateColoring;
+            g.updateColoring = () => { };
         } }
         // end of a remote delta: push dirty buffers to the GPU once
         _colored = new Set();
@@ -292,11 +299,7 @@ var oxSync;
                 s.nucleoside.geometry["attributes"].instanceColor.needsUpdate = true;
             }
             catch (_) { /* not in scene yet */ } });
-            const g = window;
-            if (this._render) {
-                g.render = this._render;
-                this._render = null;
-            }
+            this.abortApply();
             render();
         }
     }

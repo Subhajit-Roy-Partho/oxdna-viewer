@@ -174,8 +174,10 @@ module oxSync {
             systems.forEach((s) => s.callAllUpdates()); render();
         }
         private _render: any = null;
-        abortApply() { const g: any = window; if (this._render) { g.render = this._render; this._render = null; } }
-        beginApply() { const g: any = window; if (!this._render) { this._render = g.render; g.render = () => {}; } }
+        private _updColoring: any = null;
+        abortApply() { const g: any = window; if (this._render) { g.render = this._render; this._render = null; } if (this._updColoring) { g.updateColoring = this._updColoring; this._updColoring = null; } }
+        // while a delta is applied: no render per edit.* call, and no O(nts) updateColoring per ligation (we colour explicitly; Custom mode ignores strand ids)
+        beginApply() { const g: any = window; if (!this._render) { this._render = g.render; g.render = () => {}; this._updColoring = g.updateColoring; g.updateColoring = () => {}; } }
         // end of a remote delta: push dirty buffers to the GPU once
         _colored = new Set<BasicElement>(); _dirtySys = new Set<System>();
         recolor(ids: number[]) { ids.forEach((id) => { const e = elements.get(id); if (e && e.color) this._colored.add(e); }); }
@@ -183,7 +185,7 @@ module oxSync {
             if (this._colored.size) { if (view.coloringMode.get() !== "Custom") view.coloringMode.set("Custom"); this._colored.forEach((e) => { e.updateColor(); this._dirtySys.add(e.dummySys || e.getSystem()); }); this._colored.clear(); }
             this._dirtySys.forEach((s) => s.callUpdates(["instanceColor"])); this._dirtySys.clear();
             systems.concat(tmpSystems).forEach((s) => { try { s.nucleoside.geometry["attributes"].instanceColor.needsUpdate = true; } catch (_) { /* not in scene yet */ } });
-            const g: any = window; if (this._render) { g.render = this._render; this._render = null; }
+            this.abortApply();
             render();
         }
     }
