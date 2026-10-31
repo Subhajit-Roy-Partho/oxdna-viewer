@@ -1746,9 +1746,11 @@
             }
         };
 
-        // 3. Signal to parent frame that oxView is ready
+        // 3. Signal to parent frame that oxView is ready. `bridge: true` marks the signal sent AFTER the message
+        // listener above exists; ts/main.ts also posts a bare `oxview_ready` earlier (while this page is still
+        // loading), and a load request sent in response to that one is dropped.
         if (window.parent !== window) {
-            window.parent.postMessage({ message: 'oxview_ready' }, '*');
+            window.parent.postMessage({ message: 'oxview_ready', bridge: true }, '*');
         }
         </script>
     </div>
