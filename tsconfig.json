@@ -71,7 +71,8 @@
       "./ts/editing/structure_editing.ts",
       "./ts/api/plugin_api.ts",
       "./ts/file_handling/taco.ts",
-      "./ts/api/structure_factory.ts"
+      "./ts/api/structure_factory.ts",
+      "./ts/sync/ox_sync.ts"
 
     ]
 }

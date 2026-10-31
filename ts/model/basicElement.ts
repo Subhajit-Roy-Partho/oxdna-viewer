@@ -187,9 +187,9 @@ abstract class BasicElement {
     handleCircularStrands(sys: System, sid: number, bb: THREE.Vector3) {
         if (this.n5 == this.strand.end5 && this.strand.isCircular()) { //handle circular strands
             const bbLast = new THREE.Vector3(
-                sys.bbOffsets[this.n5.id * 3],
-                sys.bbOffsets[this.n5.id * 3 + 1],
-                sys.bbOffsets[this.n5.id * 3 + 2]
+                sys.bbOffsets[this.n5.sid * 3],
+                sys.bbOffsets[this.n5.sid * 3 + 1],
+                sys.bbOffsets[this.n5.sid * 3 + 2]
             );
 
             const sp = bb.clone().add(bbLast).divideScalar(2);
@@ -259,6 +259,8 @@ abstract class BasicElement {
         // on reload via the reader's id remap.)
         if (this.clusterId != null && this.clusterId >= 0) json['cluster'] = this.clusterId;
         if (this.color) json['color'] = this.color.getHex();
+        // NanoCanvas live-sync id (ts/sync): absent unless the viewer was synced / loaded a file that carried ids
+        if (typeof oxSync !== 'undefined') { const nc = oxSync.nidOfElement(this.id); if (nc) json['nc'] = nc; }
 
         return json;
     }

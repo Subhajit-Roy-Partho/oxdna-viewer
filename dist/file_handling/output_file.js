@@ -349,7 +349,10 @@ function makeOxViewJsonFile(name, space) {
         // Plain JSON map, file cluster id -> label. Old readers ignore this
         // unknown field; oxDNA .top/.dat cannot carry it (fixed column
         // format), so names only survive .oxview round-trips.
-        clusterNames: (typeof clusterNames !== "undefined") ? clusterNames : {}
+        clusterNames: (typeof clusterNames !== "undefined") ? clusterNames : {},
+        // NanoCanvas live-sync id map block (stable oligo ids, overlay counter, groups); per-monomer ids are `nc`
+        // fields written by BasicElement.toJSON.  Absent unless the viewer was synced.  Old readers ignore it.
+        nanocanvasSync: (typeof oxSync !== "undefined") ? oxSync.exportMeta() : undefined
     }, null, space));
 }
 function makeTextFile(filename, text) {
