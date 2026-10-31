@@ -8,7 +8,7 @@ var oxSync;
     let uninstall = [];
     let pill = null;
     const nowMs = () => performance.timeOrigin + performance.now();
-    oxSync.stats = { visible: [], applyMs: [], snapshotMs: 0, snapshotMaxSliceMs: 0, snapshotNts: 0, remote: 0, local: 0, rejected: 0, resync: 0, lastReject: "" };
+    oxSync.stats = { visible: [], model: [], applyMs: [], snapshotMs: 0, snapshotMaxSliceMs: 0, snapshotNts: 0, remote: 0, local: 0, rejected: 0, resync: 0, lastReject: "" };
     // ------------------------------------------------------------- scene adapter ---
     let clusterSizeCache = null;
     const invalidate = () => { clusterSizeCache = null; };
@@ -31,6 +31,13 @@ var oxSync;
             });
         }
         has(id) { return !!elements.get(id); }
+        /** one row of forEachNt for a single id (null when it is gone / not a nucleotide) -- used by targeted re-projection */
+        rowOf(id) {
+            const e = elements.get(id);
+            if (!e || !e.isNucleotide())
+                return null;
+            return [id, e.n3 ? e.n3.id : -1, baseOf(e), colorOf(e), e.clusterId || 0];
+        }
         n3Of(id) { const e = elements.get(id); return e && e.n3 ? e.n3.id : -1; }
         n5Of(id) { const e = elements.get(id); return e && e.n5 ? e.n5.id : -1; }
         poseOf(id) {
@@ -38,8 +45,9 @@ var oxSync;
             return [...e.getPos().toArray(), ...e.getA1().toArray(), ...e.getA3().toArray()];
         }
         clusterOf(id) { const e = elements.get(id); return e ? e.clusterId || 0 : 0; }
-        /** each spec becomes a free 1-nt strand in its own tmp system (exactly what oxView's own 'create' does) */
-        createNts(specs) {
+        /** specs become strands in one new tmp system (what oxView's own 'create' does); `links[i]` = index of i's 3' neighbour among
+         *  the new nts (-1 none), so whole strands are built in one pass instead of one ligate+render per bond */
+        createNts(specs, links) {
             invalidate();
             const n = specs.length;
             const tmpSys = new System(tmpSystems.length, 0);
@@ -56,28 +64,65 @@ var oxSync;
                 if (box.x === 0)
                     box = new THREE.Vector3(1000, 1000, 1000);
             }
-            const ids = [];
+            const lk = links || new Int32Array(n).fill(-1);
+            const hasPred = new Uint8Array(n);
+            for (let i = 0; i < n; i++)
+                if (lk[i] >= 0)
+                    hasPred[lk[i]] = 1;
+            const els = [];
+            const strandOf = new Array(n);
+            const mkStrand = () => realSys.addNewNucleicAcidStrand("DNA");
+            const chains = [];
+            const placed = new Uint8Array(n);
+            for (let i = 0; i < n; i++)
+                if (!hasPred[i]) {
+                    const ch = [];
+                    const st = mkStrand();
+                    for (let j = i; j >= 0 && !placed[j]; j = lk[j]) {
+                        placed[j] = 1;
+                        strandOf[j] = st;
+                        ch.push(j);
+                    }
+                    chains.push(ch);
+                }
+            for (let i = 0; i < n; i++)
+                if (!placed[i]) {
+                    const st = mkStrand();
+                    strandOf[i] = st;
+                    placed[i] = 1;
+                    chains.push([i]);
+                } // (cycles: not expected here)
             specs.forEach((s, i) => {
-                const strand = realSys.addNewNucleicAcidStrand("DNA");
-                const e = new DNANucleotide(undefined, strand);
+                const e = new DNANucleotide(undefined, strandOf[i]);
                 elements.push(e);
                 e.dummySys = tmpSys;
                 e.sid = i;
                 e.setType(s.b);
                 e.n3 = null;
                 e.n5 = null;
-                e.strand = strand;
-                strand.setFrom(e);
+                e.strand = strandOf[i];
                 e.clusterId = s.g || 0;
                 if (s.c >= 0)
                     e.color = new THREE.Color(s.c);
-                const p = s.pose;
-                e.calcPositions(new THREE.Vector3(p[0], p[1], p[2]), new THREE.Vector3(p[3], p[4], p[5]), new THREE.Vector3(p[6], p[7], p[8]));
-                e.dummySys = tmpSys;
-                ids.push(e.id);
+                els.push(e);
             });
+            for (const ch of chains) {
+                for (let k = 0; k + 1 < ch.length; k++) {
+                    els[ch[k]].n3 = els[ch[k + 1]];
+                    els[ch[k + 1]].n5 = els[ch[k]];
+                }
+                strandOf[ch[0]].setFrom(els[ch[ch.length - 1]]);
+            }
+            for (const ch of chains)
+                for (let k = ch.length - 1; k >= 0; k--) {
+                    const p = specs[ch[k]].pose;
+                    const e = els[ch[k]];
+                    e.calcPositions(new THREE.Vector3(p[0], p[1], p[2]), new THREE.Vector3(p[3], p[4], p[5]), new THREE.Vector3(p[6], p[7], p[8]));
+                    e.dummySys = tmpSys;
+                }
             addSystemToScene(tmpSys);
             tmpSys.callAllUpdates();
+            const ids = els.map((e) => e.id);
             this.recolor(ids);
             return ids;
         }
@@ -220,6 +265,15 @@ var oxSync;
             systems.forEach((s) => s.callAllUpdates());
             render();
         }
+        _render = null;
+        abortApply() { const g = window; if (this._render) {
+            g.render = this._render;
+            this._render = null;
+        } }
+        beginApply() { const g = window; if (!this._render) {
+            this._render = g.render;
+            g.render = () => { };
+        } }
         // end of a remote delta: push dirty buffers to the GPU once
         _colored = new Set();
         _dirtySys = new Set();
@@ -238,6 +292,11 @@ var oxSync;
                 s.nucleoside.geometry["attributes"].instanceColor.needsUpdate = true;
             }
             catch (_) { /* not in scene yet */ } });
+            const g = window;
+            if (this._render) {
+                g.render = this._render;
+                this._render = null;
+            }
             render();
         }
     }
@@ -271,13 +330,52 @@ var oxSync;
     }
     function install() {
         const dirty = () => { invalidate(); engine.markDirty(); };
+        // Hooks name the nucleotides an edit touches so the next flush re-projects only those (plus their neighbours, captured BEFORE the
+        // edit because deleting/cutting clears the pointers).  Anything we cannot name falls back to a full scan.
+        const near = (e, out) => { if (!e)
+            return; out.push(e.id); if (e.n3)
+            out.push(e.n3.id); if (e.n5)
+            out.push(e.n5.id); };
+        const asArr = (x) => (x instanceof Set ? Array.from(x) : Array.isArray(x) ? x : x ? [x] : []);
         for (const name of EDIT_FNS)
-            wrap(edit, name, (orig) => function (...a) { const r = orig.apply(this, a); dirty(); return r; });
+            wrap(edit, name, (orig) => function (...a) {
+                let ids = null;
+                if (name === "nick") {
+                    ids = [];
+                    near(a[0], ids);
+                }
+                else if (name === "ligate") {
+                    ids = [];
+                    near(a[0], ids);
+                    near(a[1], ids);
+                }
+                else if (name === "deleteElements") {
+                    ids = [];
+                    asArr(a[0]).forEach((e) => near(e, ids));
+                }
+                else if (name === "setSequence" && !a[2]) {
+                    ids = [];
+                    asArr(a[0]).forEach((e) => ids.push(e.id));
+                }
+                const r = orig.apply(this, a);
+                invalidate();
+                if (ids && (name === "nick" || name === "ligate" || name === "deleteElements" || name === "setSequence"))
+                    engine.markDirty(ids);
+                else if ((name === "extendStrand" || name === "createStrand" || name === "addElements" || name === "addElementsAt") && Array.isArray(r) && r.length) {
+                    const out = [];
+                    r.forEach((e) => near(e, out));
+                    near(a[0] && a[0].id !== undefined ? a[0] : null, out);
+                    engine.markDirty(out);
+                }
+                else
+                    engine.markDirty();
+                return r;
+            });
         const g = window;
         for (const name of ["colorElements"]) {
             const o = g[name];
             if (typeof o === "function") {
-                g[name] = function (...a) { const r = o.apply(this, a); dirty(); return r; };
+                g[name] = function (...a) { const els = a[1] || Array.from(selectedBases); const ids = els.map((e) => e.id); const r = o.apply(this, a); invalidate(); engine.markDirty(ids); return r; };
                 uninstall.push(() => { g[name] = o; });
             }
         }
@@ -323,6 +421,18 @@ var oxSync;
         if (!core) {
             core = NCSyncCore;
         }
+        attachTransport(new core.PortTransport(port), info);
+    }
+    oxSync.attach = attach;
+    /** same-origin embedder: the embedder hands us one end of core.directPair() (synchronous, no event-loop hop) */
+    function attachDirect(endpoint) {
+        if (!core) {
+            core = NCSyncCore;
+        }
+        attachTransport(endpoint, { direct: true });
+    }
+    oxSync.attachDirect = attachDirect;
+    function attachTransport(transport, info) {
         if (engine)
             detach("re-attach");
         scene = new OxScene();
@@ -351,23 +461,30 @@ var oxSync;
                 }
             },
         });
-        const transport = new core.PortTransport(port);
         peer = new core.Peer({
             role: "secondary", transport, now: nowMs,
             handlers: engine.handlers({
+                // model latency = edit in NanoCanvas -> applied to the oxView model; visible = ... -> end of the next animation frame
                 onEvent(ev) { if (ev.ev === "remote") {
                     oxSync.stats.remote++;
+                    if (ev.ts)
+                        oxSync.stats.model.push(ev.applied - ev.ts);
                     const t = nowMs();
                     requestAnimationFrame(() => { if (ev.ts)
                         oxSync.stats.visible.push(nowMs() - ev.ts); oxSync.stats.applyMs.push(nowMs() - t); if (oxSync.stats.visible.length > 3000) {
                         oxSync.stats.visible.shift();
                         oxSync.stats.applyMs.shift();
+                        oxSync.stats.model.shift();
                     } });
                 } },
             }),
         });
         engine.attach(peer);
         install();
+        // safety net for edit paths we do not hook: a cheap full re-projection every few seconds (no-op when nothing changed)
+        const safety = setInterval(() => { if (engine)
+            engine.markDirty(); }, 3000);
+        uninstall.push(() => clearInterval(safety));
         setPill("connecting…", "busy");
         if (pendingMeta && restored)
             engine.restore(pendingMeta, Array.from(restored).filter(([id]) => !!elements.get(id)));
@@ -377,7 +494,6 @@ var oxSync;
         peer.sendDelta = (d, tr, e) => { oxSync.stats.local++; return origSend(d, tr, e); };
         void info;
     }
-    oxSync.attach = attach;
     function detach(why) {
         if (!engine)
             return;
@@ -434,7 +550,7 @@ var oxSync;
             return null; const s = a.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(q * s.length))]; };
         return {
             attached: !!engine && engine.attached, rev: peer ? peer.rev : 0, nts: engine ? engine.idmap.size : 0, oligos: engine ? engine.registry.live.size : 0,
-            visibleP50: pct(oxSync.stats.visible, 0.5), visibleP95: pct(oxSync.stats.visible, 0.95), applyP50: pct(oxSync.stats.applyMs, 0.5), peerStats: peer ? { sent: peer.stats.sent, recv: peer.stats.recv, rejected: peer.stats.rejected, rtt50: pct(peer.stats.rtt, 0.5), rtt95: pct(peer.stats.rtt, 0.95) } : null,
+            modelP50: pct(oxSync.stats.model, 0.5), modelP95: pct(oxSync.stats.model, 0.95), visibleP50: pct(oxSync.stats.visible, 0.5), visibleP95: pct(oxSync.stats.visible, 0.95), applyP50: pct(oxSync.stats.applyMs, 0.5), peerStats: peer ? { sent: peer.stats.sent, recv: peer.stats.recv, rejected: peer.stats.rejected, rtt50: pct(peer.stats.rtt, 0.5), rtt95: pct(peer.stats.rtt, 0.95) } : null,
             snapshot: { nts: oxSync.stats.snapshotNts, ms: oxSync.stats.snapshotMs, maxSliceMs: oxSync.stats.snapshotMaxSliceMs }, remote: oxSync.stats.remote, local: oxSync.stats.local, rejected: oxSync.stats.rejected, lastReject: oxSync.stats.lastReject, resync: oxSync.stats.resync,
         };
     }
@@ -448,7 +564,7 @@ var oxSync;
     /** CSS of the live scene (id-map projection) for tests */
     function css() { return engine ? engine.css() : null; }
     oxSync.css = css;
-    function clearStats() { oxSync.stats.visible.length = 0; oxSync.stats.applyMs.length = 0; if (peer) {
+    function clearStats() { oxSync.stats.visible.length = 0; oxSync.stats.model.length = 0; oxSync.stats.applyMs.length = 0; if (peer) {
         peer.stats.rtt.length = 0;
         peer.stats.transit.length = 0;
         peer.stats.apply.length = 0;

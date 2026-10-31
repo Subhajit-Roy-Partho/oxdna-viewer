@@ -27,7 +27,7 @@
       opts = opts || {};
       this.scene = scene; this.idmap = new IdMap(); this.shadow = new Css(); this.registry = new OligoRegistry();
       this.peer = null; this.applying = false; this.attached = false; this.now = opts.now || (() => Date.now());
-      this.pendingRigid = new Map(); this.moved = new Set(); this.firstDirtyAt = 0;
+      this.pendingRigid = new Map(); this.moved = new Set(); this.firstDirtyAt = 0; this.fullDirty = false; this.touchIds = new Set(); this.flushMs = []; this.flushMs = [];
       this.sched = frameScheduler(() => this.sendLocal(), { sync: !!opts.syncSched, ...(opts.schedOpts || {}) });
       this.events = []; this.onStatus = opts.onStatus || (() => {}); this.rejections = [];
       this.bulk = null;
@@ -37,39 +37,54 @@
     }
     attach(peer) { this.peer = peer; }
     // ------------------------------------------------------------ hooks ---
-    markDirty() { if (this.applying || !this.attached) return; if (!this.firstDirtyAt) this.firstDirtyAt = this.now(); this.sched.schedule(); }
-    onRigid(g, X) { if (this.applying || !this.attached) return; const o = this.pendingRigid.get(g); this.pendingRigid.set(g, o ? rigid.compose(X, o) : X); this.markDirty(); }
-    onMoved(ids) { if (this.applying || !this.attached) return; for (const i of ids) this.moved.add(i); this.markDirty(); }
+    /** topology / base / colour may have changed: next flush re-projects the scene (O(nts), ~1-3 ms at 30k) */
+    markDirty(ids) {
+      if (this.applying || !this.attached) return;
+      // with the ids the hook touched we re-project only those (+ their neighbours, resolved by the caller); without: full scan
+      if (ids && ids.length) { for (const i of ids) this.touchIds.add(i); } else this.fullDirty = true;
+      this._kick();
+    }
+    _kick() { if (!this.firstDirtyAt) this.firstDirtyAt = this.now(); this.sched.schedule(); }
+    /** pose-only changes (cluster drags) skip the O(nts) scan: at drag rates that would dominate the frame */
+    onRigid(g, X) { if (this.applying || !this.attached) return; const o = this.pendingRigid.get(g); this.pendingRigid.set(g, o ? rigid.compose(X, o) : X); this._kick(); }
+    onMoved(ids) { if (this.applying || !this.attached) return; for (const i of ids) this.moved.add(i); this._kick(); }
 
     // ------------------------------------------------ local -> remote ---
     /** Project the scene, diff against the shadow, return {delta, transfer} or null. */
     projectLocal() {
       const sc = this.scene, idm = this.idmap, shadow = this.shadow;
-      const rows = []; // [id, n3Id, b, c, g]
-      sc.forEachNt((id, n3, b, c, g) => { rows.push(id, n3, b, c, g); });
-      const nRows = rows.length / 5;
-      const fresh = [];
-      for (let r = 0; r < nRows; r++) {
-        const id = rows[r * 5]; if (idm.nidOf(id) !== undefined) continue;
-        const t = this.tomb.get(id);
-        if (t !== undefined && !idm.nidToId.has(t) && !shadow.has(t)) { idm.link(t, id); this.tomb.delete(id); } // same nucleotide came back (undo/redo)
-        else idm.link(idm.newOverlay(ACTOR), id);
-        fresh.push(id);
-      }
       const db = new DeltaBuilder(); const poseOf = (id) => sc.poseOf(id);
-      let seen = 0;
-      for (let r = 0; r < nRows; r++) {
-        const id = rows[r * 5], n3 = rows[r * 5 + 1], b = rows[r * 5 + 2], c = rows[r * 5 + 3], g = rows[r * 5 + 4];
-        const n = idm.nidOf(id);
-        const nr = rec(n3 >= 0 ? idm.nidOf(n3) : "", b, c);
-        const old = shadow.get(n);
-        seen++;
-        if (!old) { db.add(n, nr, g, poseOf(id)); shadow.set(n, nr); }
-        else if (!recEq(old, nr)) { db.change(n, old, nr); shadow.set(n, nr); }
+      const scan = this.fullDirty; this.fullDirty = false;
+      const touched = this.touchIds; this.touchIds = new Set();
+      if (!scan && touched.size && sc.rowOf) { // targeted projection: only what the hooks named
+        const odd = []; const gone = []; const queue = [...touched]; const queued = new Set(queue);
+        for (let q = 0; q < queue.length; q++) {
+          const id = queue[q]; const row = sc.rowOf(id);
+          if (!row) { if (idm.nidOf(id) !== undefined) gone.push(id); continue; }
+          odd.push(row[0], row[1], row[2], row[3], row[4]);
+          const t3 = row[1]; if (t3 >= 0 && idm.nidOf(t3) === undefined && !queued.has(t3)) { queued.add(t3); queue.push(t3); } // brand-new neighbour
+        }
+        this._applyOdd(odd, gone, db, poseOf);
       }
-      if (seen < idm.size) { // some mapped nucleotides vanished
-        const present = new Set(); for (let r = 0; r < nRows; r++) present.add(rows[r * 5]);
-        for (const [n, id] of [...idm.nidToId]) if (!present.has(id)) { db.del(n); shadow.delete(n); idm.unlinkNid(n); this.tomb.set(id, n); if (this.tomb.size > 5000) this.tomb.delete(this.tomb.keys().next().value); }
+      if (scan) {
+        // pass 1 (allocation-free for unchanged nts): compare each nt with its shadow record in place; collect only the odd ones
+        const nid2 = idm.idToNid, nidToId = idm.nidToId; const odd = []; let seen = 0;
+        sc.forEachNt((id, n3, b, c, g) => {
+          const n = nid2.get(id);
+          if (n === undefined) { odd.push(id, n3, b, c, g); return; }
+          seen++;
+          const old = shadow.get(n);
+          const n3n = n3 >= 0 ? nid2.get(n3) : "";
+          if (old && n3n !== undefined && old.n3 === n3n && old.b === b && old.c === c) return;
+          odd.push(id, n3, b, c, g);
+        });
+        const sizeBefore = idm.size;
+        this._applyOdd(odd, null, db, poseOf);
+        if (seen < sizeBefore) { // some mapped nucleotides vanished
+          const present = new Set(); sc.forEachNt((id) => { present.add(id); });
+          const gone = []; for (const [n, id] of idm.nidToId) if (!present.has(id)) gone.push(id);
+          this._applyOdd([], gone, db, poseOf);
+        }
       }
       // free-form motion
       const d = db.build(); const transfer = [];
@@ -83,12 +98,31 @@
       }
       return deltaIsEmpty(d) ? null : { d, transfer };
     }
+    /** `odd` = flat [id, n3Id, b, c, g]* of nts that may differ from the shadow; `gone` = mapped ids no longer in the scene */
+    _applyOdd(odd, gone, db, poseOf) {
+      const idm = this.idmap, shadow = this.shadow, nidToId = idm.nidToId; const nOdd = odd.length / 5;
+      for (let r = 0; r < nOdd; r++) { // identities for brand-new nts first (a changed nt may point at one)
+        const id = odd[r * 5]; if (idm.nidOf(id) !== undefined) continue;
+        const t = this.tomb.get(id);
+        if (t !== undefined && !nidToId.has(t) && !shadow.has(t)) { idm.link(t, id); this.tomb.delete(id); } // same nucleotide came back (undo/redo)
+        else idm.link(idm.newOverlay(ACTOR), id);
+      }
+      for (let r = 0; r < nOdd; r++) {
+        const id = odd[r * 5], n3 = odd[r * 5 + 1], b = odd[r * 5 + 2], c = odd[r * 5 + 3], g = odd[r * 5 + 4];
+        const n = idm.nidOf(id); const nr = rec(n3 >= 0 ? idm.nidOf(n3) : "", b, c); const old = shadow.get(n);
+        if (!old) { db.add(n, nr, g, poseOf(id)); shadow.set(n, nr); }
+        else if (!recEq(old, nr)) { db.change(n, old, nr); shadow.set(n, nr); }
+      }
+      if (gone) for (const id of gone) { const n = idm.nidOf(id); if (n === undefined) continue; db.del(n); shadow.delete(n); idm.unlinkNid(n); this.tomb.set(id, n); if (this.tomb.size > 5000) this.tomb.delete(this.tomb.keys().next().value); }
+    }
     /** Flush callback (frame-coalesced).  Returns the sent delta (or null). */
     sendLocal() {
       const edited = this.firstDirtyAt || this.now(); this.firstDirtyAt = 0;
       if (!this.peer || !this.attached) return null;
+      const t0 = this.now();
       const r = this.projectLocal(); if (!r) return null;
       this.peer.sendDelta(r.d, r.transfer, edited);
+      this.flushMs.push(this.now() - t0); if (this.flushMs.length > 3000) this.flushMs.shift();
       return r.d;
     }
     flushNow() { this.sched.flushNow(); if (this.sched.pending === false) return this.sendLocal(); }
@@ -98,6 +132,7 @@
     applyDelta(d) {
       const sc = this.scene, idm = this.idmap, shadow = this.shadow;
       this.applying = true;
+      if (sc.beginApply) sc.beginApply();
       try {
         if (d.del) { const ids = []; for (const n of d.del) { const id = idm.idOf(n); if (id !== undefined) { ids.push(id); idm.unlinkNid(n); } } if (ids.length) sc.remove(ids); }
         if (d.add && d.add.n.length) {
@@ -107,7 +142,13 @@
             if (have !== undefined) { const ch = d.add.b[i]; if (ch !== "?") sc.setBase(have, ch); if (d.add.c[i] >= 0) sc.setColor(have, d.add.c[i]); return; }
             specs.push({ b: d.add.b[i] === "?" ? "A" : d.add.b[i], c: d.add.c[i], g: d.add.g[i], pose: d.add.f ? Array.from(d.add.f.subarray(i * 9, i * 9 + 9)) : [0, 0, 0, 1, 0, 0, 0, 0, 1] }); idxs.push(i);
           });
-          if (specs.length) { const ids = sc.createNts(specs); ids.forEach((id, k) => idm.link(d.add.n[idxs[k]], id)); }
+          if (specs.length) {
+            // links among the NEW cells are built into the strands at creation (one pass, no per-link edit/render)
+            const at = new Map(); idxs.forEach((i, k) => at.set(d.add.n[i], k));
+            const links = new Int32Array(specs.length).fill(-1), hasPred = new Uint8Array(specs.length);
+            if (d.n3 && d.n3.set) for (const [a, b] of d.n3.set) { const ka = at.get(a), kb = at.get(b); if (ka !== undefined && kb !== undefined && links[ka] < 0 && !hasPred[kb] && ka !== kb) { links[ka] = kb; hasPred[kb] = 1; } }
+            const ids = sc.createNts(specs, links); ids.forEach((id, k) => idm.link(d.add.n[idxs[k]], id));
+          }
         }
         if (d.n3) {
           for (const a of d.n3.clr || []) { const id = idm.idOf(a); if (id !== undefined && sc.n3Of(id) >= 0) sc.unlink(id); }
@@ -127,7 +168,7 @@
         if (d.groups) this.idmap.groups = d.groups;
         applyDeltaToShadow(shadow, d);
         sc.afterApply && sc.afterApply();
-      } finally { this.applying = false; }
+      } finally { this.applying = false; if (sc.abortApply) sc.abortApply(); }
     }
     // Peer handlers ---------------------------------------------------------
     handlers(extra) {

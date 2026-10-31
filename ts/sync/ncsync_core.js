@@ -348,16 +348,20 @@
   };
 
   // ---------------------------------------------------------- scheduler ----
-  /** Coalesces any number of schedule() calls into ONE flush per animation frame.  A timer races
-   *  rAF so a hidden tab / background iframe (where rAF is paused) still syncs. */
+  /** Coalesces any number of schedule() calls into ONE flush.  Modes: "micro" (default: flush at the end of the current
+   *  task -- an edit is on the wire before the next frame, a burst inside one task still collapses to one delta),
+   *  "raf" (once per animation frame, raced by a timer so a hidden tab still syncs), "sync" (tests), "manual" (tests). */
   function frameScheduler(fn, opts) {
     opts = opts || {};
+    const mode = opts.sync ? "sync" : opts.mode || "micro";
     let pending = false, raf = 0, tm = 0;
     const run = () => { if (!pending) return; pending = false; if (raf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(raf); clearTimeout(tm); raf = 0; tm = 0; fn(); };
     return {
       schedule() {
         if (pending) return; pending = true;
-        if (opts.sync) return run();
+        if (mode === "sync") return run();
+        if (mode === "manual") return;
+        if (mode === "micro") { queueMicrotask(run); return; }
         if (typeof requestAnimationFrame === "function") raf = requestAnimationFrame(run);
         tm = setTimeout(run, opts.fallbackMs || 40);
       },
@@ -386,6 +390,14 @@
   function loopbackPair(opts) {
     opts = opts || {};
     const mk = () => ({ onmessage: null, peer: null, send(m, transfer) { const c = opts.noClone ? m : structuredClone(m, { transfer: transfer || [] }); const p = this.peer; const go = () => p.onmessage && p.onmessage(c); if (opts.sync) go(); else queueMicrotask(go); }, close() {} });
+    const a = mk(), b = mk(); a.peer = b; b.peer = a; return [a, b];
+  }
+
+  /** Same-thread pair (an embedded same-origin iframe shares the embedder's event loop): send() calls the other end's handler
+   *  synchronously.  No clone, no event-loop hop, so a delta is applied in the other view before the sender's own UI work
+   *  (React re-render) runs.  Messages must be treated as immutable by receivers (they are). */
+  function directPair() {
+    const mk = () => ({ onmessage: null, peer: null, send(m) { const p = this.peer; if (p && p.onmessage) p.onmessage(m); }, close() { this.peer = null; } });
     const a = mk(), b = mk(); a.peer = b; b.peer = a; return [a, b];
   }
 
@@ -478,5 +490,5 @@
   const pct = (arr, q) => { if (!arr.length) return null; const s = arr.slice().sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(q * s.length))]; };
 
   return { PROTOCOL, NS, nid, rec, recEq, emptyDelta, deltaIsEmpty, DeltaBuilder, Css, applyDeltaToShadow, deltaNids, repairDelta, chainsFromRecs,
-    OligoRegistry, IdMap, TouchLog, mat, rigid, frameScheduler, PortTransport, BroadcastTransport, loopbackPair, Peer, pct };
+    OligoRegistry, IdMap, TouchLog, mat, rigid, frameScheduler, PortTransport, BroadcastTransport, loopbackPair, directPair, Peer, pct };
 });
