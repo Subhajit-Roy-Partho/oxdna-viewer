@@ -26,6 +26,8 @@ design in your browser and loads it as a normal system: rigidDNA2 (coarse rigid-
 compiled to WebAssembly in `wasm/rigiddna2/`, run in a Web Worker with a progress bar and a Cancel button. Built from `rigidDNA2/wasm` of the rigidDNA
 repository (`wasm/build.sh <build dir> <this repo>/wasm/rigiddna2`; see `rigidDNA2/docs/26_webassembly.md` there).
 
+**Gap-linker nucleotides.** On the lattice route the engine can splice poly-T nucleotides into strands to bridge long gaps between helix ends, which makes the exported file longer than the design. The *Gap-linker nucleotides* option of the window (auto, none, allow) controls this: auto means none for a scadnano `.sc` design, whose strands are what the user wrote, and the engine's default (added when needed) for caDNAno designs. The result table shows how many were added.
+
 **Multi-core needs cross-origin isolation** (SharedArrayBuffer): the server must send `Cross-Origin-Opener-Policy: same-origin` and
 `Cross-Origin-Embedder-Policy: credentialless` (or `require-corp`). `./web-serve.sh` does this through `serve.json`. With any other server (`python3 -m http.server`,
 a static host) add the two headers there; without them the window uses the single-thread build, and offers "Enable multi-core via service worker", which registers

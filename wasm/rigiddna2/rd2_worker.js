@@ -2,7 +2,7 @@
 // inside this worker (which itself starts the OpenMP threads as further workers, running this same file); the page cancels by terminating the worker.
 //
 // Messages to the worker:   {type:'init', base, variant:'mt'|'st', threads}      load <base>/rd2_<variant>.js
-//                           {type:'run', id, name, text, dat?, options}          options: route, inferStaples, native, threads, lattice, seed, extra
+//                           {type:'run', id, name, text, dat?, options}          options: route, inferStaples, linkers, native, threads, lattice, seed, extra
 // Messages from the worker: {type:'ready', variant, threads, version}  {type:'progress', id, ...event}  {type:'log', id, line}
 //                           {type:'result', id, rc, top, dat, summary, log, seconds}  {type:'error', id, message}
 'use strict';

@@ -4,13 +4,16 @@
   'use strict';
 
   // options -> rd2_run arguments (one per entry). Unknown keys are ignored; `extra` is appended verbatim for every other rd2_run option.
-  function buildArgs(o) {
+  // ext: extension of the design file (see extensionOf); `linkers` auto means no gap linkers for a scadnano (.sc) design, whose strands are exactly what the user wrote.
+  function buildArgs(o, ext) {
     o = o || {};
     const a = [];
     const oneOf = (v, set, what) => { if (v !== undefined && set.indexOf(v) < 0) throw new Error(what + ' must be one of ' + set.join(', ')); return v; };
     if (o.route && oneOf(o.route, ['auto', 'lattice', 'wireframe', 'articulated', 'ring'], 'route') !== 'auto') a.push('--route', o.route);
     if (o.inferStaples !== undefined) a.push('--infer-staples', oneOf(String(o.inferStaples === true ? 'on' : o.inferStaples === false ? 'off' : o.inferStaples), ['auto', 'on', 'off'], 'inferStaples'));
     if (o.lattice && o.lattice !== 'auto') a.push('--lattice', oneOf(o.lattice, ['square', 'honeycomb'], 'lattice'));
+    if (o.linkers !== undefined && o.linkers !== 'auto') oneOf(String(o.linkers), ['on', 'off'], 'linkers');
+    if (o.linkers === 'off' || ((o.linkers === undefined || o.linkers === 'auto') && ext === 'sc')) a.push('--no-linkers');
     if (o.native === false) a.push('--no-native');
     if (o.nativeIters > 0) a.push('--native-iters', String(Math.floor(o.nativeIters)));
     if (o.seed !== undefined) a.push('--seed', String(Math.floor(o.seed)));
@@ -50,7 +53,7 @@
     const outs = [prefix + '.top', prefix + '.dat', prefix + '.summary.json'];
     for (const p of outs.concat([inPath, '/work/design.dat'])) { try { FS.unlink(p); } catch (e) { /* not there */ } }
     FS.writeFile(inPath, input.text);
-    const args = buildArgs(opts);
+    const args = buildArgs(opts, ext);
     if (ext === 'top' && input.dat !== undefined) { FS.writeFile('/work/design.dat', input.dat); args.push('--dat', '/work/design.dat'); }
     const t0 = Date.now();
     const rc = M.ccall('rd2w_run', 'number', ['string', 'string', 'string'], [inPath, prefix, args.join('\n')]);
