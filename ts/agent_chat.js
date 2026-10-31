@@ -697,7 +697,7 @@ async function agentChatFetchJson(url, apiKey, body, opts) {
             if (detail && detail.length > 500) detail = detail.substring(0, 500) + '…';
             if (response.status === 401 || response.status === 403) {
                 throw new Error('AUTH_ERROR: API key invalid or unauthorized. '
-                    + 'Set a valid key with the 🔑 button (stored as oxview_agent_api_key in localStorage) '
+                    + 'Set a valid key in Model & settings (stored as oxview_agent_api_key in localStorage) '
                     + 'or agentApiKey/llmApiKey in ts/config.js. (' + (detail || ('HTTP ' + response.status)) + ')');
             }
             lastErr = new Error(response.status === 429
@@ -750,7 +750,7 @@ async function agentChatFetchJson(url, apiKey, body, opts) {
 async function agentApiCall(systemPrompt, userMessage) {
     const key = AGENT_CONFIG.apiKey;
     if (!key) {
-        throw new Error('NO_KEY: No API key set. Click the 🔑 button in the Agent AI panel to add your API key.');
+        throw new Error('NO_KEY: No API key set. Open Model & settings to add your API key.');
     }
 
     const data = await agentChatFetchJson(`${AGENT_CONFIG.baseURL}/chat/completions`, key, {
@@ -974,14 +974,14 @@ const agentChat = {
         const el = document.getElementById('agent-key-status');
         if (!el) return;
         const key = AGENT_CONFIG.apiKey;
-        el.textContent = key ? `🔑 Key: …${key.slice(-4)}` : '🔑 No key set';
-        el.style.color = key ? '#6ee7b7' : '#f87171';
+        el.textContent = key ? 'API key configured' : 'No key set';
+        el.style.color = key ? '#345b41' : '#923f34';
     },
 
     setApiKey() {
         const current = AGENT_CONFIG.apiKey;
         const input = prompt(
-            'Enter your Anthropic API key.\nIt will be saved in localStorage.\nLeave blank to clear.',
+            'Enter your provider API key.\nIt will be saved in localStorage.\nLeave blank to clear.',
             current
         );
         if (input === null) return; // cancelled
@@ -1037,7 +1037,7 @@ const agentChat = {
         };
         if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
         if (!AGENT_CONFIG.apiKey) {
-            showErr('No API key set — the /models call needs Authorization: Bearer <key>. Set one with the 🔑 button first.');
+            showErr('No API key set. Add one in Model & settings before refreshing models.');
             return;
         }
         var url = AGENT_CONFIG.baseURL.replace(/\/+$/, '') + '/models';
@@ -1057,7 +1057,7 @@ const agentChat = {
                 if (detail && detail.length > 300) detail = detail.substring(0, 300) + '…';
                 if (response.status === 401 || response.status === 403) {
                     throw new Error('🔑 API key rejected (HTTP ' + response.status + '). '
-                        + 'Set a valid key with the 🔑 button (stored as oxview_agent_api_key in localStorage).'
+                        + 'Set a valid key in Model & settings (stored as oxview_agent_api_key in localStorage).'
                         + (detail ? ' Provider says: ' + detail : ''));
                 }
                 throw new Error('API error ' + response.status + ' from ' + url + '.'
@@ -1105,7 +1105,7 @@ const agentChat = {
             }
             console.error('Agent /models fetch error:', err);
         } finally {
-            if (btn) { btn.disabled = false; btn.textContent = '⟳ Models'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Refresh models'; }
         }
     },
 
@@ -1114,11 +1114,20 @@ const agentChat = {
     _renderEntry(type, text) {
         const log = document.getElementById('agent-chat-log');
         if (!log) return null;
+        const welcome = log.querySelector('.ai-welcome');
+        if (welcome) welcome.remove();
         var el;
         if (type === 'code') {
             el = document.createElement('div');
             el.className = 'agent-msg agent-msg-code';
-            el.innerHTML = `<pre>${agentEscapeHtml(text)}</pre>`;
+            const details = document.createElement('details');
+            details.open = true;
+            const summary = document.createElement('summary');
+            summary.textContent = 'Generated code';
+            const pre = document.createElement('pre');
+            pre.textContent = text;
+            details.append(summary, pre);
+            el.appendChild(details);
         } else {
             el = document.createElement('div');
             el.className = `agent-msg agent-msg-${type}`;
@@ -1337,7 +1346,7 @@ const agentChat = {
     },
 
     handleKeydown(event) {
-        if (event.key === 'Enter' && !event.shiftKey) {
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
             event.preventDefault();
             agentChat.run();
         }
@@ -1352,7 +1361,7 @@ const agentChat = {
         if (!task) return;
 
         if (!AGENT_CONFIG.apiKey) {
-            this._log('error', '🔑 No API key set. Click the 🔑 button to add your Anthropic API key.');
+            this._log('error', 'No API key set. Open Model & settings to add your provider API key.');
             return;
         }
 
