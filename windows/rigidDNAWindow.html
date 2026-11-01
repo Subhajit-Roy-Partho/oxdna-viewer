@@ -11,6 +11,7 @@
 <div class="rd-tabs">
     <button type="button" id="rdTabBtn1" class="rd-tab rd-active" onclick="rigidDnaShowTab(1)" title="rigidDNA: rigid-body relaxation of a structure already loaded in the viewer">rigidDNA1</button>
     <button type="button" id="rdTabBtn2" class="rd-tab" onclick="rigidDnaShowTab(2)" title="rigidDNA2: relaxed 3D structure of a caDNAno / scadnano / oxDNA design, computed in your browser">rigidDNA2</button>
+    <button type="button" id="rdTabBtn3" class="rd-tab" onclick="rigidDnaShowTab(3)" title="rigidRNA: oxRNA2 structure of an RNA sequence + dot-bracket, computed in your browser">rigidRNA</button>
 </div>
 <div id="rdPane1" class="rd-pane">
 <div class="d-flex flex-align-center mb-2" style="gap: 10px;">
@@ -335,5 +336,63 @@
 
 <h2>Log</h2>
 <pre id="rd2Log" style="max-height: 150px; overflow-y: auto; font-size: 11px; background: #1e1e1e; color: #ddd; padding: 6px; white-space: pre-wrap;"></pre>
+
+</div>
+
+<div id="rdPane3" class="rd-pane" style="display:none">
+<div class="d-flex flex-align-center mb-2" style="gap: 10px;">
+    <img src="img/ico/rigiddna-icon.svg" height="40px">
+    <p class="text-muted mb-0">
+        Builds an oxRNA2 structure of an RNA from its sequence and (pseudoknotted) dot-bracket structure entirely in your browser
+        (rigidRNA compiled to WebAssembly, in a background worker): rigid base-pair nodes per stem, de novo layout of the stems,
+        Levenberg-Marquardt relaxation and export. With <i>Electrostatics</i> the stems also feel oxRNA2's salt-dependent Debye-H&uuml;ckel repulsion
+        between their backbone charges, so the stem spacing follows the salt concentration. The result opens as a normal system in the viewer.
+    </p>
+</div>
+
+<h2>1. Structure</h2>
+<label>Sequence (A, C, G, U)</label>
+<textarea id="rrSeq" rows="3" style="width: 100%; font-family: monospace; font-size: 11px;" placeholder="GGGCGCUGAAAGCGCCC..."></textarea>
+<label>Dot-bracket (pseudoknots as [] {} &lt;&gt;)</label>
+<textarea id="rrDb" rows="3" style="width: 100%; font-family: monospace; font-size: 11px;" placeholder="(((((((....)))))))"></textarea>
+<button class="button small" onclick="rrExample()">Load example</button>
+
+<h2>2. Options</h2>
+<div class="row">
+    <div class="cell-4">
+        <label>Salt (mol/l)</label>
+        <input type="number" id="rrSalt" value="0.5" min="0.01" max="2" step="0.05" oninput="rrSaltChanged()" title="total ionic strength of the oxRNA2 inputs; with Electrostatics also the Debye length of the rigid model">
+    </div>
+    <div class="cell-4">
+        <label>Temperature (K)</label>
+        <input type="number" id="rrTemp" value="300" min="250" max="400" step="5" oninput="rrSaltChanged()">
+    </div>
+    <div class="cell-4">
+        <label>Iterations</label>
+        <input type="number" id="rrIters" value="300" min="20" max="3000" step="50" title="Levenberg-Marquardt iterations of the last relaxation stage">
+    </div>
+</div>
+<p class="text-muted text-small mb-1" id="rrDebye"></p>
+<div class="row">
+    <div class="cell-6">
+        <input type="checkbox" id="rrElec" data-role="checkbox" data-caption="Electrostatics (Debye-H&uuml;ckel)" title="oxRNA2 Debye-Hueckel between the backbone charges of different stems in the rigid model (off: only steric repulsion)">
+    </div>
+    <div class="cell-6">
+        <label>Threads</label>
+        <input type="number" id="rrThreads" value="1" min="1" max="1" step="1" title="OpenMP threads of the multi-core build (needs a cross-origin-isolated page)">
+    </div>
+</div>
+<p class="text-muted text-small mb-1" id="rrEngine"></p>
+
+<h2>3. Run</h2>
+<div class="group">
+    <button class="button primary" id="rrRunBtn" onclick="rrRun()">Build and load</button>
+    <button class="button alert" id="rrCancelBtn" onclick="rrCancel()" disabled>Cancel</button>
+</div>
+<div id="rrStage" class="text-small mb-2">Idle.</div>
+<div id="rrSummary"></div>
+
+<h2>Log</h2>
+<pre id="rrLog" style="max-height: 150px; overflow-y: auto; font-size: 11px; background: #1e1e1e; color: #ddd; padding: 6px; white-space: pre-wrap;"></pre>
 
 </div>
