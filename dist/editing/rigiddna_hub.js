@@ -1,7 +1,8 @@
 /**
- * The rigidDNA window: one window with a tab for rigidDNA (1) and one for rigidDNA2.
+ * The rigidDNA window: one window with a tab for rigidDNA (1), one for rigidDNA2 and one for rigidRNA.
  * Tab 1 (windows/rigidDNAWindow.html, rigiddna_ui.ts) relaxes a structure already loaded in the viewer;
- * tab 2 (rigiddna2_ui.ts) computes the relaxed structure of a caDNAno / scadnano / oxDNA design in the browser.
+ * tab 2 (rigiddna2_ui.ts) computes the relaxed structure of a caDNAno / scadnano / oxDNA design in the browser;
+ * tab 3 (rigidrna_ui.ts) computes the oxRNA2 structure of an RNA sequence + dot-bracket (rigidRNA, optionally with salt-dependent electrostatics).
  */
 /** Tab shown when the window is created (rigidDnaOpen asks for it before the window exists). */
 let rigidDnaHubPending = 1;
@@ -10,12 +11,13 @@ let rigidDnaHubTab = 1;
 function initRigidDnaHub() {
     initRigidDnaWindow();
     initRigidDna2Window();
+    initRigidRnaWindow();
     rigidDnaShowTab(rigidDnaHubPending);
 }
 /** Shows one tab of the rigidDNA window. */
 function rigidDnaShowTab(tab) {
     rigidDnaHubTab = tab;
-    for (const t of [1, 2]) {
+    for (const t of [1, 2, 3]) {
         const pane = document.getElementById(`rdPane${t}`);
         const btn = document.getElementById(`rdTabBtn${t}`);
         if (pane)
