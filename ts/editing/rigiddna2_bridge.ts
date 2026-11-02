@@ -114,6 +114,25 @@ class Rd2Engine {
         }
     }
 
+    /**
+     * Loads rd2_api.js (the script of the worker that turns an options object into the rd2_run command line) into the page too, so that the page can show the
+     * exact command line of a run (Rd2Api.buildArgs is a pure function). Resolves once; a second call returns the same promise.
+     */
+    static loadApi(): Promise<void> {
+        if ((window as any).Rd2Api) return Promise.resolve();
+        if (!Rd2Engine.apiPromise) {
+            Rd2Engine.apiPromise = new Promise<void>((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = new URL(Rd2Engine.baseUrl + 'rd2_api.js', document.baseURI).href;
+                s.onload = () => resolve();
+                s.onerror = () => { Rd2Engine.apiPromise = null; reject(new Error('rd2_api.js did not load')); };
+                document.head.appendChild(s);
+            });
+        }
+        return Rd2Engine.apiPromise;
+    }
+    private static apiPromise: Promise<void> = null;
+
     private start(variant: 'mt' | 'st'): Promise<void> {
         const base = new URL(Rd2Engine.baseUrl, document.baseURI).href;
         this.worker = new Worker(base + 'rd2_worker.js');

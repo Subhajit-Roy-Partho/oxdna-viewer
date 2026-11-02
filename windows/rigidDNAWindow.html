@@ -7,6 +7,13 @@
     #rd2Drop { border: 2px dashed #888; border-radius: 6px; padding: 14px; text-align: center; cursor: pointer; }
     #rd2Drop.rd2-over { border-color: #3b82f6; background: rgba(59,130,246,0.08); }
     #rd2Bar { width: 100%; height: 14px; }
+    .rd2-hint { min-height: 0; font-size: 11px; color: #777; }
+    .rd2-hint.rd2-bad, .rd2-bad { color: #c62828; font-weight: 600; }
+    .rd2-invalid, .rd2-invalid ~ .select, .rd2-invalid ~ input { border-color: #c62828 !important; }
+    #rd2AdvHost label { font-size: 13px; margin-bottom: 2px; }
+    #rd2AdvHost input[type=number], #rd2AdvHost input[type=text] { width: 100%; }
+    .rd2-native { margin: 3px 0; }
+    #rd2AdvHost code { font-size: 10px; opacity: 0.8; }
 </style>
 <div class="rd-tabs">
     <button type="button" id="rdTabBtn1" class="rd-tab rd-active" onclick="rigidDnaShowTab(1)" title="rigidDNA: rigid-body relaxation of a structure already loaded in the viewer">rigidDNA1</button>
@@ -324,6 +331,26 @@
 </div>
 <p class="text-muted text-small mb-1" id="rd2Engine"></p>
 <p class="text-muted text-small" id="rd2Gpu"></p>
+
+<div class="accordion mt-2" data-role="accordion" data-one-frame="false" id="rd2AdvAcc">
+    <div class="frame">
+        <div class="heading">Advanced properties <span class="text-muted text-small" id="rd2AdvCount"></span></div>
+        <div class="content">
+            <p class="text-muted text-small mb-1">
+                Every <code>rd2_run</code> option that can be set in the browser. A blank field passes nothing, so the engine's own default applies;
+                an invalid entry is marked and is not passed. The command line below shows exactly what the engine receives.
+            </p>
+            <div class="group">
+                <button type="button" class="button small" onclick="rd2AdvReset()" title="Clear every advanced field (engine defaults)">Reset advanced</button>
+                <span class="rd2-bad text-small" id="rd2AdvProblems"></span>
+            </div>
+            <div id="rd2AdvHost"></div>
+        </div>
+    </div>
+</div>
+<h4 class="mt-2">Command line preview</h4>
+<pre id="rd2Cmd" title="The command line of rd2_run for the current options (the same arguments the worker passes to the engine). Blank advanced fields are not in it." style="white-space: pre-wrap; word-break: break-all; font-size: 11px; padding: 6px; background: rgba(128,128,128,0.15);"></pre>
+<button type="button" class="button small mb-2" onclick="rd2CopyCommand()" title="Copy the command line to the clipboard">Copy</button>
 
 <h2>3. Run</h2>
 <div class="group">
