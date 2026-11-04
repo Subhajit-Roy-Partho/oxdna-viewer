@@ -287,6 +287,12 @@
     <b id="rd2File">no file chosen</b>
 </div>
 <input type="file" id="rd2Input" multiple accept=".json,.sc,.top,.dat,.conf" style="display:none" onchange="rd2Choose(this)">
+<div id="rd2Presets" class="text-small mt-2" style="display:flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+    <span class="text-muted" style="flex-basis: 100%;">Example, the Dietz 2009 beachball (13,848 nt):</span>
+    <button id="rd2PresetDesign" class="button small" onclick="rd2Preset('design')" title="Loads the caDNAno design; press Run to compute the structure in your browser">Load the design</button>
+    <button id="rd2PresetRef" class="button small" onclick="rd2Preset('reviewed')" title="Opens the reviewed structure (run 3262) in the viewer without running the engine">Open the reviewed structure</button>
+</div>
+<div id="rd2PresetNote" class="text-small" style="display:none"></div>
 
 <h2>2. Options</h2>
 <div class="row">

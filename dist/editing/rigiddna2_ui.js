@@ -109,6 +109,32 @@ async function rd2Files(files) {
     rd2SetRunning(false);
     rd2AdvChanged();
 }
+/** Note shown with the beachball preset: what the bundled structure is and how it differs from what the engine computes. */
+const RD2_BEACHBALL_NOTE = '<b>Beachball (Dietz et al. 2009, database 446).</b> The reviewed structure is run 3262 of the fork\'s Python route (repaired, zero bonds outside FENE): ' +
+    'its three rings are compressed (radius about 17 nm, Rg 18.2 nm). The engine in this page computes three round interlocking rings (radius about 22 nm, Rg about 22.9 nm); ' +
+    'the two are <b>not identical</b> (Chamfer distance 4.4-4.6 nm). A design with three rings joined at two places each is laid out as a ball; other multi-ring designs are laid out the older way.';
+/** The beachball example: "design" fills the design slot (Run computes it), "reviewed" opens the bundled reviewed structure in the scene. */
+async function rd2Preset(kind) {
+    const base = 'examples/beachball/';
+    const get = async (f) => { const r = await fetch(base + f, { cache: 'no-store' }); if (!r.ok)
+        throw new Error(`${f}: HTTP ${r.status}`); return r.blob(); };
+    const note = rd2El('rd2PresetNote');
+    try {
+        if (kind === 'design') {
+            await rd2Files([new File([await get('beachball.json')], 'beachball.json')]);
+            notify('beachball.json loaded: press Run (about 10 s on 4 threads, 40 s on one).');
+        }
+        else {
+            const top = await get('beachball_reviewed.top'), dat = await get('beachball_reviewed.dat');
+            handleFiles([new File([top], 'beachball_reviewed.top'), new File([dat], 'beachball_reviewed.dat')]);
+        }
+        note.innerHTML = RD2_BEACHBALL_NOTE;
+        note.style.display = '';
+    }
+    catch (e) {
+        notify('Could not load the beachball example: ' + e.message, 'alert');
+    }
+}
 /**
  * Called by handleFiles for a dropped .json / .sc file: a caDNAno or scadnano design is not something the viewer can read itself, so it is offered
  * to the rigidDNA2 tab (which then holds it, ready to run). Returns true when the file was taken.
