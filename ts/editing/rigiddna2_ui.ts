@@ -575,6 +575,8 @@ async function rd2Run() {
         const opts = rd2Options();   // the same options as the command line preview
         const cmd = rd2CommandLine();
         if (cmd.text) rd2Log('$ ' + cmd.text);
+        const cb = await Rd2Engine.currentBuild();
+        if (cb.build) rd2Log('engine build on the server: ' + cb.build + (cb.engine ? ' (' + cb.engine + ')' : ''));
         const r = await rd2Engine.run(rd2Design, opts, (p) => {
             bar.value = rd2Fraction(p);
             label.textContent = rd2StageLabel(p);
@@ -614,7 +616,8 @@ function rd2ShowSummary(r: Rd2Result) {
         row('gap linkers', rd2LinkerText(s)) +
         row('E / nt (oxDNA2)', s.native_energy_per_nt !== undefined ? s.native_energy_per_nt.toFixed(4) : 'native relaxation off') +
         row('safety gate', s.gate_met ? 'met' : '<b>not met</b>: ' + s.gate_message) +
-        row('time', `${s.seconds_total.toFixed(1)} s in the engine, ${r.seconds.toFixed(1)} s with I/O`) + '</table>';
+        row('time', `${s.seconds_total.toFixed(1)} s in the engine, ${r.seconds.toFixed(1)} s with I/O`) +
+        row('engine build', r.build ? `<code>${r.build}</code> <span class="text-muted text-small">${r.engine || ''}</span>` : 'unknown (build.json not found)') + '</table>';
 }
 
 /** Registers coi-serviceworker.js (adds COOP/COEP in the page's name) and reloads: makes the page cross-origin isolated when the server sends no such headers. */

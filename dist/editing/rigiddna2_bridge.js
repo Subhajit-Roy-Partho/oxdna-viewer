@@ -89,9 +89,29 @@ class Rd2Engine {
         return Rd2Engine.apiPromise;
     }
     static apiPromise = null;
-    start(variant) {
+    /** Build id of the engine files on the server (wasm/rigiddna2/build.json, always fetched fresh); '' when it cannot be read. */
+    static async currentBuild() {
+        try {
+            const r = await fetch(new URL(Rd2Engine.baseUrl + 'build.json', document.baseURI).href, { cache: 'no-store' });
+            if (!r.ok)
+                return { build: '', engine: '' };
+            const j = await r.json();
+            return { build: String(j.build || ''), engine: String(j.engine || '') };
+        }
+        catch (e) {
+            return { build: '', engine: '' };
+        }
+    }
+    /** Build id and description of the engine the running worker was started with ('' before the first run). */
+    build = '';
+    engine = '';
+    async start(variant) {
         const base = new URL(Rd2Engine.baseUrl, document.baseURI).href;
-        this.worker = new Worker(base + 'rd2_worker.js');
+        const cur = await Rd2Engine.currentBuild();
+        this.build = cur.build;
+        this.engine = cur.engine;
+        const q = cur.build ? '?v=' + encodeURIComponent(cur.build) : '';
+        this.worker = new Worker(base + 'rd2_worker.js' + q);
         this.variant = variant;
         return new Promise((resolve, reject) => {
             this.reject = reject;
@@ -104,7 +124,7 @@ class Rd2Engine {
                     reject(new Error(ev.data.message));
             };
             this.worker.onerror = (ev) => reject(new Error(ev.message || 'worker failed to load'));
-            this.worker.postMessage({ type: 'init', base, variant });
+            this.worker.postMessage({ type: 'init', base, variant, v: cur.build });
         });
     }
     /** Terminates the worker: a running computation stops at once, the next run starts a fresh worker. */
@@ -127,6 +147,12 @@ class Rd2Engine {
         const variant = wantThreads > 1 && Rd2Engine.capabilities().isolated ? 'mt' : 'st';
         if (this.worker && this.variant !== variant)
             this.cancel();
+        // a tab that stayed open across a deployment keeps its worker (and the old WebAssembly in it): start a new one when the server has another build
+        if (this.worker) {
+            const cur = await Rd2Engine.currentBuild();
+            if (cur.build && this.build && cur.build !== this.build)
+                this.cancel();
+        }
         if (!this.worker)
             await this.start(variant);
         const worker = this.worker, id = this.nextId++;
@@ -146,7 +172,7 @@ class Rd2Engine {
                 }
                 else if (m.type === 'result') {
                     this.reject = null;
-                    resolve({ rc: m.rc, top: m.top, dat: m.dat, summary: m.summary, log: m.log, seconds: m.seconds, threads: m.threads, variant,
+                    resolve({ rc: m.rc, top: m.top, dat: m.dat, summary: m.summary, log: m.log, seconds: m.seconds, threads: m.threads, variant, build: this.build, engine: this.engine,
                         gpu: { requested: opts.gpu === 'auto', used: false, reason: 'the relaxation has no WebGPU path: it ran on the CPU (WebAssembly)' } });
                 }
                 else if (m.type === 'error') {
