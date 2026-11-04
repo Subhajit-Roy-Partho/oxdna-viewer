@@ -43,6 +43,8 @@ interface Rd2Result {
     seconds: number;           // wall time of the call inside the worker
     threads: number;
     variant: 'mt' | 'st';
+    build: string;             // build id of the engine files that ran (wasm/rigiddna2/build.json)
+    engine: string;
     gpu: { requested: boolean; used: boolean; reason: string };   // always used: false at present
 }
 
@@ -133,9 +135,24 @@ class Rd2Engine {
     }
     private static apiPromise: Promise<void> = null;
 
-    private start(variant: 'mt' | 'st'): Promise<void> {
+    /** Build id of the engine files on the server (wasm/rigiddna2/build.json, always fetched fresh); '' when it cannot be read. */
+    static async currentBuild(): Promise<{ build: string; engine: string }> {
+        try {
+            const r = await fetch(new URL(Rd2Engine.baseUrl + 'build.json', document.baseURI).href, { cache: 'no-store' });
+            if (!r.ok) return { build: '', engine: '' };
+            const j = await r.json();
+            return { build: String(j.build || ''), engine: String(j.engine || '') };
+        } catch (e) { return { build: '', engine: '' }; }
+    }
+    /** Build id and description of the engine the running worker was started with ('' before the first run). */
+    build = ''; engine = '';
+
+    private async start(variant: 'mt' | 'st'): Promise<void> {
         const base = new URL(Rd2Engine.baseUrl, document.baseURI).href;
-        this.worker = new Worker(base + 'rd2_worker.js');
+        const cur = await Rd2Engine.currentBuild();
+        this.build = cur.build; this.engine = cur.engine;
+        const q = cur.build ? '?v=' + encodeURIComponent(cur.build) : '';
+        this.worker = new Worker(base + 'rd2_worker.js' + q);
         this.variant = variant;
         return new Promise<void>((resolve, reject) => {
             this.reject = reject;
@@ -144,7 +161,7 @@ class Rd2Engine {
                 else if (ev.data.type === 'error') reject(new Error(ev.data.message));
             };
             this.worker.onerror = (ev) => reject(new Error(ev.message || 'worker failed to load'));
-            this.worker.postMessage({ type: 'init', base, variant });
+            this.worker.postMessage({ type: 'init', base, variant, v: cur.build });
         });
     }
 
@@ -163,6 +180,11 @@ class Rd2Engine {
         const wantThreads = Math.max(1, opts.threads || 1);
         const variant: 'mt' | 'st' = wantThreads > 1 && Rd2Engine.capabilities().isolated ? 'mt' : 'st';
         if (this.worker && this.variant !== variant) this.cancel();
+        // a tab that stayed open across a deployment keeps its worker (and the old WebAssembly in it): start a new one when the server has another build
+        if (this.worker) {
+            const cur = await Rd2Engine.currentBuild();
+            if (cur.build && this.build && cur.build !== this.build) this.cancel();
+        }
         if (!this.worker) await this.start(variant);
         const worker = this.worker, id = this.nextId++;
         return new Promise<Rd2Result>((resolve, reject) => {
@@ -172,7 +194,7 @@ class Rd2Engine {
                 if (m.id !== id) return;
                 if (m.type === 'progress') { if (onProgress) onProgress(m); }
                 else if (m.type === 'log') { if (onLog) onLog(m.line); }
-                else if (m.type === 'result') { this.reject = null; resolve({ rc: m.rc, top: m.top, dat: m.dat, summary: m.summary, log: m.log, seconds: m.seconds, threads: m.threads, variant,
+                else if (m.type === 'result') { this.reject = null; resolve({ rc: m.rc, top: m.top, dat: m.dat, summary: m.summary, log: m.log, seconds: m.seconds, threads: m.threads, variant, build: this.build, engine: this.engine,
                     gpu: { requested: opts.gpu === 'auto', used: false, reason: 'the relaxation has no WebGPU path: it ran on the CPU (WebAssembly)' } }); }
                 else if (m.type === 'error') { this.reject = null; this.cancel(); reject(new Error(m.message)); }
             };
