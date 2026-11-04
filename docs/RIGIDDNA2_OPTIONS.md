@@ -53,6 +53,10 @@ Each group below is a group of the Advanced properties section; `docs/NN` refers
 | `--plane-k` | number | 0..1000 | auto | wall k/2 (n.p - q)^2 around the plane of a flat layout during the coarse relaxation (docs/30); default 0.0003 when the layout is flat, 0 = off | rd2_run header | `extra` |
 | `--plane-flat` | number | 0..1 | 0.15 | the start layout counts as flat when its thin axis rms is below this fraction of its middle axis rms | relax.h | `extra` |
 
+### Ring designs (beachball)
+
+Three 6-helix-bundle rings joined at two places each (the Dietz et al. 2009 beachball, database 446, `examples/beachball/beachball.json`) are laid out as a ball of rings; other multi-ring designs are laid out the older way. The bundled reviewed reference (`beachball_reviewed.top`/`.dat`, run 3262 of the fork's Python route, repaired, zero bonds outside FENE) has compressed rings (radius about 17 nm, Rg 18.2 nm); the engine computes three round interlocking rings (radius about 22 nm, Rg about 22.9 nm). The two are **not identical** (Chamfer distance 4.4-4.6 nm). There is no dedicated switch for the beachball layout in this build.
+
 ### Relocation of the bodies
 
 | Option | Type | Allowed | Engine default | Meaning (from the engine docs) | Source | Bridge |
