@@ -5,6 +5,8 @@
 | rigidDNA2 | `wasm/rigiddna2/rd2_{mt,st}.{js,wasm}` | `rigidDNA2/wasm` of `Subhajit-Roy-Partho/rigidDNA`, branch `main` | `origin/main` `052b4e24`. Its C++ sources (`src/`, `include/`, `apps/`, `wasm/`, `results/`) are identical to `2ecfe74a` (ring route: backbone cables for wrap links), the commit of the previous build; `052b4e24` adds Python sequence-only tools only. The rebuilt `.wasm` and `.js` files are byte-identical to the previous ones (same SHA-256), the build is reproducible. | 2026-11-04 |
 | rigidRNA | `wasm/rigidrna/rd2rna_{mt,st}.{js,wasm}`, `rd2rna_api.js`, `rd2rna_worker.js` | `wasm/` of `Subhajit-Roy-Partho/rigidDNA`, branch `rna-wasm` | `origin/rna-wasm` `ec4a371b` = `origin/rna` `06c01c51` (the rigidRNA line merged with the rigidDNA2 fork line) plus the rigidRNA commit `e943b24c` (also on the remote as `rna-cpp-wasm`: C++ PDB / mmCIF front end, portable RNG, the NaN fix for loop-rich RNAs such as the 402-nt Hol_OG, and the `fold` / `substruct` / `pdb2rna` / `oxrna2pdb` entry points) plus one line in `wasm/CMakeLists.txt` that excludes `src/run_process.cpp`. The C++ sources are identical to those of the previous build (`origin/rna` `8bd12958`); the rebuilt files are byte-identical to the ones in this repository (same SHA-256). | 2026-11-04 |
 
+| seqpred | `wasm/seqpred/seqpred_{mt,st}.{js,wasm}`, `seqpred_api.js`, `seqpred_worker.js`, `build.json` | `wasm/seqpred/` of `Subhajit-Roy-Partho/rigidDNA`, branch `seqpred-cpp` (sources `src/seqpred`, `include/seqpred`; ViennaRNA 2.7.2 libRNA compiled with it) | see `build.json` (`engine`) and `docs/70_seqpred_cpp.md` of that branch for commit, Docker image digest, flags, sha256 and the byte-identical rebuild | 2026-11-05 |
+
 `origin/rna` alone cannot be used as the source of the WebAssembly (use the branch `rna-wasm`, which is `origin/rna` plus the two changes below; the commands that follow record how it was made): its `wasm/CMakeLists.txt` compiles every `src/*.cpp`, and `src/run_process.cpp` (fork-line subprocess
 driver, `fork()` and `<sys/prctl.h>`) does not compile with Emscripten; and it does not contain `e943b24c` (Hol_OG would export NaN positions again, no PDB / mmCIF input,
 no sequence-only entry in the JS API). The build therefore used:
@@ -23,6 +25,10 @@ list(FILTER RD2_SRC EXCLUDE REGEX "/run_process\\.cpp$")
 * Link flags: `-sMODULARIZE=1 -sENVIRONMENT=web,worker,node -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=4GB -sSTACK_SIZE=8MB -sINITIAL_MEMORY=256MB` (rigidDNA2) or `128MB` (rigidRNA),
   `-sNO_EXIT_RUNTIME=1 -sINVOKE_RUN=0 -sFILESYSTEM=1`, the parameter and template files embedded with `--embed-file`; `mt`: `-pthread -fopenmp -sPTHREAD_POOL_SIZE=min(cores, 8)-1 -sDEFAULT_PTHREAD_STACK_SIZE=2MB`.
 * The multi-thread builds need cross-origin isolation (see `README-web.md`); nothing changed there.
+
+## seqpred (sequence -> secondary structure)
+
+A separate module (not part of the rigidRNA engine): the rigidRNA tab's input "Sequence only: predict with seqpred" calls `wasm/seqpred/seqpred_worker.js` (class `SeqpredEngine`, `ts/editing/seqpred_bridge.ts`), writes the predicted dot-bracket into the dot-bracket field and the summary names the build id. `wasm/seqpred/build.json` is written by `tools/rd2wasm-e2e/stamp_seqpred_build.mjs` (hash of the two `.wasm` files); the files are requested as `...?v=<build>`. Check: `node tools/rd2wasm-e2e/seqpred.mjs --out <prefix>` (headless Chromium: predicts a 181-nt designed kissing-loop RNA, checks the `[ ]` layer, the build id in the URLs and the summary, builds it through the rigidRNA run). Licence note: the module contains ViennaRNA 2.7.2 code (free for research and commercial use, not to be redistributed for a fee, credit required: the summary and the tab text give it).
 
 ## Files that are not engine output
 

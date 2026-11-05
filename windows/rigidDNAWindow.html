@@ -395,6 +395,7 @@
 <select id="rrMode" data-role="select" onchange="rrModeChanged()" title="what the engine starts from">
     <option value="db" selected>Sequence + dot-bracket</option>
     <option value="predict">Sequence only: predict the secondary structure</option>
+    <option value="seqpred">Sequence only: predict with seqpred (kissing / pseudoknot layer, salt)</option>
     <option value="pdb">PDB / mmCIF file (3D start)</option>
     <option value="design">rigidRNA design JSON</option>
 </select>
@@ -423,6 +424,33 @@
             <label>Largest span (nt)</label>
             <input type="number" id="rrMaxSpan" min="0" max="100000" step="1" placeholder="0 = unlimited" title="--maxspan: largest base-pair span of the predictor (use 400 for kilobase scaffolds)">
         </div>
+    </div>
+    <div id="rrBlkSeqpred" style="display:none">
+        <p class="rr-note mb-1">seqpred (WebAssembly, in your browser): nested minimum-free-energy structure with the Turner 2004 parameters and the salt correction of ViennaRNA 2.7, plus the kissing-loop / pseudoknot layer of predictor v2 for designed RNAs. The result fills the dot-bracket field above. Free energies by the ViennaRNA 2.7.2 library (Lorenz et al., Institute for Theoretical Chemistry, University of Vienna), compiled to WebAssembly; seqpred is a C++ re-implementation of the rigidDNA2 Python predictors. Sequences longer than 600 nt get the nested MFE only (the long-range search takes minutes at 400 nt in one thread).</p>
+        <div class="row">
+            <div class="cell-4">
+                <label>Method</label>
+                <select id="spMethod" data-role="select" title="v2: nested MFE + kissing / pseudoknot layer (predictor v2); nested: MFE only; rna_kl, kl_routes, longrange: earlier tools of the same family">
+                    <option value="v2" selected>v2 (nested + kissing layer)</option>
+                    <option value="nested">nested MFE only</option>
+                    <option value="rna_kl">rna_kl (prototype)</option>
+                    <option value="kl_routes">kl_routes</option>
+                    <option value="longrange">longrange (shuffle null)</option>
+                </select>
+            </div>
+            <div class="cell-4">
+                <label>Salt (mol/l)</label>
+                <input type="number" id="spSalt" value="0.25" min="0.01" max="2" step="0.05" title="monovalent salt of the free-energy model (ViennaRNA md.salt); 0.25 M is the setting the predictor weights were fitted at, 1.021 M the Turner standard">
+            </div>
+            <div class="cell-4">
+                <label>Time budget (s)</label>
+                <input type="number" id="spBudget" value="0" min="0" step="10" title="0 = none. A budget stops the host-refinement rounds early (the result then says so); the first rounds are always run">
+            </div>
+        </div>
+        <button class="button small primary" id="spRunBtn" onclick="spPredict()">Predict structure</button>
+        <button class="button small alert" id="spCancelBtn" onclick="spCancel()" disabled>Cancel</button>
+        <div id="spStage" class="text-small">Idle.</div>
+        <div id="spSummary"></div>
     </div>
     <button class="button small" id="rrExampleBtn" onclick="rrExample()">Load example</button>
 </div>
