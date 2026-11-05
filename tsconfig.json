@@ -23,6 +23,7 @@
       "./ts/editing/rigiddna2_bridge.ts",
       "./ts/editing/rigiddna2_ui.ts",
       "./ts/editing/rigidrna_bridge.ts",
+      "./ts/editing/seqpred_bridge.ts",
       "./ts/editing/rigidrna_ui.ts",
       "./ts/editing/rigiddna_hub.ts",
       "./ts/editing/translation.ts",

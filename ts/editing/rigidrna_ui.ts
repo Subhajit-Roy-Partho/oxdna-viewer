@@ -12,7 +12,10 @@
 
 let rrEngine: RnaEngine = new RnaEngine();
 let rrRunning = false;
-type RrMode = 'db' | 'predict' | 'pdb' | 'design';
+let spEngine: SeqpredEngine = new SeqpredEngine();   // seqpred: sequence -> secondary structure (wasm/seqpred)
+let spRunning = false;
+let spLast: SeqpredResult = null;
+type RrMode = 'db' | 'predict' | 'seqpred' | 'pdb' | 'design';
 let rrFile: { name: string; text: string } = null;   // the PDB / mmCIF / design file chosen in the file modes
 
 function rrEl<T extends HTMLElement>(id: string): T { return document.getElementById(id) as T; }
@@ -55,8 +58,9 @@ function rrMode(): RrMode { return (rrEl<HTMLSelectElement>('rrMode').value || '
 function rrModeChanged() {
     const m = rrMode();
     const show = (id: string, on: boolean) => { const e = rrEl(id); if (e) e.style.display = on ? '' : 'none'; };
-    show('rrBlkSeq', m === 'db' || m === 'predict');
-    show('rrBlkDb', m === 'db');
+    show('rrBlkSeq', m === 'db' || m === 'predict' || m === 'seqpred');
+    show('rrBlkDb', m === 'db' || m === 'seqpred');
+    show('rrBlkSeqpred', m === 'seqpred');
     show('rrBlkPredict', m === 'predict');
     show('rrBlkFile', m === 'pdb' || m === 'design');
     show('rrBlkPdb', m === 'pdb');
@@ -313,7 +317,7 @@ function rrOptions(): RnaOptions {
 /** The input of the run for the chosen mode, or an error text. */
 function rrInput(): { input?: RnaInput; error?: string } {
     const m = rrMode();
-    if (m === 'db' || m === 'predict') {
+    if (m === 'db' || m === 'predict' || m === 'seqpred') {
         const seq = rrEl<HTMLTextAreaElement>('rrSeq').value.replace(/\s+/g, '').toUpperCase().replace(/T/g, 'U');
         const bases = seq.replace(/[&\/]/g, '');
         if (!bases) return { error: 'Enter a sequence.' };
@@ -321,6 +325,7 @@ function rrInput(): { input?: RnaInput; error?: string } {
         if (m === 'predict') return { input: { seq, predict: rrEl<HTMLSelectElement>('rrPredict').value as RnaInput['predict'] } };
         const db = rrEl<HTMLTextAreaElement>('rrDb').value.replace(/\s+/g, '');
         const structure = db.replace(/[&\/]/g, '');
+        if (m === 'seqpred' && !structure) return { error: 'Press "Predict structure" first: seqpred writes the predicted dot-bracket here (you can edit it before building).' };
         if (!structure || bases.length !== structure.length) return { error: `The sequence (${bases.length} nt) and the dot-bracket (${structure.length} characters) must have the same length.` };
         return { input: { seq, db } };
     }
@@ -352,7 +357,7 @@ function rrCommandLine(): { text: string; error?: string } {
         const seq = rrEl<HTMLTextAreaElement>('rrSeq').value.replace(/\s+/g, '').toUpperCase().replace(/T/g, 'U') || 'SEQUENCE';
         const db = rrEl<HTMLTextAreaElement>('rrDb').value.replace(/\s+/g, '') || 'DOT_BRACKET';
         let a: string[];
-        if (m === 'db') a = ['--seq', short(seq), '--db', short(db)];
+        if (m === 'db' || m === 'seqpred') a = ['--seq', short(seq), '--db', short(db)];
         else if (m === 'predict') a = ['--seq', short(seq), '--predict', rrEl<HTMLSelectElement>('rrPredict').value];
         else if (m === 'pdb') {
             a = ['--pdb', rrFile ? rrFile.name : 'structure.pdb'];
@@ -439,7 +444,7 @@ function rrShowSummary(r: RnaResult, mode: RrMode) {
     const f = (x: number) => (x === undefined ? '-' : x.toPrecision(3));
     const esc = (s: string) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     let h = '<table class="table compact row-hover">' +
-        row('input', { db: 'sequence + dot-bracket', predict: 'sequence only, structure predicted by the engine', pdb: 'PDB / mmCIF file', design: 'design JSON' }[mode]) +
+        row('input', { db: 'sequence + dot-bracket', seqpred: 'sequence + structure predicted by seqpred' + (spLast && spLast.build ? ' (build ' + spLast.build.build + ')' : ''), predict: 'sequence only, structure predicted by the engine', pdb: 'PDB / mmCIF file', design: 'design JSON' }[mode]) +
         row('nucleotides', rep.n_nt);
     if (mode === 'predict') {
         const db = rrPredictedStructure(r);
@@ -460,4 +465,66 @@ function rrPredictedStructure(r: RnaResult): string {
     for (const k of ['predicted_db', 'predicted_structure', 'db', 'structure']) if (typeof rep[k] === 'string' && rep[k]) return rep[k];
     const m = /^\s*(?:predicted|structure|db)[^\n:=]*[:=]\s*([.()\[\]{}<>A-Za-z&\/]{5,})\s*$/im.exec(r.log || '');
     return m ? m[1] : '';
+}
+
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------
+// seqpred: "Sequence only: predict with seqpred" input. The predicted dot-bracket is written to the dot-bracket field (editable), then "Build and load" is the ordinary
+// rigidRNA run. The module runs in its own worker (wasm/seqpred, SeqpredEngine); nothing leaves the browser.
+
+function spOptions(): SeqpredOptions {
+    const o: SeqpredOptions = {
+        method: rrEl<HTMLSelectElement>('spMethod').value as SeqpredOptions['method'],
+        salt: parseFloat(rrEl<HTMLInputElement>('spSalt').value) || 0.25,
+        budgetSeconds: Math.max(0, parseFloat(rrEl<HTMLInputElement>('spBudget').value) || 0),
+        threads: parseInt(rrEl<HTMLInputElement>('rrThreads').value) || 1,
+    };
+    return o;
+}
+
+/** "Predict structure" button of the seqpred input. */
+async function spPredict() {
+    if (spRunning) return;
+    const seq = rrEl<HTMLTextAreaElement>('rrSeq').value.replace(/\s+/g, '').toUpperCase().replace(/T/g, 'U');
+    if (!seq) { notify('Enter a sequence.', 'alert'); return; }
+    if (/[^ACGU]/.test(seq)) { notify('seqpred takes a single strand of A, C, G, U (T is read as U).', 'alert'); return; }
+    const st = rrEl('spStage');
+    spRunning = true;
+    rrEl<HTMLButtonElement>('spRunBtn').disabled = true; rrEl<HTMLButtonElement>('spCancelBtn').disabled = false;
+    rrEl('spSummary').innerHTML = '';
+    const t0 = performance.now();
+    const tick = window.setInterval(() => { st.textContent = `Predicting... ${((performance.now() - t0) / 1000).toFixed(0)} s (one thread: about 30 s for 150 nt, minutes for 400 nt with the long-range search)`; }, 1000);
+    try {
+        st.textContent = 'Starting seqpred...';
+        const r = await spEngine.predict(seq, spOptions());
+        spLast = r;
+        rrEl<HTMLTextAreaElement>('rrDb').value = r.dotbracket;
+        st.textContent = `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} base pairs, ${r.helices.length} kissing / pseudoknot helices.`;
+        spShowSummary(r);
+        rrAdvChanged();
+    } catch (e) {
+        st.textContent = e.message === 'cancelled' ? 'Cancelled.' : 'Failed: ' + e.message;
+        if (e.message !== 'cancelled') notify('seqpred failed: ' + e.message, 'alert');
+    } finally {
+        window.clearInterval(tick);
+        spRunning = false;
+        rrEl<HTMLButtonElement>('spRunBtn').disabled = false; rrEl<HTMLButtonElement>('spCancelBtn').disabled = true;
+    }
+}
+
+function spCancel() { if (spRunning) spEngine.cancel(); }
+
+function spShowSummary(r: SeqpredResult) {
+    const esc = (s: string) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const row = (k: string, v: any) => `<tr><td>${k}</td><td>${v}</td></tr>`;
+    let h = '<table class="table compact row-hover">' +
+        row('method', `${r.method}, salt ${r.salt} M`) +
+        row('nested MFE (Turner 2004, salt corrected)', `${r.energy.nestedMfe.toFixed(2)} kcal/mol`) +
+        (r.energy.score !== undefined ? row('predictor score', r.energy.score.toFixed(2)) : '') +
+        row('kissing / pseudoknot helices', r.helices.length ? r.helices.map(x => `${x.i}-${x.j} (${x.k} bp)`).join(', ') : 'none: the nested MFE is the answer') +
+        row('time', `${(r.timings.total as number).toFixed(1)} s in the engine, ${r.wallSeconds.toFixed(1)} s with loading (${r.variant === 'mt' ? 'threaded' : 'single thread'} build)`) +
+        row('provenance', `seqpred ${esc(r.version.seqpred)}, ${esc(r.version.predictor)}, ViennaRNA ${esc(r.version.viennarna)}, build ${r.build ? esc(r.build.build) : '?'} (${r.build ? esc(r.build.engine) : 'build.json not found'})`);
+    if (r.notes.length) h += row('notes', r.notes.map(esc).join('<br>'));
+    h += '</table><p class="rr-note">A prediction, not a measurement: on natural RNAs the kissing layer adds nothing to the nested MFE (documented in docs/70_seqpred_cpp.md of rigidDNA2); it targets designed kissing-loop RNAs. Check the arc plot of the result before building.</p>';
+    rrEl('spSummary').innerHTML = h;
 }
