@@ -219,7 +219,7 @@ const RD2_OPTS: Rd2Opt[] = [
     rd2Opt(2, 'orientRound', '--orient-round', 'check', 'Round candidates only', '', 'only round candidates compete in the ranking (docs/17)'),
     rd2Opt(2, 'orientProbe', '--orient-probe', 'int', 'Probe iterations', '40', 'node-level iterations of the candidate ranking', { min: 1, max: 100000, step: 1 }),
     // --- coarse relaxation
-    rd2Opt(3, 'dmin', '--dmin', 'num', 'Helix repulsion distance', '2.8', 'helix-axis repulsion distance (oxDNA length units)', { min: 0.1, max: 20, step: 0.1 }),
+    rd2Opt(3, 'dmin', '--dmin', 'num', 'Helix repulsion distance', '3.0 lattice route, else 2.8', 'helix-axis repulsion distance (oxDNA length units). Blank: rd2_run uses 3.0 on the lattice route and 2.8 on every other route; an explicit value is used on every route', { min: 0.1, max: 20, step: 0.1 }),
     rd2Opt(3, 'krep', '--krep', 'num', 'Repulsion stiffness', '5', 'stiffness of the helix-axis repulsion', { min: 0, max: 100000, step: 1 }),
     rd2Opt(3, 'iters', '--iters', 'int', 'Iterations per stage', '400', 'Levenberg-Marquardt iterations per continuation stage', { min: 1, max: 100000, step: 1 }),
     rd2Opt(3, 'stages', '--stages', 'int', 'Continuation stages', 'auto', 'continuation stages of the node level (default: automatic)', { min: 1, max: 1000, step: 1 }),

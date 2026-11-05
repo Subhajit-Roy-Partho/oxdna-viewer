@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * tabs.mjs — checks the tabs of the rigidDNA window in headless Chromium: the rigidDNA1 and rigidDNA2 ribbon buttons open the one window on the right tab,
- * switching tabs shows exactly one pane, the second click on the button of the shown tab closes the window, and a dropped design opens tab 2.
+ * rigidrna.mjs — checks the rigidRNA tab of the rigidDNA window in headless Chromium: the rigidRNA ribbon button opens the window on tab 3, a sequence + dot-bracket
+ * run with and without electrostatics loads 40 nucleotides each time and the summary says what ran, a length mismatch is refused without running.
+ * (The other inputs, the Advanced properties and the command line preview are checked by rnamodes.mjs.)
  *
- *   node tabs.mjs --out <prefix> [--port N]      writes <prefix>_tab1.png, <prefix>_tab2.png; exit code 1 on a failed check
+ *   node rigidrna.mjs --out <prefix> [--port N]      writes <prefix>_tab3.png, <prefix>_result.png; exit code 1 on a failed check
  */
 import http from "node:http";
 import fs from "node:fs";

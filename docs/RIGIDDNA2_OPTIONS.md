@@ -1,7 +1,7 @@
 # rigidDNA2 tab: the options of `rd2_run` in the browser
 
-The rigidDNA2 tab of the rigidDNA window runs `rd2_run` of the rigidDNA engine compiled to WebAssembly (`wasm/rigiddna2/`, built from engine `main` at `23b5a9f`,
-`rigidDNA2/wasm/build.sh`). A run in the browser is the command line `rd2_run <design> <out_prefix> [options]` on an in-memory file system. This page lists every
+The rigidDNA2 tab of the rigidDNA window runs `rd2_run` of the rigidDNA engine compiled to WebAssembly (`wasm/rigiddna2/`, built from the engine's `origin/main` at `052b4e24`,
+`rigidDNA2/wasm/build.sh`; engine commits and build flags in `docs/WASM_BUILDS.md`). A run in the browser is the command line `rd2_run <design> <out_prefix> [options]` on an in-memory file system. This page lists every
 option of that command line, says which ones the tab exposes (section **Advanced properties** of the tab), which ones cannot work in a browser and why, and how the
 command line is made, so that the GUI and the command line stay the same thing.
 
@@ -85,7 +85,7 @@ Three 6-helix-bundle rings joined at two places each (the Dietz et al. 2009 beac
 
 | Option | Type | Allowed | Engine default | Meaning (from the engine docs) | Source | Bridge |
 |---|---|---|---|---|---|---|
-| `--dmin` | number | 0.1..20 | 2.8 | helix-axis repulsion distance (oxDNA length units) | model.h, relax.h | `extra` |
+| `--dmin` | number | 0.1..20 | 3.0 on the lattice route, 2.8 on every other route | helix-axis repulsion distance (oxDNA length units); an explicit value is used on every route (the library default stays 2.8, `rd2_run` applies 3.0 when the route is the lattice route and `--dmin` was not given) | apps/rd2_run.cpp, model.h, relax.h | `extra` |
 | `--krep` | number | 0..100000 | 5 | stiffness of the helix-axis repulsion | model.h, relax.h | `extra` |
 | `--iters` | integer | 1..100000 | 400 | Levenberg-Marquardt iterations per continuation stage | relax.h | `extra` |
 | `--stages` | integer | 1..1000 | auto | continuation stages of the node level (default: automatic) | relax.h | `extra` |
