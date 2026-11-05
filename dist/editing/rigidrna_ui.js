@@ -347,6 +347,8 @@ function rrInput() {
         const structure = db.replace(/[&\/]/g, '');
         if (m === 'seqpred' && !structure)
             return { error: 'Press "Predict structure" first: seqpred writes the predicted dot-bracket here (you can edit it before building).' };
+        if (m === 'seqpred' && spLast && (spLast.method === 'dna' || spLast.method === 'ssdna') && rrEl('spMethod').value === spLast.method)
+            return { error: 'This is a DNA prediction: the rigidRNA engine builds RNA structures only, so the DNA structure is not built here (its pairs and dot-bracket are shown in the summary).' };
         if (!structure || bases.length !== structure.length)
             return { error: `The sequence (${bases.length} nt) and the dot-bracket (${structure.length} characters) must have the same length.` };
         return { input: { seq, db } };
@@ -550,8 +552,10 @@ async function spPredict() {
         notify('Enter a sequence.', 'alert');
         return;
     }
-    if (/[^ACGU]/.test(seq)) {
-        notify('seqpred takes a single strand of A, C, G, U (T is read as U).', 'alert');
+    const meth = rrEl('spMethod').value;
+    const multi = meth === 'msrna' || meth === 'dna';
+    if (multi ? /[^ACGU&]/.test(seq) : /[^ACGU]/.test(seq)) {
+        notify(meth === 'dna' ? 'The DNA hybrid takes strands of A, C, G, T separated by &.' : multi ? 'MS-RNA takes strands of A, C, G, U separated by & (T is read as U).' : 'This method takes a single strand of A, C, G, U (T is read as U); choose "MS-RNA" or "DNA hybrid" for several strands separated by &.', 'alert');
         return;
     }
     const st = rrEl('spStage');
@@ -563,10 +567,14 @@ async function spPredict() {
     const tick = window.setInterval(() => { st.textContent = `Predicting... ${((performance.now() - t0) / 1000).toFixed(0)} s (one thread: about 30 s for 150 nt, minutes for 400 nt with the long-range search)`; }, 1000);
     try {
         st.textContent = 'Starting seqpred...';
-        const r = await spEngine.predict(seq, spOptions());
+        const r = await spEngine.predict(meth === 'dna' || meth === 'ssdna' ? seq.replace(/U/g, 'T') : seq, spOptions());
         spLast = r;
         rrEl('rrDb').value = r.dotbracket;
-        st.textContent = `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} base pairs, ${r.helices.length} kissing / pseudoknot helices.`;
+        st.textContent = r.method === 'dna' || r.method === 'ssdna'
+            ? `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} DNA base pairs${r.method === 'dna' ? ' over ' + (r.lengths || []).length + ' strands' : ''} (prediction only: the rigidRNA engine builds RNA).`
+            : r.method === 'msrna'
+                ? `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} base pairs over ${(r.lengths || []).length} strands, primary state "${r.primary}", ${(r.alternatives || []).length} alternative state(s).`
+                : `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} base pairs, ${r.helices.length} kissing / pseudoknot helices.`;
         spShowSummary(r);
         rrAdvChanged();
     }
@@ -587,15 +595,55 @@ function spCancel() { if (spRunning)
 function spShowSummary(r) {
     const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
-    let h = '<table class="table compact row-hover">' +
-        row('method', `${r.method}, salt ${r.salt} M`) +
-        row('nested MFE (Turner 2004, salt corrected)', `${r.energy.nestedMfe.toFixed(2)} kcal/mol`) +
-        (r.energy.score !== undefined ? row('predictor score', r.energy.score.toFixed(2)) : '') +
-        row('kissing / pseudoknot helices', r.helices.length ? r.helices.map(x => `${x.i}-${x.j} (${x.k} bp)`).join(', ') : 'none: the nested MFE is the answer') +
-        row('time', `${r.timings.total.toFixed(1)} s in the engine, ${r.wallSeconds.toFixed(1)} s with loading (${r.variant === 'mt' ? 'threaded' : 'single thread'} build)`) +
-        row('provenance', `seqpred ${esc(r.version.seqpred)}, ${esc(r.version.predictor)}, ViennaRNA ${esc(r.version.viennarna)}, build ${r.build ? esc(r.build.build) : '?'} (${r.build ? esc(r.build.engine) : 'build.json not found'})`);
+    const prov = row('provenance', `seqpred ${esc(r.version.seqpred)}, ${esc(r.version.predictor)}, ViennaRNA ${esc(r.version.viennarna)}, build ${r.build ? esc(r.build.build) : '?'} (${r.build ? esc(r.build.engine) : 'build.json not found'})`);
+    const timeRow = row('time', `${r.timings.total.toFixed(1)} s in the engine, ${r.wallSeconds.toFixed(1)} s with loading (${r.variant === 'mt' ? 'threaded' : 'single thread'} build)`);
+    let h = '<table class="table compact row-hover">';
+    if (r.method === 'dna' || r.method === 'ssdna') {
+        const cnt = (a) => (a ? a.length : 0);
+        const dnaR = r;
+        h += row('method', r.method === 'dna' ? 'DNA hybrid (docs/59 section 5.1): domain pairing + ViennaRNA-DNA MFE on the nucleotides domain pairing leaves free' : 'single-stranded DNA tools (lane SSDNA-1): hybrid, ViennaRNA-DNA MFE, G-quadruplex / i-motif sequence rules') +
+            row('strands', (r.lengths || []).map((n, k) => `${k + 1}: ${n} nt`).join(', ')) +
+            row('base pairs (hybrid)', `${r.pairs.length}`) +
+            (r.method === 'dna' ? row('domain pairing / MFE stems added', `${cnt(dnaR.bPairs)} pairs from domain pairing, ${cnt(dnaR.keptPairs)} pairs added from the MFE (of ${cnt(dnaR.aPairs)} MFE pairs); MFE energy ${r.energy.mfeA.toFixed(2)} kcal/mol (strand order ${(dnaR.ordering || []).map((x) => x + 1).join('-')})`)
+                : row('ViennaRNA-DNA MFE', `${cnt(dnaR.mfePairs)} pairs, ${r.energy.mfe.toFixed(2)} kcal/mol (${r.temp} deg C); domain pairing ${cnt(dnaR.domainPairs)} pairs`) +
+                    row('G-quadruplex rule (G3+N1-7)', dnaR.g4.motifs.length ? dnaR.g4.motifs.map((m) => m.map(t => `${t[0]}-${t[1]}`).join(' / ')).join('; ') : 'no motif') +
+                    row('i-motif rule (C3+N1-7)', dnaR.imotif.motifs.length ? dnaR.imotif.motifs.map((m) => m.map(t => `${t[0]}-${t[1]}`).join(' / ')).join('; ') : 'no motif')) +
+            timeRow + prov;
+    }
+    else if (r.method === 'msrna') {
+        h += row('method', 'MS-RNA v4 (multi-strand: ViennaRNA co-fold of strand subsets and orderings, partition into complexes at 100 uM, deterministic kissing layer)') +
+            row('strands', (r.lengths || []).map((n, k) => `${k + 1}: ${n} nt`).join(', ')) +
+            row('primary state', `${esc(r.primary || '')}${r.primary === 'kiss' ? ' (every strand has at least 50 nt: monomer folds are kept and linked by kissing helices)' : ''}, free energy ${r.energy.freeEnergy.toFixed(2)} kcal/mol`) +
+            row('base pairs', `${r.pairs.length}, of which ${r.layers.filter(l => l > 0).length} cross the nested structure (kissing / pseudoknot layer)`);
+        const alts = r.alternatives || [];
+        if (alts.length) {
+            h += row('alternative states', alts.map((a, k) => `<b>${esc(a.name)}</b> (${a.F.toFixed(2)} kcal/mol, ${a.pairs.length} pairs) <button class="button mini" onclick="spUseAlternative(${k})">use this structure</button>`).join('<br>'));
+        }
+        h += timeRow + prov;
+    }
+    else {
+        h += row('method', `${r.method}, salt ${r.salt} M`) +
+            row('nested MFE (Turner 2004, salt corrected)', `${r.energy.nestedMfe.toFixed(2)} kcal/mol`) +
+            (r.energy.score !== undefined ? row('predictor score', r.energy.score.toFixed(2)) : '') +
+            row('kissing / pseudoknot helices', r.helices.length ? r.helices.map(x => `${x.i}-${x.j} (${x.k} bp)`).join(', ') : 'none: the nested MFE is the answer') +
+            timeRow + prov;
+    }
     if (r.notes.length)
         h += row('notes', r.notes.map(esc).join('<br>'));
-    h += '</table><p class="rr-note">A prediction, not a measurement: on natural RNAs the kissing layer adds nothing to the nested MFE (documented in docs/70_seqpred_cpp.md of rigidDNA2); it targets designed kissing-loop RNAs. Check the arc plot of the result before building.</p>';
+    h += '</table><p class="rr-note">' + (r.method === 'dna' || r.method === 'ssdna'
+        ? 'A prediction, not a measurement (docs/71 and docs/73 of rigidDNA2): short stems and hairpins are mostly right, junctions, ligand-bound aptamers and kissing complexes are not; the G-quadruplex rule predicts the motif, not its topology. This module has no NUPACK (proprietary) and no scaffold-alignment / species-collapse step.'
+        : r.method === 'msrna'
+            ? 'A prediction, not a measurement: the answer to a kissing-complex versus extended-duplex question is a set of states, so the alternative states are listed (docs/73_multistrand.md of rigidDNA2). On blind entries MS-RNA is only marginally better than plain ViennaRNA co-folding.'
+            : r.method === 'v3'
+                ? 'A prediction, not a measurement: v3 adds closing-helix candidates to v2 (docs/74 section 12 of rigidDNA2); it was frozen without a held-out result, so v2 remains the validated predictor. On natural RNAs the kissing layer adds nothing to the nested MFE.'
+                : 'A prediction, not a measurement: on natural RNAs the kissing layer adds nothing to the nested MFE (documented in docs/70_seqpred_cpp.md of rigidDNA2); it targets designed kissing-loop RNAs.') + '</p>';
     rrEl('spSummary').innerHTML = h;
+}
+/** msrna: copy an alternative state's dot-bracket into the dot-bracket field. */
+function spUseAlternative(k) {
+    if (!spLast || !spLast.alternatives || !spLast.alternatives[k])
+        return;
+    rrEl('rrDb').value = spLast.alternatives[k].dotbracket;
+    rrEl('spStage').textContent = `Dot-bracket of the alternative state "${spLast.alternatives[k].name}" loaded; "Build and load" builds this structure.`;
+    rrAdvChanged();
 }

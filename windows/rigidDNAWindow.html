@@ -430,8 +430,12 @@
         <div class="row">
             <div class="cell-4">
                 <label>Method</label>
-                <select id="spMethod" data-role="select" title="v2: nested MFE + kissing / pseudoknot layer (predictor v2); nested: MFE only; rna_kl, kl_routes, longrange: earlier tools of the same family">
+                <select id="spMethod" data-role="select" title="v2: nested MFE + kissing / pseudoknot layer (predictor v2); v3: v2 plus closing-helix candidates (PK-7); MS-RNA v4: several strands separated by &amp;, returns the primary state and the alternative states; nested: MFE only; rna_kl, kl_routes, longrange: earlier tools of the same family">
                     <option value="v2" selected>v2 (nested + kissing layer)</option>
+                    <option value="v3">v3 (v2 + closing-helix candidates; frozen, no held-out result)</option>
+                    <option value="msrna">MS-RNA v4 (several strands separated by &amp;)</option>
+                    <option value="dna">DNA hybrid (strands A, C, G, T separated by &amp;; prediction only)</option>
+                    <option value="ssdna">single-stranded DNA tools (G-quadruplex, i-motif; prediction only)</option>
                     <option value="nested">nested MFE only</option>
                     <option value="rna_kl">rna_kl (prototype)</option>
                     <option value="kl_routes">kl_routes</option>

@@ -16,7 +16,7 @@
   function checkOptions(o) {
     o = Object.assign({}, o || {});
     if (o.salt !== undefined && !(Number(o.salt) > 0)) throw new SeqpredError('salt must be a positive number (mol/L)');
-    if (o.method !== undefined && !['v2', 'nested', 'hint', 'v3', 'rna_kl', 'kl_routes', 'longrange', 'cassette'].includes(o.method)) throw new SeqpredError('method must be one of v2, nested, hint, v3, rna_kl, kl_routes, longrange, cassette');
+    if (o.method !== undefined && !['v2', 'nested', 'hint', 'v3', 'msrna', 'dna', 'ssdna', 'rna_kl', 'kl_routes', 'longrange', 'cassette'].includes(o.method)) throw new SeqpredError('method must be one of v2, nested, hint, v3, msrna, dna, ssdna, rna_kl, kl_routes, longrange, cassette');
     for (const k of ['threads', 'maxLength']) if (o[k] !== undefined) o[k] = Math.max(0, Math.floor(Number(o[k])));
     if (o.budgetSeconds !== undefined) o.budgetSeconds = Math.max(0, Number(o.budgetSeconds));
     return o;
