@@ -9,11 +9,12 @@
  */
 
 interface SeqpredOptions {
-    method?: 'v2' | 'nested' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
+    method?: 'v2' | 'v3' | 'msrna' | 'dna' | 'ssdna' | 'nested' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
     salt?: number;            // mol/l (default 0.25)
     budgetSeconds?: number;   // stop starting new host-refinement rounds after this time (0 = unlimited)
     maxLength?: number;       // longer sequences get the nested MFE only (default 1500)
     threads?: number;         // threaded build only
+    gate?: number;            // msrna: strands of at least this many nt keep their own fold and are linked by kissing helices (default 50)
 }
 
 interface SeqpredResult {
@@ -22,7 +23,11 @@ interface SeqpredResult {
     dotbracket: string;                                 // nested (), crossing layers [] {} <>
     pairs: [number, number][]; layers: number[];        // 1-based
     helices: { i: number; j: number; k: number }[];     // long-range helices
-    energy: { nestedMfe: number; nestedDotbracket: string; score?: number };
+    energy: { nestedMfe?: number; nestedDotbracket?: string; score?: number; freeEnergy?: number; mfeA?: number; mfe?: number; mea?: number };   // dna: mfeA (ViennaRNA-DNA MFE of the best strand order); ssdna: mfe, mea   // msrna: freeEnergy (kcal/mol of the complex partition), no nested MFE
+    strands?: string[]; lengths?: number[];             // msrna: the strands (pairs are global over their concatenation, dotbracket has '&' between strands)
+    temp?: number;                                      // dna / ssdna: temperature (deg C)
+    primary?: string;                                   // msrna: 'kiss' or 'default'
+    alternatives?: { name: string; F: number; dotbracket: string; pairs: [number, number][]; layers: number[] }[];   // msrna: other states with a different pairing
     notes: string[]; truncated: boolean; capped?: boolean;
     timings: { [k: string]: any };
     version: { seqpred: string; buildId: string; git: string; viennarna: string; parameters: string; predictor: string };
