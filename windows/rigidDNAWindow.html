@@ -299,7 +299,7 @@
 <div class="row">
     <div class="cell-6">
         <label>Layout route</label>
-        <select id="rd2Route" data-role="select" title="auto decides from the design: ring, wireframe (one helix per edge), articulated (bundles joined by long crossovers) or lattice">
+        <select id="rd2Route" data-role="select" title="auto decides from the design: ring (rings of helices; three interlocked rings give the beachball ball), wireframe (one helix per edge), articulated (bundles joined by long crossovers) or lattice (helix repulsion distance 3.0 here, 2.8 on the other routes, unless set under Advanced properties)">
             <option value="auto">auto (decided from the design)</option>
             <option value="lattice">lattice</option>
             <option value="wireframe">wireframe</option>
@@ -374,22 +374,76 @@
 </div>
 
 <div id="rdPane3" class="rd-pane" style="display:none">
+<style>
+    #rrAdvHost label { font-size: 13px; margin-bottom: 2px; }
+    #rrAdvHost input[type=number], #rrAdvHost input[type=text] { width: 100%; }
+    #rrAdvHost code { font-size: 10px; opacity: 0.8; }
+    .rr-note { font-size: 11px; color: #777; }
+</style>
 <div class="d-flex flex-align-center mb-2" style="gap: 10px;">
     <img src="img/ico/rigiddna-icon.svg" height="40px">
     <p class="text-muted mb-0">
-        Builds an oxRNA2 structure of an RNA from its sequence and (pseudoknotted) dot-bracket structure entirely in your browser
-        (rigidRNA compiled to WebAssembly, in a background worker): rigid base-pair nodes per stem, de novo layout of the stems,
-        Levenberg-Marquardt relaxation and export. With <i>Electrostatics</i> the stems also feel oxRNA2's salt-dependent Debye-H&uuml;ckel repulsion
-        between their backbone charges, so the stem spacing follows the salt concentration. The result opens as a normal system in the viewer.
+        Builds an oxRNA2 structure of an RNA entirely in your browser (rigidRNA compiled to WebAssembly, in a background worker): rigid base-pair nodes per stem,
+        de novo layout, Levenberg-Marquardt relaxation and export. The input is a sequence with its dot-bracket structure, a sequence alone (the engine predicts
+        the structure), a PDB / mmCIF file or a design JSON. With <i>Electrostatics</i> the stems also feel oxRNA2's salt-dependent Debye-H&uuml;ckel repulsion.
+        The result opens as a normal system. The oxRNA2 molecular-dynamics relaxation of it is a separate step (oxDNA / oxpy), not part of the engine.
     </p>
 </div>
 
 <h2>1. Structure</h2>
-<label>Sequence (A, C, G, U)</label>
-<textarea id="rrSeq" rows="3" style="width: 100%; font-family: monospace; font-size: 11px;" placeholder="GGGCGCUGAAAGCGCCC..."></textarea>
-<label>Dot-bracket (pseudoknots as [] {} &lt;&gt;)</label>
-<textarea id="rrDb" rows="3" style="width: 100%; font-family: monospace; font-size: 11px;" placeholder="(((((((....)))))))"></textarea>
-<button class="button small" onclick="rrExample()">Load example</button>
+<label>Input</label>
+<select id="rrMode" data-role="select" onchange="rrModeChanged()" title="what the engine starts from">
+    <option value="db" selected>Sequence + dot-bracket</option>
+    <option value="predict">Sequence only: predict the secondary structure</option>
+    <option value="pdb">PDB / mmCIF file (3D start)</option>
+    <option value="design">rigidRNA design JSON</option>
+</select>
+<div id="rrBlkSeq">
+    <label>Sequence (A, C, G, U; N = unknown; <code>&amp;</code> or <code>/</code> between strands)</label>
+    <textarea id="rrSeq" rows="3" style="width: 100%; font-family: monospace; font-size: 11px;" placeholder="GGGCGCUGAAAGCGCCC..."></textarea>
+    <div id="rrBlkDb">
+        <label>Dot-bracket (pseudoknots as [] {} &lt;&gt; and A a, B b, ...; the strand separators may be repeated here or left out)</label>
+        <textarea id="rrDb" rows="3" style="width: 100%; font-family: monospace; font-size: 11px;" placeholder="(((((((....)))))))"></textarea>
+    </div>
+    <div id="rrBlkPredict" class="row" style="display:none">
+        <div class="cell-4">
+            <label>Predictor</label>
+            <select id="rrPredict" data-role="select" title="rd2_rna --predict: mfe = minimum free energy, mea = maximum expected accuracy, probknot = base-pair probabilities with pseudoknots, layers = nested layers of stems with pseudoknots">
+                <option value="mfe" selected>mfe</option>
+                <option value="mea">mea</option>
+                <option value="probknot">probknot</option>
+                <option value="layers">layers (pseudoknots)</option>
+            </select>
+        </div>
+        <div class="cell-4">
+            <label>MEA gamma</label>
+            <input type="number" id="rrGamma" min="0.01" max="100" step="any" placeholder="default 1" title="--gamma: weight of the base pairs in the MEA structure (mea only)">
+        </div>
+        <div class="cell-4">
+            <label>Largest span (nt)</label>
+            <input type="number" id="rrMaxSpan" min="0" max="100000" step="1" placeholder="0 = unlimited" title="--maxspan: largest base-pair span of the predictor (use 400 for kilobase scaffolds)">
+        </div>
+    </div>
+    <button class="button small" id="rrExampleBtn" onclick="rrExample()">Load example</button>
+</div>
+<div id="rrBlkFile" style="display:none">
+    <label id="rrFileLabel">File</label>
+    <input type="file" id="rrFile" onchange="rrFileChosen(this)">
+    <p class="rr-note mb-1" id="rrFileInfo">No file chosen.</p>
+    <div id="rrBlkPdb" class="row">
+        <div class="cell-4">
+            <label>Chains</label>
+            <input type="text" id="rrChains" placeholder="all (e.g. A,B)" title="--pdb-chains: chain identifiers, comma separated">
+        </div>
+        <div class="cell-4">
+            <label>Model</label>
+            <input type="text" id="rrModel" placeholder="1 (or all)" title="--pdb-model: model number, or all">
+        </div>
+        <div class="cell-4">
+            <input type="checkbox" id="rrLayout" data-role="checkbox" data-caption="Lay out de novo from the pairs" title="--layout: ignore the 3D coordinates of the file and lay the stems out from its base pairs alone (de novo test)">
+        </div>
+    </div>
+</div>
 
 <h2>2. Options</h2>
 <div class="row">
@@ -417,6 +471,26 @@
     </div>
 </div>
 <p class="text-muted text-small mb-1" id="rrEngine"></p>
+
+<div class="accordion mt-2" data-role="accordion" data-one-frame="false" id="rrAdvAcc">
+    <div class="frame">
+        <div class="heading">Advanced properties <span class="text-muted text-small" id="rrAdvCount"></span></div>
+        <div class="content">
+            <p class="text-muted text-small mb-1">
+                Every <code>rd2_rna</code> option that can be set in the browser. A blank field passes nothing, so the engine's own default applies;
+                an invalid entry is marked and is not passed. The command line below shows what the engine receives.
+            </p>
+            <div class="group">
+                <button type="button" class="button small" onclick="rrAdvReset()" title="Clear every advanced field (engine defaults)">Reset advanced</button>
+                <span class="rd2-bad text-small" id="rrAdvProblems"></span>
+            </div>
+            <div id="rrAdvHost"></div>
+        </div>
+    </div>
+</div>
+<h4 class="mt-2">Command line preview</h4>
+<pre id="rrCmd" title="The command line of rd2_rna for the current options (the same arguments the worker passes to the engine)" style="white-space: pre-wrap; word-break: break-all; font-size: 11px; padding: 6px; background: rgba(128,128,128,0.15);"></pre>
+<button type="button" class="button small mb-2" onclick="rrCopyCommand()" title="Copy the command line to the clipboard">Copy</button>
 
 <h2>3. Run</h2>
 <div class="group">

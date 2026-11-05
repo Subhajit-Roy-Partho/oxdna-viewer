@@ -1,4 +1,4 @@
 {
  "build": "34a422903136",
- "engine": "rigidDNA2 engine 2ecfe74a (ring-beachball: wrap-cable seam fix on the three-ring route)"
+ "engine": "rigidDNA2 engine origin/main 052b4e24 (C++ sources as 2ecfe74a: wrap-cable seam fix on the three-ring route)"
 }

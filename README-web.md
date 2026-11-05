@@ -35,3 +35,11 @@ a static host) add the two headers there; without them the window uses the singl
 
 End-to-end check in a headless Chromium: `node tools/rd2wasm-e2e/e2e.mjs --design design.json --out /path/prefix --threads 4` (writes screenshots and a JSON record;
 needs playwright-core as in `tools/oxview-render`).
+
+## rigidRNA in the browser (WebAssembly)
+
+The **rigidRNA** tab of the same window builds an oxRNA2 structure of an RNA in your browser (`wasm/rigidrna/`, rigidRNA compiled to WebAssembly, in a Web Worker). The input is a
+sequence with its dot-bracket structure (`&` or `/` between strands), a sequence alone (the engine predicts the structure: mfe, mea, probknot, layers), a PDB / mmCIF file or a
+rigidRNA design JSON; options for salt, temperature, electrostatics, the layout and the relaxation are under *Advanced properties*, with the command line shown. See
+`docs/RIGIDRNA_OPTIONS.md`. Which engine commits and flags the two WebAssembly modules were built from: `docs/WASM_BUILDS.md`.
+Checks: `node tools/rd2wasm-e2e/rigidrna.mjs --out <prefix>` and `node tools/rd2wasm-e2e/rnamodes.mjs --out <prefix> [--pdb 1EHZ.pdb] [--design hairpin_gaaa.json]`.

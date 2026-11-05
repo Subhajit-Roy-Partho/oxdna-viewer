@@ -34,6 +34,7 @@
 | #10 | Browser web deployment, non-root Tailscale proxy, postMessage bridge, and unified LLM cross-tool integration | 2026-07-23 08:24 |
 | #11 | Commit the rigidDNA relaxation window's full parameter set + live intermediate relaxation steps (existed uncommitted from an earlier session); remove dead `spatial_api.js` script reference | 2026-09-18 |
 | #12 | rigidDNA2 WebAssembly coupling (branch `rd2-wasm`): `wasm/rigiddna2/` module + worker, `ts/editing/rigiddna2_{bridge,ui}.ts`, `windows/rigidDNAWindow.*` (one window, tab rigidDNA1 + tab rigidDNA2; `ts/editing/rigiddna_hub.ts`), COOP/COEP in `serve.json`, `coi-serviceworker.js`, `tools/rd2wasm-e2e` (`e2e.mjs` full run, `tabs.mjs` tab behaviour) | 2026-10-28 |
+| #13 | WebAssembly update 2026-11-04 (branch `wasm-update-20261104`): rigidDNA2 rebuilt from engine origin/main 052b4e24 (C++ identical to 2ecfe74a, binary identical to the previous build), rigidRNA rebuilt from origin/rna 8bd12958 + e943b24c; rigidRNA tab: input select (sequence + dot-bracket, sequence only with predictor, PDB / mmCIF, design JSON), Advanced properties, command line preview (`ts/editing/rigidrna_ui.ts`, `docs/RIGIDRNA_OPTIONS.md`, `docs/WASM_BUILDS.md`, `tools/rd2wasm-e2e/rnamodes.mjs`) | 2026-11-04 |
 
 ---
 
