@@ -1,4 +1,4 @@
 {
- "build": "9b0211f68c4c",
- "engine": "seqpred 701ab326 (rigidDNA2 branch seqpred-cpp2: v3, MS-RNA, DNA tools) + ViennaRNA 2.7.2, emscripten/emsdk:6.0.13"
+ "build": "29b2ca3bc219",
+ "engine": "seqpred 2b071704 (rigidDNA2 branch m2-port; models v2, v3, m2 [m2 EXPERIMENTAL]) + ViennaRNA 2.7.2, emscripten/emsdk:6.0.13"
 }

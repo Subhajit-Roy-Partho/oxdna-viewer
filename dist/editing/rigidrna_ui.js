@@ -118,8 +118,7 @@ function spModelChanged() {
     const v = rrEl('spModel').value;
     if (v === 'v2' || v === 'v3')
         spSetSelect('spMethod', v);
-    else if (v === 'm2')
-        notify('The M2 model is not in this seqpred build: v2 remains the validated predictor.', 'warn');
+    else if (v === 'm2') { /* selectable only when the loaded build carries M2 (spRefreshModel); passed on as options.model */ }
 }
 /** Enables the M2 option only when the loaded module build carries it (else it stays disabled). */
 async function spRefreshModel() {

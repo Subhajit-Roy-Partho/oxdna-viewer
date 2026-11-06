@@ -19,8 +19,11 @@ class SeqpredEngine {
     static m2Supported(v) {
         if (!v)
             return false;
-        if (Array.isArray(v.models) && v.models.indexOf('m2') >= 0)
+        const mm = v.models;
+        if (Array.isArray(mm) && mm.indexOf('m2') >= 0)
             return true;
+        if (mm && typeof mm === 'object' && !Array.isArray(mm) && Object.prototype.hasOwnProperty.call(mm, 'm2'))
+            return true; // version block: { models: { v2, v3, m2 } }
         return /m2/i.test([v.predictor, v.seqpred].filter(Boolean).join(' '));
     }
     /** wasm/seqpred/build.json (never cached); null when the module is not deployed. */

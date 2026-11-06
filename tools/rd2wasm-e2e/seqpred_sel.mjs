@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
  * seqpred_sel.mjs — checks GOAL 1 + GOAL 2 of the seqpred-ui lane in headless Chromium: the
- * rigidRNA tab's "predict with seqpred" input shows a model selector (v2 default, v3, M2 disabled
- * with "not in this build"), a 181-nt designed kissing-loop RNA (model v2) predicts a crossing
+ * rigidRNA tab's "predict with seqpred" input shows a model selector (v2 default, v3, M2 when the module build carries it), a 181-nt designed kissing-loop RNA (model v2) predicts a crossing
  * layer, the summary names the model and the build id, the selection panel draws an arc diagram
  * with red crossing arcs and a grey nested-MFE decoy, the ranked-candidate chart renders and a
  * click redraws the arcs, the reference overlay reports pair F1, and the predicted structure
@@ -81,7 +80,7 @@ try {
   check("model selector exists with v2, v3, m2", !!models && models.map((m) => m.value).join(",") === "v2,v3,m2", JSON.stringify(models));
   check("v2 is the default", !!models && (await page.evaluate(() => document.getElementById("spModel").value)) === "v2");
   const m2 = (models || []).find((m) => m.value === "m2");
-  check("M2 is disabled with 'not in this build'", !!m2 && m2.disabled && /not in this build/.test(m2.text), m2 ? m2.text : "no m2 option");
+  check("M2 is enabled when the module build carries it (and still labelled experimental)", !!m2 && !m2.disabled && !/not in this build/.test(m2.text) && /experimental/.test(m2.text), m2 ? m2.text : "no m2 option");
   const v2t = (models || []).find((m) => m.value === "v2"), v3t = (models || []).find((m) => m.value === "v3");
   check("v2 tooltip states the honest trade-off", !!v2t && /0\.956/.test(v2t.title) && /adds no pseudoknot on natural RNAs/.test(v2t.title), v2t ? v2t.title : "");
   check("M2 tooltip states the honest trade-off", !!m2 && /0\.471/.test(m2.title) && /0\.641/.test(m2.title) && /13\/20/.test(m2.title) && /3\/20/.test(m2.title), m2 ? m2.title : "");
@@ -130,6 +129,24 @@ try {
   await page.waitForTimeout(300);
   check("a short reference is refused with a clear message", /but the sequence is/.test(await page.textContent("#spRefMsg")), await page.textContent("#spRefMsg"));
   await page.evaluate((db) => { document.getElementById("spRefDb").value = db; spApplyRef(); }, db);
+
+  // ---- model M2 on the same design: the selector drives options.model, the summary names M2 and the gate, the selection graph is redrawn
+  await setSel("spModel", "m2");
+  await page.evaluate((s) => { document.getElementById("rrSeq").value = s; document.getElementById("rrDb").value = ""; }, SEQ);
+  await page.evaluate(() => spPredict());
+  await page.waitForFunction(() => /^(Done|Failed|Cancelled)/.test(document.getElementById("spStage").textContent), null, { timeout: 900000 });
+  const stage2 = await page.textContent("#spStage");
+  check("M2 prediction finishes", /^Done/.test(stage2), stage2);
+  const sum2 = await page.innerText("#spSummary");
+  check("summary shows model M2 (experimental) and the build id", /model\s+(m2|M2)/i.test(sum2) && /build [0-9a-f]{12}/.test(sum2), sum2.replace(/\s+/g, " ").slice(0, 300));
+  const db2 = await page.evaluate(() => document.getElementById("rrDb").value);
+  check("M2 returns a structure of the right length", db2.length === SEQ.length && /[(]/.test(db2), db2);
+  const arcs2 = await page.evaluate(() => ({ all: document.querySelectorAll("#spArc path").length, rows: document.querySelectorAll("#spCand .sp-cand").length }));
+  check("selection graph is redrawn for M2 (arcs and candidate rows)", arcs2.all >= 2 && arcs2.rows >= 2, JSON.stringify(arcs2));
+  await setSel("spModel", "v2");
+  await page.evaluate((s) => { document.getElementById("rrSeq").value = s; document.getElementById("rrDb").value = ""; }, SEQ);
+  await page.evaluate(() => spPredict());
+  await page.waitForFunction(() => /^(Done|Failed|Cancelled)/.test(document.getElementById("spStage").textContent), null, { timeout: 900000 });
 
   // ---- screenshots
   await page.evaluate(() => document.getElementById("spSel").scrollIntoView());

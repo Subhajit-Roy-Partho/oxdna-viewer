@@ -33,7 +33,7 @@ interface SeqpredResult {
     alternatives?: { name: string; F: number; dotbracket: string; pairs: [number, number][]; layers: number[] }[];   // msrna: other states with a different pairing
     notes: string[]; truncated: boolean; capped?: boolean;
     timings: { [k: string]: any };
-    version: { seqpred: string; buildId: string; git: string; viennarna: string; parameters: string; predictor: string; models?: string[] };
+    version: { seqpred: string; buildId: string; git: string; viennarna: string; parameters: string; predictor: string; models?: string[] | { [k: string]: { label?: string; status?: string; note?: string } } };
     build: { build: string; engine: string } | null;    // wasm/seqpred/build.json
     variant: 'mt' | 'st';
     wallSeconds: number;
@@ -51,7 +51,9 @@ class SeqpredEngine {
     /** True when the loaded module build carries the M2 re-ranker (version block or probe). */
     static m2Supported(v: any): boolean {
         if (!v) return false;
-        if (Array.isArray((v as any).models) && (v as any).models.indexOf('m2') >= 0) return true;
+        const mm = (v as any).models;
+        if (Array.isArray(mm) && mm.indexOf('m2') >= 0) return true;
+        if (mm && typeof mm === 'object' && !Array.isArray(mm) && Object.prototype.hasOwnProperty.call(mm, 'm2')) return true;   // version block: { models: { v2, v3, m2 } }
         return /m2/i.test([v.predictor, v.seqpred].filter(Boolean).join(' '));
     }
 
