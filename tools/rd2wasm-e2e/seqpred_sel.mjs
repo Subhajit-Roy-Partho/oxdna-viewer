@@ -39,8 +39,7 @@ const srv = http.createServer((req, res) => {
 await new Promise((r) => srv.listen(o.port, "127.0.0.1", r));
 
 const req = createRequire(import.meta.url);
-const pw = [process.env.PLAYWRIGHT_CORE, path.join(ROOT, "tools/oxview-render/node_modules/playwright-core"),
-  "/home/subho/Documents/Github/oxdna-viewer/tools/oxview-render/node_modules/playwright-core"].filter(Boolean).map((c) => { try { return req(c); } catch { return null; } }).find(Boolean);
+const pw = [process.env.PLAYWRIGHT_CORE, path.join(ROOT, "tools/oxview-render/node_modules/playwright-core")].filter(Boolean).map((c) => { try { return req(c); } catch { return null; } }).find(Boolean);
 if (!pw) { console.error("playwright-core not found"); process.exit(2); }
 const findChrome = () => {
   if (process.env.CHROME_PATH && fs.existsSync(process.env.CHROME_PATH)) return process.env.CHROME_PATH;
@@ -107,7 +106,7 @@ try {
     m2 = (models || []).find((m) => m.value === "m2"), ml3 = (models || []).find((m) => m.value === "ml3");
   check("v2 tooltip states the honest trade-off", !!v2t && /0\.956/.test(v2t.title) && /0 of 44/.test(v2t.title), v2t ? v2t.title : "");
   check("v3 tooltip has no held-out result of its own", !!v3t && /closing-helix/.test(v3t.title) && /no held-out result/.test(v3t.title), v3t ? v3t.title : "");
-  if (isIn("m2")) check("M2 tooltip states the honest trade-off (module note or fallback)", !!m2 && /0\.471/.test(m2.title) && /0\.641/.test(m2.title) && (/13\/20/.test(m2.title) || /3 of 44/.test(m2.title)), m2 ? m2.title : "");
+  if (isIn("m2")) check("M2 tooltip states the honest trade-off (module note or fallback)", !!m2 && ((/0\.471/.test(m2.title) && /0\.641/.test(m2.title)) || (/3 of 44/.test(m2.title) && /false helices/.test(m2.title))), m2 ? m2.title : "");
   else skip("M2 tooltip", "not in this build");
   check("ml3 tooltip names the pKiss limit", !!ml3 && /pKiss/.test(ml3.title), ml3 ? ml3.title : "");
   // trade-off line under the selector + EXPERIMENTAL badge for m2
@@ -240,14 +239,15 @@ try {
     await setSel("spModel", "v2");
   } else skip("M2 181-nt run", "not in this build");
 
-  // ---- time budget: a small budget still finishes (truncated or not, honestly reported)
+  // ---- time budget: a 1 s budget (every stage is bounded: the 181-nt run takes several seconds) still finishes (truncated or not, honestly reported)
   await setSel("spModel", "v2");
-  await page.evaluate((s) => { document.getElementById("rrSeq").value = s; document.getElementById("rrDb").value = ""; document.getElementById("spBudget").value = "5"; }, SEQ);
+  await page.evaluate((s) => { document.getElementById("rrSeq").value = s; document.getElementById("rrDb").value = ""; document.getElementById("spBudget").value = "1"; }, SEQ);
   stage = await predict();
   check("budget run finishes", /^Done/.test(stage), stage);
   sum = await page.innerText("#spSummary");
+  check("1 s budget run is reported as truncated", /truncated/.test(sum), sum.replace(/\s+/g, " ").slice(0, 200));
   if (/truncated/.test(sum)) check("truncated budget run names the stage it stopped at", /at stage \S+/.test(sum), sum.replace(/\s+/g, " ").slice(0, 300));
-  else skip("truncated stage name", "the 5 s budget run was not truncated");
+  else skip("truncated stage name", "the 1 s budget run was not truncated");
   await page.evaluate(() => { document.getElementById("spBudget").value = "0"; });
 
   // ---- screenshots

@@ -33,8 +33,7 @@ const srv = http.createServer((req, res) => {
 await new Promise((r) => srv.listen(o.port, "127.0.0.1", r));
 
 const req = createRequire(import.meta.url);
-const pw = [process.env.PLAYWRIGHT_CORE, path.join(ROOT, "tools/oxview-render/node_modules/playwright-core"),
-  "/home/subho/Documents/Github/oxdna-viewer/tools/oxview-render/node_modules/playwright-core"].filter(Boolean).map((c) => { try { return req(c); } catch { return null; } }).find(Boolean);
+const pw = [process.env.PLAYWRIGHT_CORE, path.join(ROOT, "tools/oxview-render/node_modules/playwright-core")].filter(Boolean).map((c) => { try { return req(c); } catch { return null; } }).find(Boolean);
 if (!pw) { console.error("playwright-core not found"); process.exit(2); }
 const cache = path.join(os.homedir(), ".cache", "ms-playwright");
 const findChrome = () => {
@@ -101,7 +100,7 @@ try {
   check("RENDERER CHECK v4: confidence status designed-kissing is green", /designed-kissing/.test(h) && /color:green/.test(h), h.slice(0, 200));
   check("RENDERER CHECK v4: margin to the nested decoy 3.50", /margin to the nested decoy/.test(h) && /3\.50/.test(h));
   check("RENDERER CHECK v4: per-helix rule list ga+dis_or_casc", /rules ga\+dis_or_casc/.test(h), h.slice(0, 600));
-  check("RENDERER CHECK v4: gate kind none renders", /gate.*not fired.*v4 has no gate/.test(h));
+  check("RENDERER CHECK v4: gate kind none renders", /no gate: the top-scored candidate is returned/.test(h));
   check("RENDERER CHECK v4: engine and loading times", /engine 1\.2 s, loading 0\.8 s/.test(h));
   check("RENDERER CHECK v4: version line names git short hash", /git abcdef123456/.test(h));
 
@@ -126,7 +125,7 @@ try {
   // ---- current-build v2 shape: missing new fields degrade honestly, never throw
   h = await html(OLDV2, "v2");
   check("RENDERER CHECK old v2: confidence honestly not reported", /confidence: not reported by this build/.test(h));
-  check("RENDERER CHECK old v2: old gate shape renders without kind", /gate: not fired \(no-gate\)/.test(h));
+  check("RENDERER CHECK old v2: old gate shape renders without kind", /no gate: the top-scored candidate is returned \(it is nested\)/.test(h));
   check("RENDERER CHECK old v2: margin falls back to selection decoy", /margin to the nested decoy.*0\.00/.test(h) || /margin to the nested decoy/.test(h));
 
   // ---- downloads

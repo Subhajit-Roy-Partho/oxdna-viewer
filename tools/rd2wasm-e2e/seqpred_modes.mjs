@@ -31,8 +31,7 @@ const srv = http.createServer((req, res) => {
 await new Promise((r) => srv.listen(o.port, "127.0.0.1", r));
 
 const req = createRequire(import.meta.url);
-const pw = [process.env.PLAYWRIGHT_CORE, path.join(ROOT, "tools/oxview-render/node_modules/playwright-core"),
-  "/home/subho/Documents/Github/oxdna-viewer/tools/oxview-render/node_modules/playwright-core"].filter(Boolean).map((c) => { try { return req(c); } catch { return null; } }).find(Boolean);
+const pw = [process.env.PLAYWRIGHT_CORE, path.join(ROOT, "tools/oxview-render/node_modules/playwright-core")].filter(Boolean).map((c) => { try { return req(c); } catch { return null; } }).find(Boolean);
 if (!pw) { console.error("playwright-core not found"); process.exit(2); }
 const cache = path.join(os.homedir(), ".cache", "ms-playwright");
 const chrome = process.env.CHROME_PATH || fs.readdirSync(cache).filter((d) => /^chromium-\d+$/.test(d)).sort().reverse()
@@ -79,20 +78,24 @@ try {
   await setMode("seqpred");
   const methods = await page.evaluate(() => Array.from(document.getElementById("spMethod").options).map((x) => x.value));
   check("the method list offers v3 and msrna", methods.includes("v3") && methods.includes("msrna"), methods.join(","));
-  // ms2 (multi-strand RNA/DNA): not in this build -> disabled, honestly labelled, run SKIPPED
+  // ms2 (multi-strand RNA/DNA): enabled when the build carries it (then run below), else disabled and honestly labelled
   const ms2opt = await page.evaluate(() => { const s = document.getElementById("spMethod"); const x = Array.from(s.options).find((y) => y.value === "ms2"); return x ? { disabled: x.disabled, text: x.text } : null; });
-  check("the method list offers ms2 (disabled: not in this build)", !!ms2opt && ms2opt.disabled && /not in this build/.test(ms2opt.text), JSON.stringify(ms2opt));
-  skip("ms2 prediction", "not in this build");
+  const ms2In = !!ms2opt && !ms2opt.disabled;
+  if (ms2In) check("the method list offers ms2 (enabled, no 'not in this build' suffix)", !/not in this build/.test(ms2opt.text), JSON.stringify(ms2opt));
+  else check("the method list offers ms2 (disabled: not in this build)", !!ms2opt && ms2opt.disabled && /not in this build/.test(ms2opt.text), JSON.stringify(ms2opt));
   const visible = (id) => page.evaluate((id) => { const e = document.getElementById(id); return !!e && e.style.display !== "none"; }, id);
   await setMethod("msrna");
   await page.evaluate(() => spMethodChanged());
   await page.waitForTimeout(800);
   check("multi-strand option block (molecule, temperature, assembly, kissing, G4, second DNA state) shown for msrna", (await visible("spMsRow")) && (await page.evaluate(() => !!document.getElementById("spMolecule") && !!document.getElementById("spTemp") && !!document.getElementById("spDeclared") && !!document.getElementById("spKiss") && !!document.getElementById("spG4") && !!document.getElementById("spMsdna"))));
-  await page.evaluate(() => { const s = document.getElementById("spMethod"); const x = Array.from(s.options).find((y) => y.value === "ms2"); x.disabled = false; s.value = "ms2"; try { Metro.getPlugin(s, "select").val("ms2"); } catch (e) {} s.dispatchEvent(new Event("change", { bubbles: true })); spMethodChanged(); });
-  await page.waitForFunction(() => /not in this build/.test(document.getElementById("spTradeoff").textContent), null, { timeout: 180000 });
-  const ms2trade = await page.innerText("#spTradeoff");
-  check("ms2 trade-off line is honest (F1 numbers) and badged missing", /0\.726/.test(ms2trade) && /not distinguishable/.test(ms2trade) && /not in this build/.test(ms2trade), ms2trade.slice(0, 250));
-  check("multi-strand option block shown for ms2", await visible("spMsRow"));
+  if (ms2In) {
+    await setMethod("ms2");
+    await page.evaluate(() => spMethodChanged());
+    await page.waitForTimeout(800);
+    const ms2trade = await page.innerText("#spTradeoff");
+    check("ms2 trade-off line is honest (F1 numbers), not badged missing", /0\.726/.test(ms2trade) && /not distinguishable/.test(ms2trade) && !/not in this build/.test(ms2trade), ms2trade.slice(0, 250));
+    check("multi-strand option block shown for ms2", await visible("spMsRow"));
+  } else skip("ms2 trade-off and option block", "ms2 not in this build");
   const dlCheck = async (tag, n) => {
     const dl = await page.evaluate(() => ({ dbn: spDownloadContent(spLast, "dbn"), json: spDownloadContent(spLast, "json"), fa: spDownloadContent(spLast, "fa") }));
     let j = null; try { j = JSON.parse(dl.json.text); } catch (e) { /* no */ }
@@ -142,6 +145,22 @@ try {
   await page.evaluate(() => spUseAlternative(0));
   db = await page.evaluate(() => document.getElementById("rrDb").value);
   check("'use this structure' loads the alternative state (equals the reference state " + MS_ALT_NAME + ")", same(pairsOf(db), MS_ALT_PAIRS), db);
+  // ---- ms2 (multi-strand RNA / DNA of lane MS-2), when the build carries it
+  if (ms2In) {
+    await setMethod("ms2");
+    await page.evaluate((s) => { document.getElementById("rrSeq").value = s; document.getElementById("rrDb").value = ""; }, MS_SEQ);
+    t0 = Date.now();
+    stage = await predict();
+    console.log("ms2", ((Date.now() - t0) / 1000).toFixed(1), "s:", stage);
+    check("ms2 prediction finishes", /^Done/.test(stage), stage);
+    db = await page.evaluate(() => document.getElementById("rrDb").value);
+    check("ms2 dot-bracket has '&' between the three strands", (db.match(/&/g) || []).length === 2 && db.replace(/&/g, "").length === MS_SEQ.replace(/&/g, "").length, db);
+    sum = await page.innerText("#spSummary");
+    check("ms2 summary names the route and has molecule, times and version rows", /rna-ms3\.1/.test(sum) && /molecule/.test(sum) && /loading/.test(sum) && /git [0-9a-f]{7,}/.test(sum), sum.replace(/\s+/g, " ").slice(0, 300));
+    await dlCheck("ms2", MS_SEQ.replace(/&/g, "").length);
+    await setMethod("msrna");
+  } else skip("ms2 prediction", "ms2 not in this build");
+
   // ---- DNA hybrid and single-stranded DNA tools (prediction only)
   await setMethod("dna");
   await page.evaluate((s) => { document.getElementById("rrSeq").value = s; document.getElementById("rrDb").value = ""; }, DNA_SEQ);

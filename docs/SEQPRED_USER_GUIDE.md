@@ -32,8 +32,9 @@ RNAs, 150+150 RNAs without pseudoknot, 46 designed RNAs, 100 shuffled sequences)
 * **ml2 / ml3 (re-rankers, do-no-harm)**: false helices stay rare (ml3: 1.3 % of 150
   natural RNAs, 2.0 % of shuffles) but the natural pseudoknot gain was NOT demonstrated on
   the sealed test (1 of 44 vs 0 for v2, interval includes 0). ml3 needs the external pKiss
-  program: only in the native command-line build (in the browser the module offers ml3nok
-  if it is in the build, a different model without that input).
+  program: only in the native command-line build (the browser module does not carry it: the
+  program is GPL-licensed and is not compiled into the module; a model without that input
+  would be a different, unevaluated model).
 * **ms2 (multi-strand RNA / DNA)**: on 200 DNA complexes F1 0.726 vs 0.720 for the
   shipped DNA predictor (not distinguishable, +/- 0.03).
 * **MS-RNA v4, DNA hybrid, single-stranded DNA tools**: the older multi-strand and DNA

@@ -115,7 +115,7 @@ const SP_TRADEOFFS = {
     m2: 'More natural pseudoknots found (3 of 44 vs 0 for v2) but many false helices on RNAs without a pseudoknot (8 % of 150 natural RNAs, 21 % of shuffled sequences).',
     h2d: '3 of 44 natural pseudoknots found vs 0 for v2; false helices on 4.7 % of 150 natural RNAs and 11 % of shuffled sequences.',
     ml2: 'Re-ranker, do-no-harm: false helices stay rare but the natural pseudoknot gain was NOT demonstrated on the sealed test.',
-    ml3: 'Re-ranker, do-no-harm (false helices on 1.3 % of 150 natural RNAs, 2.0 % of shuffles) but the natural pseudoknot gain was NOT demonstrated on the sealed test (1 of 44 vs 0 for v2, interval includes 0). Needs the external pKiss program: only in the native command-line build (in the browser the module offers ml3nok if it is in the build, a different model without that input).',
+    ml3: 'Re-ranker, do-no-harm (false helices on 1.3 % of 150 natural RNAs, 2.0 % of shuffles) but the natural pseudoknot gain was NOT demonstrated on the sealed test (1 of 44 vs 0 for v2, interval includes 0). Needs the external pKiss program: only in the native command-line build (the browser module does not carry it: the program is GPL-licensed and is not compiled into the module; a model without that input would be a different, unevaluated model).',
     ms2: 'Multi-strand RNA / DNA: on 200 DNA complexes F1 0.726 vs 0.720 for the shipped DNA predictor (not distinguishable, +/- 0.03).',
     msrna: 'MS-RNA v4 (multi-strand): the answer to a kissing-complex versus extended-duplex question is a set of states; on blind entries only marginally better than plain ViennaRNA co-folding.',
     dna: 'DNA hybrid (domain pairing + ViennaRNA-DNA MFE): short stems are mostly right, junctions and kissing complexes are not; no NUPACK (proprietary).',
@@ -224,6 +224,8 @@ async function spRefreshModel() {
                 continue;
             const ok = SeqpredEngine.modelSupported(v, id);
             o.disabled = !ok;
+            if (ok)
+                o.text = o.text.replace(/\s*\u2014\s*not in this build\s*$/, '');
             if (!ok && (SP_SINGLE_MODELS.indexOf(id) >= 0 || id === 'ms2') && o.text.indexOf('not in this build') < 0)
                 o.text += ' \u2014 not in this build';
         }
@@ -858,7 +860,7 @@ function spGateText(r) {
         return `gate (discriminator): p = ${spNum(g.pCross)} vs thr ${spNum(g.thr)}: ${g.fired ? 'fired' : 'not met'}${why}${st}`;
     if (kind === 'margin')
         return `gate (margin ${spNum(g.margin)}): ${g.fired ? 'fired' : 'not met'}, margin value ${spNum(g.marginValue)}${why}`;
-    return `gate: ${g.fired ? 'fired' : 'not fired'}${why}`;
+    return `no gate: the top-scored candidate is returned (${g.fired ? 'it has extra helices' : 'it is nested'})`;
 }
 /** The confidence status line (colour + margins + per-helix rule list). */
 function spConfidenceHtml(r) {
@@ -867,7 +869,7 @@ function spConfidenceHtml(r) {
         return 'confidence: not reported by this build (needs a newer module)';
     const col = {
         'designed-kissing': 'green', 'low-confidence': '#b45309', 'nested': '#6b7280',
-        'extra-helices': '#2563eb', 'fallback-nested': '#b45309',
+        'extra-helices': '#2563eb', 'fallback-nested': '#b45309', 'truncated': '#b45309', 'single-state': '#6b7280', 'alternatives': '#2563eb',
     };
     const esc = (s) => String(s).replace(/[&<>]/g, (x) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[x]));
     let h = `confidence: <b style="color:${col[c.status] || 'inherit'}">${esc(c.status)}</b>`;
