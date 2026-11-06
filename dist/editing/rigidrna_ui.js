@@ -14,6 +14,10 @@ let rrRunning = false;
 let spEngine = new SeqpredEngine(); // seqpred: sequence -> secondary structure (wasm/seqpred)
 let spRunning = false;
 let spLast = null;
+let spLastModel = null; // the single-chain model the last prediction was asked for (v2/v3/m2)
+let spSelIdx = 0; // which ranked candidate the selection panel draws
+let spPx = 0; // pixels per nucleotide of the arc diagram (0 = fit)
+let spRefPairs = null; // validated reference pairs, or null
 let rrFile = null; // the PDB / mmCIF / design file chosen in the file modes
 function rrEl(id) { return document.getElementById(id); }
 function rrLog(line) {
@@ -70,7 +74,81 @@ function rrModeChanged() {
     const info = rrEl('rrFileInfo');
     if (info)
         info.textContent = 'No file chosen.';
+    if (m === 'seqpred') {
+        spMethodChanged();
+    }
     rrAdvChanged();
+}
+/** Sets a select by value, through the Metro plugin when it manages the control. Never fires handlers (see spSyncing). */
+function spSetSelect(id, v) {
+    const s = rrEl(id);
+    if (!s || s.value === v)
+        return;
+    spSyncing = true;
+    try {
+        s.value = v;
+        try {
+            window.Metro.getPlugin(s, 'select').val(v);
+        }
+        catch (e) { /* plain select */ }
+    }
+    finally {
+        spSyncing = false;
+    }
+}
+/** Re-entrancy guard: Metro's select val() fires change synchronously, so the model/method
+ *  mirror pair would recurse forever without this. */
+let spSyncing = false;
+/** The single-chain model select follows the method select (v2/v3); other methods hide it. */
+function spMethodChanged() {
+    if (spSyncing)
+        return;
+    const m = rrEl('spMethod').value;
+    const row = rrEl('spModelRow');
+    if (row)
+        row.style.display = (m === 'v2' || m === 'v3') ? '' : 'none';
+    if (m === 'v2' || m === 'v3')
+        spSetSelect('spModel', m);
+    spRefreshModel();
+}
+/** The model select drives the method select (M2 is disabled while the build lacks it). */
+function spModelChanged() {
+    if (spSyncing)
+        return;
+    const v = rrEl('spModel').value;
+    if (v === 'v2' || v === 'v3')
+        spSetSelect('spMethod', v);
+    else if (v === 'm2')
+        notify('The M2 model is not in this seqpred build: v2 remains the validated predictor.', 'warn');
+}
+/** Enables the M2 option only when the loaded module build carries it (else it stays disabled). */
+async function spRefreshModel() {
+    const s = document.getElementById('spModel');
+    if (!s)
+        return;
+    let v = null;
+    try {
+        v = await spEngine.versionInfo();
+    }
+    catch (e) {
+        v = null;
+    }
+    const ok = SeqpredEngine.m2Supported(v);
+    for (const o of Array.from(s.options)) {
+        if (o.value !== 'm2')
+            continue;
+        o.disabled = !ok;
+        o.text = ok ? 'M2 (experimental re-ranker; better on natural pseudoknots, more false helices on random sequences)'
+            : 'M2 (experimental re-ranker; better on natural pseudoknots, more false helices on random sequences) \u2014 not in this build';
+    }
+    spSyncing = true;
+    try {
+        window.Metro.getPlugin(s, 'select').val(s.value);
+    }
+    catch (e) { /* plain select */ }
+    finally {
+        spSyncing = false;
+    }
 }
 /** Reads the chosen file of the PDB / design modes. */
 async function rrFileChosen(input) {
@@ -535,12 +613,22 @@ function rrPredictedStructure(r) {
 // seqpred: "Sequence only: predict with seqpred" input. The predicted dot-bracket is written to the dot-bracket field (editable), then "Build and load" is the ordinary
 // rigidRNA run. The module runs in its own worker (wasm/seqpred, SeqpredEngine); nothing leaves the browser.
 function spOptions() {
+    // The method select stays authoritative (old callers set it directly); the model select mirrors
+    // it for the single-chain predictor and is passed on as options.model for the M2 lane.
+    const method = rrEl('spMethod').value;
+    let model = undefined;
+    if (method === 'v2' || method === 'v3') {
+        const v = rrEl('spModel').value;
+        model = (v === 'v2' || v === 'v3' || v === 'm2') ? v : method;
+    }
     const o = {
-        method: rrEl('spMethod').value,
+        method,
         salt: parseFloat(rrEl('spSalt').value) || 0.25,
         budgetSeconds: Math.max(0, parseFloat(rrEl('spBudget').value) || 0),
         threads: parseInt(rrEl('rrThreads').value) || 1,
     };
+    if (model)
+        o.model = model;
     return o;
 }
 /** "Predict structure" button of the seqpred input. */
@@ -567,8 +655,19 @@ async function spPredict() {
     const tick = window.setInterval(() => { st.textContent = `Predicting... ${((performance.now() - t0) / 1000).toFixed(0)} s (one thread: about 30 s for 150 nt, minutes for 400 nt with the long-range search)`; }, 1000);
     try {
         st.textContent = 'Starting seqpred...';
-        const r = await spEngine.predict(meth === 'dna' || meth === 'ssdna' ? seq.replace(/U/g, 'T') : seq, spOptions());
+        const opts = spOptions();
+        spLastModel = opts.model || (opts.method === 'v3' ? 'v3' : opts.method === 'v2' ? 'v2' : null);
+        const r = await spEngine.predict(meth === 'dna' || meth === 'ssdna' ? seq.replace(/U/g, 'T') : seq, opts);
         spLast = r;
+        spSelIdx = 0;
+        spPx = 0;
+        spRefPairs = null;
+        const ref = rrEl('spRefDb');
+        if (ref)
+            ref.value = '';
+        const rmsg = rrEl('spRefMsg');
+        if (rmsg)
+            rmsg.textContent = '';
         rrEl('rrDb').value = r.dotbracket;
         st.textContent = r.method === 'dna' || r.method === 'ssdna'
             ? `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} DNA base pairs${r.method === 'dna' ? ' over ' + (r.lengths || []).length + ' strands' : ''} (prediction only: the rigidRNA engine builds RNA).`
@@ -576,6 +675,7 @@ async function spPredict() {
                 ? `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} base pairs over ${(r.lengths || []).length} strands, primary state "${r.primary}", ${(r.alternatives || []).length} alternative state(s).`
                 : `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} base pairs, ${r.helices.length} kissing / pseudoknot helices.`;
         spShowSummary(r);
+        spRenderSel();
         rrAdvChanged();
     }
     catch (e) {
@@ -623,6 +723,7 @@ function spShowSummary(r) {
     }
     else {
         h += row('method', `${r.method}, salt ${r.salt} M`) +
+            (spLastModel && (r.method === 'v2' || r.method === 'v3' || r.method === 'm2') ? row('model', `${spLastModel} (single-chain RNA predictor)${spLastModel !== r.method ? `, engine ran ${r.method}` : ''}, build ${r.build ? esc(r.build.build) : '?'}`) : '') +
             row('nested MFE (Turner 2004, salt corrected)', `${r.energy.nestedMfe.toFixed(2)} kcal/mol`) +
             (r.energy.score !== undefined ? row('predictor score', r.energy.score.toFixed(2)) : '') +
             row('kissing / pseudoknot helices', r.helices.length ? r.helices.map(x => `${x.i}-${x.j} (${x.k} bp)`).join(', ') : 'none: the nested MFE is the answer') +
@@ -646,4 +747,252 @@ function spUseAlternative(k) {
     rrEl('rrDb').value = spLast.alternatives[k].dotbracket;
     rrEl('spStage').textContent = `Dot-bracket of the alternative state "${spLast.alternatives[k].name}" loaded; "Build and load" builds this structure.`;
     rrAdvChanged();
+}
+/** Pairs of a dot-bracket string (1-based like the module, '&' and '/' strand separators skipped). */
+function spDbPairs(db) {
+    const st = { '(': [], '[': [], '{': [], '<': [] };
+    const cl = { ')': '(', ']': '[', '}': '{', '>': '<' };
+    const out = [];
+    let k = 0;
+    for (const c of db) {
+        if (c === '&' || c === '/')
+            continue;
+        k++;
+        if (st[c])
+            st[c].push(k);
+        else if (cl[c]) {
+            const o = st[cl[c]].pop();
+            if (o !== undefined)
+                out.push([o, k]);
+        }
+    }
+    return out.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+}
+/** One adapter for the module result: field names live here, nowhere else. */
+function spAdapt(r) {
+    const anyr = r;
+    const rawCands = anyr.candidates || anyr.topCandidates || r.top || [];
+    const nestedDotbracket = (r.energy && r.energy.nestedDotbracket) || '';
+    const nestedPairs = nestedDotbracket ? spDbPairs(nestedDotbracket) : [];
+    const nestedSet = new Set(nestedPairs.map(p => p[0] + ',' + p[1]));
+    const candidates = rawCands.slice(0, 20).map((c, i) => {
+        if (c.pairs && c.pairs.length) {
+            const layers = (c.layers && c.layers.length === c.pairs.length) ? c.layers.slice() : c.pairs.map(() => 0);
+            return { rank: c.rank || i + 1, hostSource: c.hostSource || c.source || '', score: c.score, helices: c.helices || [], pairs: c.pairs.slice(), layers };
+        }
+        // Current build: candidates carry helices + score only. Draw them over the nested pairs
+        // (exact when the candidate keeps the selected host structure, an approximation otherwise).
+        const pairs = nestedPairs.slice();
+        const layers = nestedPairs.map(() => 0);
+        for (const h of (c.helices || [])) {
+            for (let t = 0; t < h[2]; t++) {
+                const a = h[0] + t, b = h[1] - t;
+                if (a >= b)
+                    break;
+                const key = a + ',' + b;
+                if (!nestedSet.has(key)) {
+                    pairs.push([a, b]);
+                    layers.push(1);
+                }
+            }
+        }
+        const order = pairs.map((p, k) => k).sort((a, b) => pairs[a][0] - pairs[b][0] || pairs[a][1] - pairs[b][1]);
+        return { rank: c.rank || i + 1, hostSource: c.hostSource || c.source || '', score: c.score, helices: c.helices || [], pairs: order.map(k => pairs[k]), layers: order.map(k => layers[k]) };
+    });
+    return {
+        length: r.length, pairs: r.pairs.slice(), layers: r.layers.slice(), candidates,
+        selScore: r.energy && r.energy.score,
+        nestedMfe: r.energy && r.energy.nestedMfe, nestedDotbracket, nestedPairs,
+    };
+}
+/** Dot-bracket of pairs with layers (0: (), 1: [], 2: {}, 3: <>, then Aa, Bb, ...). */
+function spPairsDotbracket(n, pairs, layers) {
+    const open = ['(', '[', '{', '<'], close = [')', ']', '}', '>'];
+    const db = [];
+    for (let i = 0; i < n; i++)
+        db.push('.');
+    pairs.forEach((p, k) => {
+        const l = layers[k] || 0;
+        if (l < 4) {
+            db[p[0] - 1] = open[l];
+            db[p[1] - 1] = close[l];
+        }
+        else {
+            const c = String.fromCharCode(65 + (l - 4) % 26);
+            db[p[0] - 1] = c;
+            db[p[1] - 1] = c.toLowerCase();
+        }
+    });
+    return db.join('');
+}
+/** Arc-diagram SVG: the selected structure above the axis, the nested-MFE decoy below it. */
+function spArcSvg(a, pairs, layers, refSet) {
+    const n = a.length;
+    const px = spPx || Math.min(8, Math.max(1.5, 900 / Math.max(1, n)));
+    const pad = 24, axis = 130, below = 70;
+    const W = Math.ceil(n * px + 2 * pad), H = axis + below + 24;
+    const X = (i) => (pad + (i - 1) * px).toFixed(1);
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    let s = `<svg id="spArc" width="${W}" height="${H}" role="img" aria-label="Arc diagram of the selected candidate">`;
+    s += `<line x1="${pad}" y1="${axis}" x2="${(pad + n * px).toFixed(1)}" y2="${axis}" stroke="currentColor" stroke-width="1"/>`;
+    const step = n > 1000 ? 100 : n > 200 ? 50 : 10;
+    for (let i = 1; i <= n; i += step)
+        s += `<text x="${X(i)}" y="${H - 6}" font-size="9" fill="currentColor">${i}</text>`;
+    const arc = (p, cls, up) => {
+        const x1 = pad + (p[0] - 1) * px, x2 = pad + (p[1] - 1) * px;
+        const rx = Math.max(1, (x2 - x1) / 2), ry = Math.min(rx * 0.55 + 6, up ? 110 : 56);
+        const y2 = up ? axis - 0.01 : axis + 0.01;
+        return `<path class="${cls}" d="M ${x1.toFixed(1)} ${axis} A ${rx.toFixed(1)} ${ry.toFixed(1)} 0 0 ${up ? 1 : 0} ${x2.toFixed(1)} ${y2}" fill="none" stroke-width="1.4" opacity="0.85"><title>${p[0]}-${p[1]}</title></path>`;
+    };
+    pairs.forEach((p, k) => {
+        let cls = (layers[k] || 0) > 0 ? 'sp-x' : 'sp-n';
+        if (refSet && !refSet.has(p[0] + ',' + p[1]))
+            cls += ' sp-nonref';
+        s += arc(p, cls, true);
+    });
+    a.nestedPairs.forEach(p => { s += arc(p, 'sp-decoy', false); });
+    s += `<text x="${pad}" y="16" font-size="10" fill="currentColor">${esc('selected: ' + pairs.length + ' pairs')}</text>`;
+    s += `<text x="${pad}" y="${axis + below - 2}" font-size="10" fill="currentColor">${esc('nested-MFE decoy: ' + a.nestedPairs.length + ' pairs')}</text>`;
+    return s + '</svg>';
+}
+/** Redraws the selection panel (arc diagram + ranked candidates); hides it for other methods. */
+function spRenderSel() {
+    const host = rrEl('spSel');
+    if (!host)
+        return;
+    if (!spLast || (spLast.method !== 'v2' && spLast.method !== 'v3')) {
+        host.style.display = 'none';
+        return;
+    }
+    host.style.display = '';
+    const a = spAdapt(spLast);
+    if (spSelIdx < 0 || spSelIdx >= a.candidates.length)
+        spSelIdx = 0;
+    const cand = a.candidates[spSelIdx];
+    const pairs = cand ? cand.pairs : a.pairs, layers = cand ? cand.layers : a.layers;
+    const refSet = spRefPairs ? new Set(spRefPairs.map(p => p[0] + ',' + p[1])) : null;
+    rrEl('spArcWrap').innerHTML = spArcSvg(a, pairs, layers, refSet);
+    const note = rrEl('spArcNote');
+    if (note)
+        note.textContent = `${a.length} nt, ${pairs.length} pairs drawn${spPx ? ' (' + spPx.toFixed(1) + ' px/nt)' : ''}${cand && cand !== undefined && a.candidates.length ? '; candidate ' + cand.rank + ' of ' + a.candidates.length : ''}. Scroll sideways to inspect.`;
+    // Ranked candidates as horizontal bars (lower score is better); the decoy row carries the MFE on its own scale.
+    const cands = a.candidates;
+    const scores = cands.map(c => c.score).filter(v => typeof v === 'number');
+    const lo = Math.min(...scores), hi = Math.max(...scores);
+    let h = '';
+    cands.forEach((c, k) => {
+        const w = (typeof c.score === 'number' && hi > lo) ? (20 + 80 * (hi - c.score) / (hi - lo)) : 60;
+        h += `<div class="sp-cand${k === spSelIdx ? ' spsel' : ''}" data-k="${k}" title="Candidate ${c.rank} (${c.hostSource || 'host?'}), score ${typeof c.score === 'number' ? c.score.toFixed(2) : '?'}: click to draw it">`
+            + `<span class="text-small"><b>${k === spSelIdx ? '&#9679; ' : '&#9675; '}#${c.rank} ${c.hostSource || ''}</b> ${typeof c.score === 'number' ? c.score.toFixed(2) : '?'}</span>`
+            + `<div class="sp-bar" style="width:${w.toFixed(0)}%;background:#2563eb;opacity:${k === spSelIdx ? 1 : 0.55}"></div>`
+            + ` <button type="button" class="button mini" data-use="${k}" title="Write this candidate into the dot-bracket field (then Build and load builds it)">use</button></div>`;
+    });
+    if (typeof a.nestedMfe === 'number') {
+        h += `<div class="sp-cand" title="Nested minimum free energy without any long-range layer (own energy scale, not the candidate score)">`
+            + `<span class="text-small"><b>nested-MFE decoy</b> ${a.nestedMfe.toFixed(2)} kcal/mol</span>`
+            + `<div class="sp-bar" style="width:100%;background:#9ca3af;opacity:0.6"></div></div>`;
+    }
+    const box = rrEl('spCand');
+    box.innerHTML = h || '<span class="text-small text-muted">No ranked candidates in this result.</span>';
+    for (const el of Array.from(box.querySelectorAll('.sp-cand[data-k]'))) {
+        el.addEventListener('click', (ev) => {
+            const t = ev.target;
+            if (t && t.getAttribute && t.getAttribute('data-use') !== null)
+                return; // the use button handles itself
+            spSelIdx = parseInt(el.getAttribute('data-k'), 10) || 0;
+            spRenderSel();
+        });
+    }
+    for (const b of Array.from(box.querySelectorAll('button[data-use]'))) {
+        b.addEventListener('click', (ev) => { ev.stopPropagation(); spUseCandidate(parseInt(b.getAttribute('data-use'), 10) || 0); });
+    }
+}
+/** Zoom buttons of the arc diagram. */
+function spZoom(f) {
+    const a = spLast ? spAdapt(spLast) : null;
+    const cur = spPx || (a ? Math.min(8, Math.max(1.5, 900 / Math.max(1, a.length))) : 4);
+    spPx = Math.min(12, Math.max(1, cur * f));
+    spRenderSel();
+}
+/** Writes a ranked candidate into the dot-bracket field (the 3D flow then builds it). */
+function spUseCandidate(k) {
+    if (!spLast)
+        return;
+    const a = spAdapt(spLast);
+    if (k < 0 || k >= a.candidates.length)
+        return;
+    spSelIdx = k;
+    const c = a.candidates[k];
+    rrEl('rrDb').value = spPairsDotbracket(a.length, c.pairs, c.layers);
+    rrEl('spStage').textContent = `Candidate #${c.rank} (${c.hostSource || 'unknown host'}) in the dot-bracket field; "Build and load" builds this structure.`;
+    spRenderSel();
+    rrAdvChanged();
+}
+/** Checks a reference dot-bracket and recolours the arcs (orange = predicted but not in reference). */
+function spApplyRef() {
+    const msg = rrEl('spRefMsg');
+    const done = (t, bad) => { if (msg) {
+        msg.textContent = t;
+        msg.style.color = bad ? '#c62828' : '';
+    } };
+    if (!spLast) {
+        done('Predict a structure first.', true);
+        return;
+    }
+    const a = spAdapt(spLast);
+    const ref = rrEl('spRefDb').value.replace(/\s+/g, '');
+    if (!ref) {
+        spRefPairs = null;
+        done('', false);
+        spRenderSel();
+        return;
+    }
+    if (ref.length !== a.length) {
+        done(`The reference is ${ref.length} nt but the sequence is ${a.length} nt.`, true);
+        return;
+    }
+    if (/[^().\[\]{}<>.\-:;_~]/.test(ref)) {
+        done('Only the brackets ( ) [ ] { } < >, dots and - : ; _ ~ are supported.', true);
+        return;
+    }
+    const st = { '(': [], '[': [], '{': [], '<': [] };
+    const cl = { ')': '(', ']': '[', '}': '{', '>': '<' };
+    for (let i = 0; i < ref.length; i++) {
+        const c = ref[i];
+        if (st[c])
+            st[c].push(i + 1);
+        else if (cl[c]) {
+            if (!st[cl[c]].length) {
+                done(`Unbalanced bracket ${c} at position ${i + 1}.`, true);
+                return;
+            }
+            st[cl[c]].pop();
+        }
+    }
+    for (const k of Object.keys(st))
+        if (st[k].length) {
+            done(`Unbalanced bracket ${k} (${st[k].length} unclosed).`, true);
+            return;
+        }
+    spRefPairs = spDbPairs(ref);
+    const pred = new Set((spSelIdx < a.candidates.length ? a.candidates[spSelIdx].pairs : a.pairs).map(p => p[0] + ',' + p[1]));
+    const refS = new Set(spRefPairs.map(p => p[0] + ',' + p[1]));
+    let tp = 0;
+    pred.forEach(k => { if (refS.has(k))
+        tp++; });
+    const fp = pred.size - tp, fn = refS.size - tp;
+    const f1 = (2 * tp + fp + fn) ? 2 * tp / (2 * tp + fp + fn) : 1;
+    done(`Pair F1 ${f1.toFixed(3)} (${tp} shared, ${fp} only predicted, ${fn} only in reference).`, false);
+    spRenderSel();
+}
+/** Removes the reference overlay. */
+function spClearRef() {
+    spRefPairs = null;
+    const ref = rrEl('spRefDb');
+    if (ref)
+        ref.value = '';
+    const msg = rrEl('spRefMsg');
+    if (msg)
+        msg.textContent = '';
+    spRenderSel();
 }

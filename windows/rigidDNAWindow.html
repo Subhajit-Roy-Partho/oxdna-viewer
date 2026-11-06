@@ -430,7 +430,7 @@
         <div class="row">
             <div class="cell-4">
                 <label>Method</label>
-                <select id="spMethod" data-role="select" title="v2: nested MFE + kissing / pseudoknot layer (predictor v2); v3: v2 plus closing-helix candidates (PK-7); MS-RNA v4: several strands separated by &amp;, returns the primary state and the alternative states; nested: MFE only; rna_kl, kl_routes, longrange: earlier tools of the same family">
+                <select id="spMethod" data-role="select" onchange="spMethodChanged()" title="v2: nested MFE + kissing / pseudoknot layer (predictor v2); v3: v2 plus closing-helix candidates (PK-7); MS-RNA v4: several strands separated by &amp;, returns the primary state and the alternative states; nested: MFE only; rna_kl, kl_routes, longrange: earlier tools of the same family">
                     <option value="v2" selected>v2 (nested + kissing layer)</option>
                     <option value="v3">v3 (v2 + closing-helix candidates; frozen, no held-out result)</option>
                     <option value="msrna">MS-RNA v4 (several strands separated by &amp;)</option>
@@ -453,8 +453,50 @@
         </div>
         <button class="button small primary" id="spRunBtn" onclick="spPredict()">Predict structure</button>
         <button class="button small alert" id="spCancelBtn" onclick="spCancel()" disabled>Cancel</button>
+        <div class="row mt-1" id="spModelRow">
+            <div class="cell-12">
+                <label>Model (single-chain RNA predictor)</label>
+                <select id="spModel" data-role="select" onchange="spModelChanged()" title="Which single-chain RNA predictor weights rank the long-range candidates: v2 (validated), v3 (closing-helix candidates) or M2 (experimental re-ranker, when the build carries it)">
+                    <option value="v2" selected title="Weights blind to the Holliday RNAs, designed kissing-F1 0.956 on 36 held-out designs, adds no pseudoknot on natural RNAs.">v2 (default, validated on designed RNAs)</option>
+                    <option value="v3" title="Adds closing-helix candidates to the v2 long-range search; frozen without a held-out result, so v2 remains the validated predictor.">v3 (closing-helix candidates)</option>
+                    <option value="m2" disabled title="Raised pseudoknot F1 0.471 to 0.641 on 24 held-out natural families, but on shuffled designs a false helix appears 13/20 versus 3/20 for v2.">M2 (experimental re-ranker; better on natural pseudoknots, more false helices on random sequences) &#8212; not in this build</option>
+                </select>
+            </div>
+        </div>
         <div id="spStage" class="text-small">Idle.</div>
         <div id="spSummary"></div>
+        <div id="spSel" style="display:none">
+            <style>
+                #spArcWrap { overflow-x: auto; border: 1px solid rgba(128,128,128,0.4); border-radius: 4px; }
+                #spArcWrap svg { display: block; }
+                .sp-n { stroke: #2563eb; }
+                .sp-x { stroke: #dc2626; }
+                .sp-decoy { stroke: #9ca3af; }
+                .sp-nonref { stroke: #f59e0b; }
+                .sp-cand { cursor: pointer; border: 1px solid rgba(128,128,128,0.4); border-radius: 4px; padding: 2px 6px; margin: 2px 0; }
+                .sp-cand.spsel { border: 2px solid #2563eb; }
+                .sp-bar { height: 10px; border-radius: 3px; }
+                .sp-sw { display: inline-block; width: 22px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: 4px; }
+            </style>
+            <h4 class="mt-2">Pseudoknot / kissing-loop selection</h4>
+            <p class="rr-note mb-1">Blue pairs sit inside the nested stems, red pairs cross them (the kissing / pseudoknot layer the selection added), grey pairs below the axis are the nested-MFE decoy without any long-range layer.</p>
+            <div class="group">
+                <button type="button" class="button mini" onclick="spZoom(1.25)" title="Wider arcs (more pixels per nucleotide)">Zoom in</button>
+                <button type="button" class="button mini" onclick="spZoom(0.8)" title="Narrower arcs (fewer pixels per nucleotide)">Zoom out</button>
+                <span class="text-small text-muted" id="spArcNote"></span>
+            </div>
+            <div id="spArcWrap"><svg id="spArc" role="img" aria-label="Arc diagram of the selected candidate"></svg></div>
+            <h5 class="mt-2">Ranked candidates (lower score is better; click a row to draw it)</h5>
+            <div id="spCand"></div>
+            <h5 class="mt-2">Reference dot-bracket (optional)</h5>
+            <textarea id="spRefDb" rows="2" style="width: 100%; font-family: monospace; font-size: 11px;" placeholder="Dot-bracket of the same length, e.g. (((...[[[...)))...]]]" title="Paste a reference dot-bracket of the same length: predicted pairs also in the reference keep their colour, predicted pairs missing from it turn orange, and the pair F1 is shown"></textarea>
+            <div class="group">
+                <button type="button" class="button mini" onclick="spApplyRef()" title="Check the reference and recolour the arcs">Apply reference</button>
+                <button type="button" class="button mini" onclick="spClearRef()" title="Remove the reference overlay">Clear</button>
+                <span class="text-small" id="spRefMsg"></span>
+            </div>
+            <p class="rr-note mb-1"><span class="sp-sw sp-n"></span>nested (layer 0) <span class="sp-sw sp-x"></span>kissing / pseudoknot (crossing) <span class="sp-sw sp-decoy"></span>nested-MFE decoy <span class="sp-sw sp-nonref"></span>predicted but not in reference</p>
+        </div>
     </div>
     <button class="button small" id="rrExampleBtn" onclick="rrExample()">Load example</button>
 </div>
