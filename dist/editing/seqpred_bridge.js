@@ -11,9 +11,18 @@ class SeqpredEngine {
     static baseUrl = 'wasm/seqpred/';
     worker = null;
     variant = null;
+    readyVersion = null; // seqpred_version of the loaded module (set by start())
     nextId = 1;
     reject = null;
     static buildPromise = null;
+    /** True when the loaded module build carries the M2 re-ranker (version block or probe). */
+    static m2Supported(v) {
+        if (!v)
+            return false;
+        if (Array.isArray(v.models) && v.models.indexOf('m2') >= 0)
+            return true;
+        return /m2/i.test([v.predictor, v.seqpred].filter(Boolean).join(' '));
+    }
     /** wasm/seqpred/build.json (never cached); null when the module is not deployed. */
     static buildInfo() {
         if (!SeqpredEngine.buildPromise) {
@@ -33,6 +42,7 @@ class SeqpredEngine {
             this.worker.onmessage = (ev) => {
                 if (ev.data.type === 'ready') {
                     this.variant = ev.data.variant;
+                    this.readyVersion = ev.data.version || null;
                     resolve();
                 }
                 else if (ev.data.type === 'error')
@@ -53,6 +63,12 @@ class SeqpredEngine {
             this.reject = null;
         }
     }
+    /** The version block of the loaded module (starts the worker when needed). */
+    async versionInfo() {
+        if (!this.worker)
+            await this.start('st');
+        return this.readyVersion;
+    }
     /** Predicts the structure of one sequence; rejects with Error('cancelled') after cancel(). */
     async predict(sequence, opts) {
         const wantMt = (opts.threads || 1) > 1 && RnaEngine.capabilities().isolated;
@@ -61,6 +77,22 @@ class SeqpredEngine {
             this.cancel();
         if (!this.worker)
             await this.start(variant);
+        // Backwards compatibility: the single-chain predictor used to be chosen by method alone
+        // (method v2/v3); the model field is new. Old callers without options.model still get v2.
+        const o = Object.assign({}, opts);
+        if (!o.method && !o.model)
+            o.method = 'v2';
+        else if (o.model && (!o.method || ['v2', 'v3', 'm2'].indexOf(o.method) >= 0)) {
+            if (o.model === 'm2') {
+                if (!SeqpredEngine.m2Supported(this.readyVersion))
+                    throw new Error('The M2 model is not in this seqpred build (' + (this.readyVersion && this.readyVersion.predictor ? this.readyVersion.predictor : 'no version') + '): v2 remains the validated predictor.');
+                o.method = 'm2';
+            }
+            else
+                o.method = o.model;
+        }
+        if (o.method === 'm2' && !SeqpredEngine.m2Supported(this.readyVersion))
+            throw new Error('The M2 model is not in this seqpred build: v2 remains the validated predictor.');
         const info = await SeqpredEngine.buildInfo();
         const worker = this.worker, id = this.nextId++;
         return new Promise((resolve, reject) => {
@@ -80,7 +112,7 @@ class SeqpredEngine {
                 }
             };
             worker.onerror = (ev) => { this.reject = null; this.cancel(); reject(new Error(ev.message || 'worker error')); };
-            worker.postMessage({ type: 'predict', id, sequence, options: opts });
+            worker.postMessage({ type: 'predict', id, sequence, options: o });
         });
     }
 }
