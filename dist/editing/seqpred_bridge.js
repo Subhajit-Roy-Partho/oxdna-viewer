@@ -12,20 +12,29 @@ class SeqpredEngine {
     worker = null;
     variant = null;
     readyVersion = null; // seqpred_version of the loaded module (set by start())
+    loadSeconds = 0; // module loading time of the current worker: creating it to 'ready'
     nextId = 1;
     reject = null;
     static buildPromise = null;
-    /** True when the loaded module build carries the M2 re-ranker (version block or probe). */
-    static m2Supported(v) {
+    /** True when the loaded module build carries the model id (version.models block or probe). A model missing from the object is not in this build. */
+    static modelSupported(v, id) {
         if (!v)
             return false;
         const mm = v.models;
-        if (Array.isArray(mm) && mm.indexOf('m2') >= 0)
+        if (Array.isArray(mm) && mm.indexOf(id) >= 0)
             return true;
-        if (mm && typeof mm === 'object' && !Array.isArray(mm) && Object.prototype.hasOwnProperty.call(mm, 'm2'))
-            return true; // version block: { models: { v2, v3, m2 } }
-        return /m2/i.test([v.predictor, v.seqpred].filter(Boolean).join(' '));
+        if (mm && typeof mm === 'object' && !Array.isArray(mm) && Object.prototype.hasOwnProperty.call(mm, id)) {
+            const e = mm[id];
+            if (e && typeof e === 'object' && e.available === false)
+                return false; // listed but not in this build
+            return true;
+        }
+        if (id === 'm2')
+            return /m2/i.test([v.predictor, v.seqpred].filter(Boolean).join(' '));
+        return false;
     }
+    /** True when the loaded module build carries the M2 re-ranker (version block or probe). */
+    static m2Supported(v) { return SeqpredEngine.modelSupported(v, 'm2'); }
     /** wasm/seqpred/build.json (never cached); null when the module is not deployed. */
     static buildInfo() {
         if (!SeqpredEngine.buildPromise) {
@@ -40,12 +49,16 @@ class SeqpredEngine {
         const q = info && info.build ? '?v=' + encodeURIComponent(info.build) : '';
         this.worker = new Worker(base + 'seqpred_worker.js' + q);
         this.variant = variant;
+        const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        this.loadSeconds = 0;
         return new Promise((resolve, reject) => {
             this.reject = reject;
             this.worker.onmessage = (ev) => {
                 if (ev.data.type === 'ready') {
                     this.variant = ev.data.variant;
                     this.readyVersion = ev.data.version || null;
+                    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                    this.loadSeconds = (now - t0) / 1000;
                     resolve();
                 }
                 else if (ev.data.type === 'error')
@@ -78,25 +91,24 @@ class SeqpredEngine {
         const variant = wantMt ? 'mt' : 'st';
         if (this.worker && this.variant !== variant)
             this.cancel();
+        const warm = !!this.worker;
         if (!this.worker)
             await this.start(variant);
         // Backwards compatibility: the single-chain predictor used to be chosen by method alone
         // (method v2/v3); the model field is new. Old callers without options.model still get v2.
+        // Any single-chain model missing from the loaded build is refused here (the tab disables it too).
         const o = Object.assign({}, opts);
         if (!o.method && !o.model)
             o.method = 'v2';
-        else if (o.model && (!o.method || ['v2', 'v3', 'm2'].indexOf(o.method) >= 0)) {
-            if (o.model === 'm2') {
-                if (!SeqpredEngine.m2Supported(this.readyVersion))
-                    throw new Error('The M2 model is not in this seqpred build (' + (this.readyVersion && this.readyVersion.predictor ? this.readyVersion.predictor : 'no version') + '): v2 remains the validated predictor.');
-                o.method = 'm2';
-            }
-            else
-                o.method = o.model;
+        else if (o.model && (!o.method || ['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3'].indexOf(o.method) >= 0)) {
+            if (!SeqpredEngine.modelSupported(this.readyVersion, o.model))
+                throw new Error('The ' + o.model.toUpperCase() + ' model is not in this seqpred build (' + (this.readyVersion && this.readyVersion.predictor ? this.readyVersion.predictor : 'no version') + '): v2 remains the validated predictor.');
+            o.method = o.model;
         }
-        if (o.method === 'm2' && !SeqpredEngine.m2Supported(this.readyVersion))
-            throw new Error('The M2 model is not in this seqpred build: v2 remains the validated predictor.');
+        if (o.method && ['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3'].indexOf(o.method) >= 0 && !SeqpredEngine.modelSupported(this.readyVersion, o.method))
+            throw new Error('The ' + String(o.method).toUpperCase() + ' model is not in this seqpred build: v2 remains the validated predictor.');
         const info = await SeqpredEngine.buildInfo();
+        const loadSeconds = warm ? 0 : this.loadSeconds;
         const worker = this.worker, id = this.nextId++;
         return new Promise((resolve, reject) => {
             this.reject = reject;
@@ -106,7 +118,7 @@ class SeqpredEngine {
                     return;
                 if (m.type === 'result') {
                     this.reject = null;
-                    resolve(Object.assign({}, m.result, { build: info, variant: this.variant, wallSeconds: m.wallSeconds }));
+                    resolve(Object.assign({}, m.result, { build: info, variant: this.variant, wallSeconds: m.wallSeconds, loadSeconds }));
                 }
                 else if (m.type === 'error') {
                     this.reject = null;

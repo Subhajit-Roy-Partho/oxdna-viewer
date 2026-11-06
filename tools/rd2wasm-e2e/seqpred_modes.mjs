@@ -31,8 +31,7 @@ const srv = http.createServer((req, res) => {
 await new Promise((r) => srv.listen(o.port, "127.0.0.1", r));
 
 const req = createRequire(import.meta.url);
-const pw = [process.env.PLAYWRIGHT_CORE, path.join(ROOT, "tools/oxview-render/node_modules/playwright-core"),
-  "/home/subho/Documents/Github/oxdna-viewer/tools/oxview-render/node_modules/playwright-core"].filter(Boolean).map((c) => { try { return req(c); } catch { return null; } }).find(Boolean);
+const pw = [process.env.PLAYWRIGHT_CORE, path.join(ROOT, "tools/oxview-render/node_modules/playwright-core")].filter(Boolean).map((c) => { try { return req(c); } catch { return null; } }).find(Boolean);
 if (!pw) { console.error("playwright-core not found"); process.exit(2); }
 const cache = path.join(os.homedir(), ".cache", "ms-playwright");
 const chrome = process.env.CHROME_PATH || fs.readdirSync(cache).filter((d) => /^chromium-\d+$/.test(d)).sort().reverse()
@@ -40,8 +39,9 @@ const chrome = process.env.CHROME_PATH || fs.readdirSync(cache).filter((d) => /^
 const browser = await pw.chromium.launch({ executablePath: chrome, headless: true,
   args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--disable-gpu-sandbox", "--disable-dev-shm-usage"] });
 
-let failed = 0;
+let failed = 0, skipped = 0;
 const check = (name, ok, extra = "") => { console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? "  " + extra : ""}`); if (!ok) failed++; };
+const skip = (name, why) => { console.log(`SKIP  ${name}  ${why}`); skipped++; };
 const V3_SEQ = "GGUUUCUUAUGGGACUCCUGCAGGAACCUUGUACCUGCAGGCACUCCCAUAAGAAGCGCGCCUGAAGGUCCAAACAAGGAGGACCUUCAACUCCUGCGUUGAAAUCGCAACAACGCAGGUCGCGCUAUUAACCCAAUGCGAUAGGGUUAAAACC";            // closing-helix design e3_clp_pal_04 of lane PK-7 (154 nt); predictor v3 selects a closing-helix candidate here
 const V3_PAIRS = [[0,153],[1,152],[2,151],[3,150],[4,53],[5,52],[6,51],[7,50],[8,49],[9,48],[10,47],[11,46],[12,45],[13,44],[16,40],[17,39],[18,38],[19,37],[20,36],[21,35],[22,34],[23,33],[26,78],[27,77],[28,76],[29,75],[30,74],[31,73],[54,125],[55,124],[56,123],[57,122],[58,121],[59,120],[62,88],[63,87],[64,86],[65,85],[66,84],[67,83],[68,82],[69,81],[70,80],[92,118],[93,117],[94,116],[95,115],[96,114],[97,113],[98,112],[99,111],[100,110],[103,141],[104,140],[105,139],[106,138],[107,137],[108,136],[127,149],[128,148],[129,147],[130,146],[131,145],[132,144],[133,143]];          // 0-based pairs of the Python reference (scripts/seqpred/pk_closing.py predict3, salt 0.25), also what the C++ build reproduces in the golden test
 const MS_SEQ = "CUUCGAGAGUCACC&CCGACCCCCAGCCAGUCUCGAAGG&GUGACAUACAGAUCAACAGGGUCG";     // survey/blind entry 7Q7Z, three strands
@@ -78,6 +78,31 @@ try {
   await setMode("seqpred");
   const methods = await page.evaluate(() => Array.from(document.getElementById("spMethod").options).map((x) => x.value));
   check("the method list offers v3 and msrna", methods.includes("v3") && methods.includes("msrna"), methods.join(","));
+  // ms2 (multi-strand RNA/DNA): enabled when the build carries it (then run below), else disabled and honestly labelled
+  const ms2opt = await page.evaluate(() => { const s = document.getElementById("spMethod"); const x = Array.from(s.options).find((y) => y.value === "ms2"); return x ? { disabled: x.disabled, text: x.text } : null; });
+  const ms2In = !!ms2opt && !ms2opt.disabled;
+  if (ms2In) check("the method list offers ms2 (enabled, no 'not in this build' suffix)", !/not in this build/.test(ms2opt.text), JSON.stringify(ms2opt));
+  else check("the method list offers ms2 (disabled: not in this build)", !!ms2opt && ms2opt.disabled && /not in this build/.test(ms2opt.text), JSON.stringify(ms2opt));
+  const visible = (id) => page.evaluate((id) => { const e = document.getElementById(id); return !!e && e.style.display !== "none"; }, id);
+  await setMethod("msrna");
+  await page.evaluate(() => spMethodChanged());
+  await page.waitForTimeout(800);
+  check("multi-strand option block (molecule, temperature, assembly, kissing, G4, second DNA state) shown for msrna", (await visible("spMsRow")) && (await page.evaluate(() => !!document.getElementById("spMolecule") && !!document.getElementById("spTemp") && !!document.getElementById("spDeclared") && !!document.getElementById("spKiss") && !!document.getElementById("spG4") && !!document.getElementById("spMsdna"))));
+  if (ms2In) {
+    await setMethod("ms2");
+    await page.evaluate(() => spMethodChanged());
+    await page.waitForTimeout(800);
+    const ms2trade = await page.innerText("#spTradeoff");
+    check("ms2 trade-off line is honest (F1 numbers), not badged missing", /0\.726/.test(ms2trade) && /not distinguishable/.test(ms2trade) && !/not in this build/.test(ms2trade), ms2trade.slice(0, 250));
+    check("multi-strand option block shown for ms2", await visible("spMsRow"));
+  } else skip("ms2 trade-off and option block", "ms2 not in this build");
+  const dlCheck = async (tag, n) => {
+    const dl = await page.evaluate(() => ({ dbn: spDownloadContent(spLast, "dbn"), json: spDownloadContent(spLast, "json"), fa: spDownloadContent(spLast, "fa") }));
+    let j = null; try { j = JSON.parse(dl.json.text); } catch (e) { /* no */ }
+    const db = await page.evaluate(() => document.getElementById("rrDb").value);
+    check(`${tag} downloads non-empty with <method>_<n>nt names`, dl.dbn.text.length > 0 && dl.json.text.length > 0 && dl.fa.text.length > 0 && new RegExp(`^\\w+_${n}nt\\.`).test(dl.dbn.filename), [dl.dbn.filename, dl.json.filename, dl.fa.filename].join(" "));
+    check(`${tag} downloads hold the dot-bracket and parse as JSON`, dl.dbn.text.includes(db) && !!j && Array.isArray(j.pairs), dl.dbn.text.slice(0, 100));
+  };
 
   // ---- v3
   await setMethod("v3");
@@ -90,6 +115,8 @@ try {
   check("v3 structure equals the Python reference (pk_closing.predict3)", same(pairsOf(db), V3_PAIRS), db);
   let sum = await page.innerText("#spSummary");
   check("v3 summary names the method and the caveat", /v3/.test(sum) && /frozen without a held-out result/.test(sum) && /build [0-9a-f]{12}/.test(sum), sum.replace(/\s+/g, " ").slice(0, 300));
+  check("v3 summary has gate, confidence, margin and loading-time rows", /gate/.test(sum) && /confidence/.test(sum) && /margin to the nested decoy/.test(sum) && /loading/.test(sum) && /git [0-9a-f]{7,}/.test(sum), sum.replace(/\s+/g, " ").slice(0, 300));
+  await dlCheck("v3", V3_SEQ.length);
 
   // ---- MS-RNA
   await setMethod("msrna");
@@ -103,6 +130,8 @@ try {
   check("primary structure equals the Python reference (ms2_rna.predict)", same(pairsOf(db), MS_PAIRS), db);
   sum = await page.innerText("#spSummary");
   check("summary lists the primary state, the alternative state and the caveat", new RegExp("primary state\\s+" + MS_PRIMARY).test(sum) && sum.includes(MS_ALT_NAME) && /set of states/.test(sum), sum.replace(/\s+/g, " ").slice(0, 400));
+  check("msrna summary has molecule, times and version rows", /molecule/.test(sum) && /loading/.test(sum) && /git [0-9a-f]{7,}/.test(sum));
+  await dlCheck("msrna", MS_SEQ.replace(/&/g, "").length);
   await page.screenshot({ path: o.out + "_msrna.png" });
   // the primary structure builds through the ordinary rigidRNA run (two '&')
   const n0 = await nNt();
@@ -116,6 +145,22 @@ try {
   await page.evaluate(() => spUseAlternative(0));
   db = await page.evaluate(() => document.getElementById("rrDb").value);
   check("'use this structure' loads the alternative state (equals the reference state " + MS_ALT_NAME + ")", same(pairsOf(db), MS_ALT_PAIRS), db);
+  // ---- ms2 (multi-strand RNA / DNA of lane MS-2), when the build carries it
+  if (ms2In) {
+    await setMethod("ms2");
+    await page.evaluate((s) => { document.getElementById("rrSeq").value = s; document.getElementById("rrDb").value = ""; }, MS_SEQ);
+    t0 = Date.now();
+    stage = await predict();
+    console.log("ms2", ((Date.now() - t0) / 1000).toFixed(1), "s:", stage);
+    check("ms2 prediction finishes", /^Done/.test(stage), stage);
+    db = await page.evaluate(() => document.getElementById("rrDb").value);
+    check("ms2 dot-bracket has '&' between the three strands", (db.match(/&/g) || []).length === 2 && db.replace(/&/g, "").length === MS_SEQ.replace(/&/g, "").length, db);
+    sum = await page.innerText("#spSummary");
+    check("ms2 summary names the route and has molecule, times and version rows", /rna-ms3\.1/.test(sum) && /molecule/.test(sum) && /loading/.test(sum) && /git [0-9a-f]{7,}/.test(sum), sum.replace(/\s+/g, " ").slice(0, 300));
+    await dlCheck("ms2", MS_SEQ.replace(/&/g, "").length);
+    await setMethod("msrna");
+  } else skip("ms2 prediction", "ms2 not in this build");
+
   // ---- DNA hybrid and single-stranded DNA tools (prediction only)
   await setMethod("dna");
   await page.evaluate((s) => { document.getElementById("rrSeq").value = s; document.getElementById("rrDb").value = ""; }, DNA_SEQ);
@@ -125,6 +170,7 @@ try {
   check("DNA hybrid pairs equal the Python reference (dna_predict.predict)", same(pairsOf(db).map(([a, b]) => [a + 1, b + 1]), DNA_PAIRS), db);
   sum = await page.innerText("#spSummary");
   check("DNA summary names the hybrid, the MFE pairs added and the caveat", /DNA hybrid/.test(sum) && /pairs added from the MFE/.test(sum) && /no NUPACK/.test(sum), sum.replace(/\s+/g, " ").slice(0, 300));
+  await dlCheck("dna", DNA_SEQ.replace(/&/g, "").length);
   const refused = await page.evaluate(() => rrInput());
   check("the RNA engine refuses to build a DNA prediction", !!refused.error && /DNA prediction/.test(refused.error), refused.error);
   await setMethod("ssdna");
@@ -136,6 +182,7 @@ try {
   check("the G-quadruplex rule names the four G tracts of the reference", sum.includes(tracts), tracts);
   db = await page.evaluate(() => document.getElementById("rrDb").value);
   check("ssDNA hybrid pairs equal the Python reference (ssdna_predict.hybrid)", same(pairsOf(db).map(([a, b]) => [a + 1, b + 1]), G4_HYBRID), db);
+  await dlCheck("ssdna", G4_SEQ.length);
   // a single-strand method refuses '&'
   await setMethod("v2");
   await page.evaluate(() => { document.getElementById("rrSeq").value = "GGGGAAAACCCC&GGGG"; document.getElementById("spStage").textContent = ""; });
@@ -148,5 +195,5 @@ try {
   await browser.close();
   srv.close();
 }
-console.log(failed ? `${failed} FAILED` : "ALL PASS");
+console.log(failed ? `${failed} FAILED (${skipped} skipped)` : `ALL PASS (${skipped} skipped)`);
 process.exit(failed ? 1 : 0);

@@ -31,8 +31,7 @@ const srv = http.createServer((req, res) => {
 await new Promise((r) => srv.listen(o.port, "127.0.0.1", r));
 
 const req = createRequire(import.meta.url);
-const pw = [process.env.PLAYWRIGHT_CORE, path.join(ROOT, "tools/oxview-render/node_modules/playwright-core"),
-  "/home/subho/Documents/Github/oxdna-viewer/tools/oxview-render/node_modules/playwright-core"].filter(Boolean).map((c) => { try { return req(c); } catch { return null; } }).find(Boolean);
+const pw = [process.env.PLAYWRIGHT_CORE, path.join(ROOT, "tools/oxview-render/node_modules/playwright-core")].filter(Boolean).map((c) => { try { return req(c); } catch { return null; } }).find(Boolean);
 if (!pw) { console.error("playwright-core not found"); process.exit(2); }
 const cache = path.join(os.homedir(), ".cache", "ms-playwright");
 const chrome = process.env.CHROME_PATH || fs.readdirSync(cache).filter((d) => /^chromium-\d+$/.test(d)).sort().reverse()
