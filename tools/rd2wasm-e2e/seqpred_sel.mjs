@@ -80,6 +80,8 @@ try {
   // wait for the model refresh (starts the worker, reads version.models)
   await page.waitForFunction(() => { const m = document.getElementById("spModel"); return m && (/not in this build/.test(m.options[m.options.length - 1].text) || !m.options[m.options.length - 1].disabled); }, null, { timeout: 180000 });
   await page.waitForTimeout(500);
+  await page.evaluate(() => { const s = document.getElementById("spMethod"); s.value = "v2"; try { Metro.getPlugin(s, "select").val("v2"); } catch (e) {} s.dispatchEvent(new Event("change", { bubbles: true })); });   // since lane CPP-5 the method selector defaults to the auto router: these checks are about the single-chain predictor v2
+  await page.waitForTimeout(300);
 
   // ---- model selector: every single-chain model listed, availability from the build
   const models = await page.evaluate(() => {
@@ -87,8 +89,8 @@ try {
     if (!s) return null;
     return Array.from(s.options).map((x) => ({ value: x.value, text: x.text, disabled: x.disabled, title: x.title }));
   });
-  check("model selector lists all single-chain models", !!models && models.map((m) => m.value).join(",") === SINGLE.join(","), JSON.stringify((models || []).map((m) => m.value)));
-  check("v2 is the default", !!models && (await page.evaluate(() => document.getElementById("spModel").value)) === "v2");
+  check("model selector lists all single-chain models (CPP-4 added nat1, e1, ml4)", !!models && models.map((m) => m.value).join(",") === SINGLE.concat(["nat1", "e1", "ml4"]).join(","), JSON.stringify((models || []).map((m) => m.value)));
+  check("v2 is the default of the single-chain model selector (the method selector itself defaults to auto since lane CPP-5)", !!models && (await page.evaluate(() => document.getElementById("spModel").value)) === "v2");
   const mods = await page.evaluate(() => spEngine.versionInfo().then((v) => v.models || {}));
   const isIn = (id) => Object.prototype.hasOwnProperty.call(mods, id) && !(mods[id] && mods[id].available === false);
   for (const id of SINGLE) {

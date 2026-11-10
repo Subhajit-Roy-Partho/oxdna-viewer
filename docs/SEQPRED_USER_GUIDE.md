@@ -35,6 +35,33 @@ RNAs, 150+150 RNAs without pseudoknot, 46 designed RNAs, 100 shuffled sequences)
   program: only in the native command-line build (the browser module does not carry it: the
   program is GPL-licensed and is not compiled into the module; a model without that input
   would be a different, unevaluated model).
+* **Recommendation**: for natural RNA, ML3 (native build with the pKiss program; in the blind
+  look of the project it found 46 of 228 natural pseudoknots with 1 / 287 and 0 / 98 false
+  helices) or NAT-1 in the browser; for designed RNA, v4 (V3D) or MS-3.
+* **nat1 (NAT-1)**: natural-RNA pseudoknot model on top of the v2 candidate pool (topology price
+  + logistic gate), fitted on 12-250 nt single chains at 0.25 M salt. One blind look (test2):
+  24 of 228 natural pseudoknots found (10.5 %) vs 0 for the nested MFE, false helices 0 / 287
+  natural no-crossing RNAs and 1 / 98 shuffles; on the 22 experimental-3D rows 1 found. The gate
+  stays closed for most RNAs, then the answer is the nested MFE. Not a designed-RNA model.
+* **e1 (ENERGY-1, K 30 or 50)**: NAT-1's price refitted on a pre-filtered pool: the cheapest form
+  that keeps NAT-1's accuracy, NOT a more accurate energy (K = 30: 26 of 228 found, 1 / 287 and
+  1 / 98 false helices; K = 50 is reported, not claimed).
+* **ml4 (ML-4)**: helix-graph network (5-seed ensemble) on the NAT-1 price: does not beat
+  NAT-1 at equal false-helix cost (29 of 228 found, 1 / 287 and 1 / 98 false helices). Evaluated
+  in double precision in the module: equal to the float32 reference up to 2e-6 in the scores.
+* **ms3 (MS-3, EXPERIMENTAL)**: one strand with the design signature (>= 34 % of the nucleotides
+  in unique complementary domains of >= 8 bp, >= 10 domains, >= 150 nt) gets domain pairing + MFE
+  (a DESIGN DECODER, not a blind folding model); other single strands the MFE with G-quadruplex
+  protection and a stem filter; several strands MS-2 unchanged. The summary adds the assembly
+  (strand contacts, complexes, strands without a partner, dimer free energy and bound fraction at
+  the stated concentration: a report, not a gate). Held-out second look on 12 designs only.
+* **domain pairing B / hybrid B**: design decoders (longest complementary segments first; hybrid
+  adds the MFE pairs with both ends free), not blind folding models.
+* **auto** (recommended, the default when the module carries it): the router of lane ROUTE-1 (rule R1, `scripts/seqpred/auto_route.py` of rigidDNA2, ported to C++ in lane CPP-5): ONE frozen model answers and the summary says which one (`arm`), why (`reason`), the class of the input, how far to trust it (router confidence level high / medium / low / unknown from the development / validation rows of ROUTE-1, not blind) and which arms were tried. Natural single RNA of 12-500 nt: ML3 in the native tool; ML3 needs the external pKiss program (GPL-3.0-or-later, not part of the module), so in the browser the line is "ML3 unavailable" and the answer comes from NAT-1 (12-250 nt) or the nested MFE; the result is flagged `mlFallback: true` and its confidence is `unknown` (the confidence table was built from ML3 answers). Designed kissing-loop RNA (V3D status designed-kissing): V3D; long designed single strands (design gate: at least 34 % of the nucleotides in unique complementary domains of at least 8 bp, at least 10 domains, at least 150 nt): MS-3; several RNA strands: MS-2; DNA: MS-3. Other temperatures than 37 C and RNA outside 12-800 nt bypass the learned arms (nested MFE). V3D runs first on every single RNA, so auto is slower than NAT-1 alone (about 20 s at 250 nt natively, about 30-60 s in the browser).
+* **Scoring against a reference**: paste a reference structure (dot-bracket, pair list, bpseq or
+  ct) under the arc diagram: the arcs are recoloured and the drawn candidate is scored with the
+  C++ metrics of the module (pair precision / recall / F1 / MCC, crossing-pair recall, helix
+  recall, pseudoknot found, false helix).
 * **ms2 (multi-strand RNA / DNA)**: on 200 DNA complexes F1 0.726 vs 0.720 for the
   shipped DNA predictor (not distinguishable, +/- 0.03).
 * **MS-RNA v4, DNA hybrid, single-stranded DNA tools**: the older multi-strand and DNA

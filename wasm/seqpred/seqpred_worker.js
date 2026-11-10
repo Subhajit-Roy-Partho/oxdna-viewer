@@ -2,6 +2,7 @@
 //   {type:'init', base, variant, build}             load <base>/seqpred_api.js and <base>/seqpred_<variant>.js  (variant 'mt': threaded build, needs crossOriginIsolated; falls back to 'st');
 //                                            `build` (optional): build id of build.json, appended as ?v=<build> to every file so that a browser cache cannot serve another build
 //   {type:'predict', id, sequence, options}  -> {type:'result', id, result}  |  {type:'error', id, message}
+//   {type:'score', id, request}             -> {type:'scored', id, result}  |  {type:'error', id, message}   (scoring of a predicted pair set against a reference structure, C++ port of runall.metrics)
 //   {type:'ready', version}
 'use strict';
 if (self.name === 'em-pthread') {
@@ -22,6 +23,8 @@ self.onmessage = async (ev) => {
       const t0 = Date.now();
       const result = sp.predict(m.sequence, m.options);
       self.postMessage({ type: 'result', id: m.id, result, wallSeconds: (Date.now() - t0) / 1000 });
+    } else if (m.type === 'score') {
+      self.postMessage({ type: 'scored', id: m.id, result: sp.score(m.request) });
     }
   } catch (e) {
     self.postMessage({ type: 'error', id: m.id, message: String((e && e.message) || e) });

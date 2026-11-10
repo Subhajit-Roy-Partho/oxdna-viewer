@@ -98,11 +98,15 @@ function spSetSelect(id: string, v: string) {
 let spSyncing = false;
 
 /** Every single-chain RNA model the tab knows (version.models keys of newer builds). */
-const SP_SINGLE_MODELS = ['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3'];
+const SP_SINGLE_MODELS = ['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'nat1', 'e1', 'ml4'];
 
 /** Multi-strand / tool methods of the spMethod select (kept working as before). */
-const SP_MULTI_METHODS = ['msrna', 'ms2', 'dna', 'ssdna'];
-const SP_TOOL_METHODS = ['nested', 'rna_kl', 'kl_routes', 'longrange'];
+const SP_MULTI_METHODS = ['msrna', 'ms2', 'ms3', 'dna', 'ssdna', 'domainB', 'hybridB', 'auto'];
+/** Methods that take several strands separated by & (or one strand): the summary shows strands, molecule and route. */
+const SP_STRAND_METHODS = ['msrna', 'ms2', 'ms3'];
+/** Methods whose input keeps T (DNA) instead of reading it as U. */
+const SP_KEEP_T = ['ms3', 'domainB', 'hybridB', 'auto'];
+const SP_TOOL_METHODS = ['nested', 'rna_kl', 'kl_routes', 'longrange', 'domainB', 'hybridB'];
 
 /** One honest line per model, shown under the selector. Taken from the pre-registered sealed test
  *  of the project (44 natural pseudoknot RNAs, 150+150 RNAs without pseudoknot, 46 designed RNAs,
@@ -121,15 +125,23 @@ const SP_TRADEOFFS: { [k: string]: string } = {
     dna: 'DNA hybrid (domain pairing + ViennaRNA-DNA MFE): short stems are mostly right, junctions and kissing complexes are not; no NUPACK (proprietary).',
     ssdna: 'Single-stranded DNA tools (hybrid, MFE, G-quadruplex / i-motif rules): the G-quadruplex rule predicts the motif, not its topology.',
     nested: 'Nested Turner 2004 MFE only (salt corrected): no kissing / pseudoknot layer.',
+    nat1: 'Natural-RNA pseudoknot model (12-250 nt, fitted at 0.25 M): one blind look, 24 of 228 natural pseudoknots found vs 0 for the nested MFE, false helices 0 / 287 and 1 / 98 shuffles. ML3 finds more (46 of 228) but needs pKiss (native only). Not a designed-RNA model: use v4 (V3D) or MS-3.',
+    e1: 'NAT-1 price refitted on a pre-filtered pool (K = 30, or 50): the cheapest form that keeps NAT-1 accuracy, NOT a more accurate energy. Blind look: K = 30 finds 26 of 228 natural pseudoknots, 1 / 287 and 1 / 98 false helices. 12-250 nt.',
+    ml4: 'HG-Net ensemble on the NAT-1 price: does not beat NAT-1 at equal false-helix cost (blind look: 29 of 228 natural pseudoknots, 1 / 287 and 1 / 98 false helices). 12-250 nt. Not a designed-RNA model.',
+    ms3: 'EXPERIMENTAL. One strand: design signature gate (designed ssDNA / ssRNA origami: domain pairing + MFE, a DESIGN DECODER, not blind) else MFE with G4 protection and a stem filter; several strands: MS-2 unchanged; assembly summary (contacts, complexes, dimer dG). Held-out second look on 12 designs only.',
+    domainB: 'Domain pairing B: longest complementary segments first, no thermodynamics. A DESIGN DECODER for designed RNA / DNA and ssRNA-origami sequences, not a blind folding model.',
+    hybridB: 'Domain pairing B plus the MFE pairs with both ends free (stems >= 3). A DESIGN DECODER: good only on designed sequences, not a blind folding model.',
+    auto: 'Recommended. The router of lane ROUTE-1 (rule R1): one frozen model per input, and the result says which model answered and why. Natural RNA of 12-500 nt: ML3 in the native tool, but ML3 needs the GPL-3 pKiss program and is NOT in the browser, so here the answer comes from NAT-1 (12-250 nt) or the nested MFE (the result is flagged ML3 unavailable). Designed kissing-loop RNA: V3D; long designed strands: MS-3; several RNA strands: MS-2; DNA: MS-3. Runs V3D first on every single RNA, so it is slower than NAT-1 alone.',
 };
 
 /** Models the tab flags EXPERIMENTAL (shown as a badge; the module's own status wins when present). */
-const SP_EXPERIMENTAL = ['m2', 'h2d', 'ml2', 'ml3'];
+const SP_EXPERIMENTAL = ['m2', 'h2d', 'ml2', 'ml3', 'ms3'];
 
 /** Which option block each single-chain model uses (salt and time budget: all; threads: all but ms2). */
 function spModelOptions(id: string): string[] {
     if (id === 'm2' || id === 'h2d') return ['gateMargin'];
     if (id === 'ml2' || id === 'ml3') return ['thr'];
+    if (id === 'e1') return ['k'];
     return [];
 }
 
@@ -146,6 +158,8 @@ function spMethodChanged() {
 /** The model select drives the method select (models missing from the build stay disabled). */
 function spModelChanged() {
     if (spSyncing) return;
+    // the model row is hidden unless a single-chain method is selected: a (delayed) change event of the hidden select (Metro refresh) must not override auto / ms2 / ...
+    if (SP_SINGLE_MODELS.indexOf(rrEl<HTMLSelectElement>('spMethod').value) < 0) return;
     const v = rrEl<HTMLSelectElement>('spModel').value;
     if (SP_SINGLE_MODELS.indexOf(v) >= 0) spSetSelect('spMethod', v);
     spRefreshModel();
@@ -168,10 +182,13 @@ function spLabel(id: string, info: any, fallback: string): string {
 function spShowOptionsFor(sel: string) {
     const show = (id: string, on: boolean) => { const e = rrEl(id); if (e) e.style.display = on ? '' : 'none'; };
     const single = SP_SINGLE_MODELS.indexOf(sel) >= 0;
-    const multi = sel === 'ms2' || sel === 'msrna';
+    const multi = sel === 'ms2' || sel === 'msrna' || sel === 'ms3' || sel === 'auto';
     show('spGateRow', single && spModelOptions(sel).indexOf('gateMargin') >= 0);
     show('spThrRow', single && spModelOptions(sel).indexOf('thr') >= 0);
     show('spMsRow', multi);
+    show('spKRow', single && spModelOptions(sel).indexOf('k') >= 0);
+    show('spMs2Only', sel === 'ms2' || sel === 'msrna');   // auto: molecule and temperature only
+    show('spMs3Row', sel === 'ms3');
     const gate = rrEl<HTMLInputElement>('spGate');
     if (gate && (sel === 'm2' || sel === 'h2d')) gate.placeholder = sel === 'h2d' ? 'default 4' : 'default 2';
 }
@@ -192,7 +209,7 @@ async function spRefreshModel() {
     const fallbacks: { [k: string]: string } = {
         v2: 'v2 (default, validated on designed RNAs)', v3: 'v3 (closing-helix candidates; frozen, no held-out result)',
         v4: 'v4 (short-helix rule + confidence)', m2: 'M2 (experimental re-ranker)', h2d: 'h2d (2D refit, experimental)',
-        ml2: 'ml2 (re-ranker)', ml3: 'ml3 (re-ranker, needs pKiss)',
+        ml2: 'ml2 (re-ranker)', ml3: 'ml3 (re-ranker, needs pKiss)', nat1: 'NAT-1 (natural RNA, topology price + gate)', e1: 'ENERGY-1 (NAT-1 price, pre-filtered pool)', ml4: 'ML-4 (HG-Net ensemble on the NAT-1 price)',
     };
     for (const o of Array.from(s.options)) {
         const id = (o as HTMLOptionElement).value;
@@ -209,14 +226,15 @@ async function spRefreshModel() {
     const sm = document.getElementById('spMethod') as HTMLSelectElement;
     if (sm) for (const o of Array.from(sm.options)) {
         const id = (o as HTMLOptionElement).value;
-        if (SP_SINGLE_MODELS.indexOf(id) < 0 && id !== 'ms2') continue;
+        if (SP_SINGLE_MODELS.indexOf(id) < 0 && id !== 'ms2' && id !== 'ms3' && id !== 'domainB' && id !== 'hybridB' && id !== 'auto') continue;
         const ok = SeqpredEngine.modelSupported(v, id);
         (o as HTMLOptionElement).disabled = !ok;
         if (ok) o.text = o.text.replace(/\s*\u2014\s*not in this build\s*$/, '');
-        if (!ok && (SP_SINGLE_MODELS.indexOf(id) >= 0 || id === 'ms2') && o.text.indexOf('not in this build') < 0)
+        if (!ok && (SP_SINGLE_MODELS.indexOf(id) >= 0 || id === 'ms2' || id === 'ms3' || id === 'domainB' || id === 'hybridB' || id === 'auto') && o.text.indexOf('not in this build') < 0)
             o.text += ' \u2014 not in this build';
     }
     if (!SeqpredEngine.modelSupported(v, s.value)) spSetSelect('spModel', 'v2');
+    if (sm && sm.value === 'auto' && !SeqpredEngine.modelSupported(v, 'auto')) spSetSelect('spMethod', 'v2');   // a build without the router: back to v2
     spSyncing = true;
     try { (window as any).Metro.getPlugin(s, 'select').val(s.value); } catch (e) { /* plain select */ }
     finally { spSyncing = false; }
@@ -225,13 +243,13 @@ async function spRefreshModel() {
     const meth = rrEl<HTMLSelectElement>('spMethod').value;
     const descId = meth;
     const info = mm[descId];
-    const ok = (SP_SINGLE_MODELS.indexOf(descId) >= 0 || descId === 'ms2') ? SeqpredEngine.modelSupported(v, descId) : true;
+    const ok = (SP_SINGLE_MODELS.indexOf(descId) >= 0 || descId === 'ms2' || descId === 'ms3' || descId === 'domainB' || descId === 'hybridB' || descId === 'auto') ? SeqpredEngine.modelSupported(v, descId) : true;
     const trade = rrEl('spTradeoff');
     if (trade) {
         const exp = (info && /experimental/i.test(String(info.status || ''))) || SP_EXPERIMENTAL.indexOf(descId) >= 0;
         trade.innerHTML = ''
             + (exp && ok ? '<span class="sp-badge sp-exp">EXPERIMENTAL</span> ' : '')
-            + (!ok ? '<span class="sp-badge sp-missing">not in this build</span> ' : '')
+            + (!ok ? '<span class="sp-badge sp-missing">' + 'not in this build' + '</span> ' : '')
             + '<span>' + spTradeoff(descId, info).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])) + '</span>';
     }
     spShowOptionsFor(meth);
@@ -647,7 +665,7 @@ function spOptions(): SeqpredOptions {
         salt: parseFloat(rrEl<HTMLInputElement>('spSalt').value) || 0.25,
         budgetSeconds: Math.max(0, parseFloat(rrEl<HTMLInputElement>('spBudget').value) || 0),
     };
-    if (method !== 'ms2') o.threads = parseInt(rrEl<HTMLInputElement>('rrThreads').value) || 1;   // ms2 runs single-threaded
+    if (method !== 'ms2' && method !== 'ms3') o.threads = parseInt(rrEl<HTMLInputElement>('rrThreads').value) || 1;   // ms2 runs single-threaded
     if (model) o.model = model;
     const gateEl = rrEl<HTMLInputElement>('spGate');
     if (gateEl && rrEl('spGateRow').style.display !== 'none') {
@@ -658,6 +676,23 @@ function spOptions(): SeqpredOptions {
     if (thrEl && rrEl('spThrRow').style.display !== 'none') {
         const t = parseFloat(thrEl.value);
         if (isFinite(t) && t >= 0 && t <= 1) o.thr = t;
+    }
+    const kEl = rrEl<HTMLSelectElement>('spK');
+    if (kEl && rrEl('spKRow').style.display !== 'none') o.k = (parseInt(kEl.value) === 50 ? 50 : 30);
+    if (method === 'ms3') {
+        const mol3 = rrEl<HTMLSelectElement>('spMolecule');
+        if (mol3) o.molecule = mol3.value as SeqpredOptions['molecule'];
+        const tp3 = rrEl<HTMLInputElement>('spTemp');
+        if (tp3 && isFinite(parseFloat(tp3.value))) o.temp = parseFloat(tp3.value);
+        const mg = rrEl<HTMLInputElement>('spMg'), cc = rrEl<HTMLInputElement>('spConc');
+        if (mg && isFinite(parseFloat(mg.value)) && parseFloat(mg.value) > 0) o.mg = parseFloat(mg.value);
+        if (cc && isFinite(parseFloat(cc.value)) && parseFloat(cc.value) > 0) o.concUM = parseFloat(cc.value);
+    }
+    if (method === 'auto') {
+        const mola = rrEl<HTMLSelectElement>('spMolecule');
+        if (mola) o.molecule = mola.value as SeqpredOptions['molecule'];
+        const tpa = rrEl<HTMLInputElement>('spTemp');
+        if (tpa && isFinite(parseFloat(tpa.value))) o.temp = parseFloat(tpa.value);
     }
     if (method === 'ms2' || method === 'msrna') {
         const mol = rrEl<HTMLSelectElement>('spMolecule');
@@ -677,12 +712,14 @@ function spOptions(): SeqpredOptions {
 /** "Predict structure" button of the seqpred input. */
 async function spPredict() {
     if (spRunning) return;
-    const seq = rrEl<HTMLTextAreaElement>('rrSeq').value.replace(/\s+/g, '').toUpperCase().replace(/T/g, 'U');
-    if (!seq) { notify('Enter a sequence.', 'alert'); return; }
     const meth = rrEl<HTMLSelectElement>('spMethod').value;
+    const keepT = SP_KEEP_T.indexOf(meth) >= 0;      // ms3, domainB, hybridB: T keeps its meaning (DNA)
+    const rawSeq = rrEl<HTMLTextAreaElement>('rrSeq').value.replace(/\s+/g, '').toUpperCase();
+    const seq = keepT ? rawSeq : rawSeq.replace(/T/g, 'U');
+    if (!seq) { notify('Enter a sequence.', 'alert'); return; }
     const single = SP_SINGLE_MODELS.indexOf(meth) >= 0;
-    const multi = meth === 'msrna' || meth === 'ms2' || meth === 'dna';
-    if (multi ? /[^ACGU&]/.test(seq) : /[^ACGU]/.test(seq)) { notify(meth === 'dna' ? 'The DNA hybrid takes strands of A, C, G, T separated by &.' : multi ? 'MS-RNA and MS2 take strands of A, C, G, U separated by & (T is read as U).' : 'This method takes a single strand of A, C, G, U (T is read as U); choose "MS-RNA", "MS2" or "DNA hybrid" for several strands separated by &.', 'alert'); return; }
+    const multi = meth === 'msrna' || meth === 'ms2' || meth === 'dna' || keepT;
+    if (keepT ? (/[^ACGTU&]/.test(seq) || (/T/.test(seq) && /U/.test(seq) && meth !== 'ms3')) : multi ? /[^ACGU&]/.test(seq) : /[^ACGU]/.test(seq)) { notify(meth === 'dna' ? 'The DNA hybrid takes strands of A, C, G, T separated by &.' : multi ? 'MS-RNA and MS2 take strands of A, C, G, U separated by & (T is read as U).' : 'This method takes a single strand of A, C, G, U (T is read as U); choose "MS-RNA", "MS2" or "DNA hybrid" for several strands separated by &.', 'alert'); return; }
     const st = rrEl('spStage');
     spRunning = true;
     rrEl<HTMLButtonElement>('spRunBtn').disabled = true; rrEl<HTMLButtonElement>('spCancelBtn').disabled = false;
@@ -700,10 +737,12 @@ async function spPredict() {
         const rmsg = rrEl('spRefMsg'); if (rmsg) rmsg.textContent = '';
         rrEl<HTMLTextAreaElement>('rrDb').value = r.dotbracket;
         const xHel = spCrossingHelices(r);
-        st.textContent = r.method === 'dna' || r.method === 'ssdna'
+        st.textContent = r.method === 'auto'
+            ? `Done in ${r.wallSeconds.toFixed(1)} s: auto router chose ${(r as any).arm} (${(r as any).label}); ${r.pairs.length} base pairs${(r as any).mlFallback ? '; ML3 is not available in the browser, so the natural-RNA line fell through' : ''}${r.truncated ? ' (truncated: time budget)' : ''}.`
+            : r.method === 'dna' || r.method === 'ssdna'
             ? `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} DNA base pairs${r.method === 'dna' ? ' over ' + (r.lengths || []).length + ' strands' : ''} (prediction only: the rigidRNA engine builds RNA).`
-            : r.method === 'msrna' || r.method === 'ms2'
-            ? `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} base pairs over ${(r.lengths || []).length} strands, primary state "${r.primary || (r as any).route || '?'}", ${(r.alternatives || []).length} alternative state(s).`
+            : r.method === 'msrna' || r.method === 'ms2' || r.method === 'ms3' || r.method === 'domainB' || r.method === 'hybridB'
+            ? `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} base pairs over ${(r.lengths || []).length} strands, state "${r.primary || (r as any).route || '?'}", ${(r.alternatives || []).length} alternative state(s).`
             : `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} base pairs, ${xHel} kissing / pseudoknot helices${r.truncated ? ' (truncated: time budget)' : ''}.`;
         spShowSummary(r);
         spRenderDownloads(r);
@@ -745,6 +784,8 @@ function spGateText(r: SeqpredResult): string {
         ? ` [stage1 nested ${spNum(g.stage1Nested)}, crossing ${spNum(g.stage1Crossing)}]` : '';
     if (kind === 'discriminator')
         return `gate (discriminator): p = ${spNum(g.pCross)} vs thr ${spNum(g.thr)}: ${g.fired ? 'fired' : 'not met'}${why}${st}`;
+    if (kind === 'logistic')
+        return `gate (logistic): p = ${spNum(g.pOpen, 3)} vs threshold ${spNum(g.thr, 3)}: ${g.fired ? 'open (the best crossing candidate is returned)' : 'closed (the nested MFE is returned)'}, price margin ${spNum(g.marginValue)}${why}`;
     if (kind === 'margin')
         return `gate (margin ${spNum(g.margin)}): ${g.fired ? 'fired' : 'not met'}, margin value ${spNum(g.marginValue)}${why}`;
     return `no gate: the top-scored candidate is returned (${g.fired ? 'it has extra helices' : 'it is nested'})`;
@@ -756,7 +797,7 @@ function spConfidenceHtml(r: SeqpredResult): string {
     if (!c) return 'confidence: not reported by this build (needs a newer module)';
     const col: { [k: string]: string } = {
         'designed-kissing': 'green', 'low-confidence': '#b45309', 'nested': '#6b7280',
-        'extra-helices': '#2563eb', 'fallback-nested': '#b45309', 'truncated': '#b45309', 'single-state': '#6b7280', 'alternatives': '#2563eb',
+        'extra-helices': '#2563eb', 'fallback-nested': '#b45309', 'truncated': '#b45309', 'single-state': '#6b7280', 'alternatives': '#2563eb', 'pseudoknot': '#2563eb', 'design-decoder': '#b45309',
     };
     const esc = (s: any) => String(s).replace(/[&<>]/g, (x) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[x]));
     let h = `confidence: <b style="color:${col[c.status] || 'inherit'}">${esc(c.status)}</b>`;
@@ -765,6 +806,8 @@ function spConfidenceHtml(r: SeqpredResult): string {
     if (c.marginOther !== undefined && c.marginOther !== null) bits.push(`margin other ${spNum(c.marginOther)}`);
     if (c.nExtraHelices !== undefined) bits.push(`${c.nExtraHelices} extra ${c.nExtraHelices === 1 ? 'helix' : 'helices'}`);
     if (c.pCross !== undefined && c.pCross !== null) bits.push(`p = ${spNum(c.pCross)}`);
+    if (c.gateProbability !== undefined && c.gateProbability !== null) bits.push(`gate p = ${spNum(c.gateProbability, 3)}, threshold ${spNum(c.threshold, 3)}`);
+    if (typeof c.calibrated === 'number' && c.status === 'pseudoknot') bits.push(`calibrated P(improves F1 by >= 0.05) = ${spNum(c.calibrated)}`);
     if (c.reason) bits.push(esc(c.reason));
     if (bits.length) h += ` (${bits.join(', ')})`;
     if (c.helices && c.helices.length)
@@ -801,7 +844,7 @@ function spDownloadContent(r: SeqpredResult, kind: 'dbn' | 'json' | 'fa'): { fil
                 version: r.version && { seqpred: r.version.seqpred, predictor: r.version.predictor, viennarna: r.version.viennarna, git: r.version.git },
             }, null, 1),
         };
-    const multi = r.method === 'msrna' || r.method === 'ms2' || r.method === 'dna';
+    const multi = r.method === 'msrna' || r.method === 'ms2' || r.method === 'dna' || r.method === 'ms3' || r.method === 'domainB' || r.method === 'hybridB' || (r.method === 'auto' && (r as any).nStrands > 1);
     const seqs: string[] = multi ? ((r as any).strands && (r as any).strands.length ? (r as any).strands.slice() : String(r.sequence).split('&')) : [String(r.sequence).replace(/&/g, '')];
     const dbs: string[] = multi ? String(r.dotbracket).split('&') : [String(r.dotbracket).replace(/&/g, '')];
     if (kind === 'fa')
@@ -835,6 +878,21 @@ function spRenderDownloads(r: SeqpredResult) {
 function spSummaryHtml(r: SeqpredResult): string {
     const esc = (s: any) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     const row = (k: string, v: any) => `<tr><td>${k}</td><td>${v}</td></tr>`;
+    if (r.method === 'auto') {
+        // The router's own rows (arm, reason, ML3 fallback, confidence level, arms tried), then the summary of the arm that answered (the result carries the arm's own blocks).
+        const a = r as any;
+        const rc = a.routerConfidence || {};
+        const col: { [k: string]: string } = { high: 'green', medium: '#2563eb', low: '#b45309', unknown: '#6b7280' };
+        let h0 = '<table class="table compact row-hover">';
+        h0 += row('auto router', `<b>answered by ${esc(a.arm)}</b>: ${esc(a.armTitle || '')}<br>class: ${esc(a.label)}; reason: ${esc(a.reason)} (rule ${esc(a.ruleVersion || 'R1')})`);
+        h0 += row('router confidence', `<b style="color:${col[rc.level] || 'inherit'}">${esc(rc.level || 'unknown')}</b>${typeof rc.score === 'number' ? ' (mean pair F1 ' + rc.score.toFixed(3) + ' of the cell ' + esc(rc.cell) + ', n = ' + esc(rc.n) + ')' : ''}<br><span class="text-small">${esc(rc.basis || '')}</span>`);
+        if (a.mlFallback) h0 += row('ML3 fallback', '<b style="color:#b45309">mlFallback: true</b>. The rule sends natural RNA of 12-500 nt to ML3, which needs the external pKiss program (GPL-3.0-or-later: not part of this module). In the browser ML3 is unavailable, so the answer comes from the next line of the chain (' + esc(a.arm) + '); the native tool with pKiss answers with ML3. The confidence table was built from ML3 answers, so level "unknown" is expected for NAT-1 / nested answers.');
+        h0 += row('arms tried', (a.tried || []).map((t: any) => `${esc(t.arm)}: ${esc(t.outcome)} (${esc(String(t.why).slice(0, 160))})`).join('<br>'));
+        if (a.warnings && a.warnings.length) h0 += row('warnings', a.warnings.map(esc).join('<br>'));
+        h0 += '</table>';
+        const inner = Object.assign({}, r, { method: a.armMethod }) as any;
+        return h0 + spSummaryHtml(inner);
+    }
     const gitShort = r.version && r.version.git ? String(r.version.git).slice(0, 12) : '?';
     const prov = row('provenance', `seqpred ${esc(r.version.seqpred)}, ${esc(r.version.predictor)}, ViennaRNA ${esc(r.version.viennarna)}, build ${r.build ? esc(r.build.build) : '?'} (${r.build ? esc(r.build.engine) : 'build.json not found'})`);
     const total = r.timings && typeof r.timings.total === 'number' ? (r.timings.total as number).toFixed(1) : '-';
@@ -852,14 +910,28 @@ function spSummaryHtml(r: SeqpredResult): string {
                   row('G-quadruplex rule (G3+N1-7)', dnaR.g4.motifs.length ? dnaR.g4.motifs.map((m: number[][]) => m.map(t => `${t[0]}-${t[1]}`).join(' / ')).join('; ') : 'no motif') +
                   row('i-motif rule (C3+N1-7)', dnaR.imotif.motifs.length ? dnaR.imotif.motifs.map((m: number[][]) => m.map(t => `${t[0]}-${t[1]}`).join(' / ')).join('; ') : 'no motif')) +
             timeRow + truncRow + prov;
-    } else if (r.method === 'msrna' || r.method === 'ms2') {
+    } else if (r.method === 'domainB' || r.method === 'hybridB') {
+        const dm = r as any;
+        h += row('method', r.method === 'domainB' ? 'domain pairing B (no thermodynamics; a DESIGN DECODER, not a blind folding model)' : 'hybrid B: domain pairing + MFE pairs with both ends free in stems >= 3 (a DESIGN DECODER, not a blind folding model)') +
+            row('strands', (r.lengths || []).map((n, k) => `${k + 1}: ${n} nt`).join(', ')) +
+            row('molecule', esc(dm.molecule || '?')) +
+            row('base pairs', `${r.pairs.length}` + (dm.domain ? ` (${dm.domain.nB} from domain pairing${dm.domain.nA !== undefined ? `, ${dm.domain.nAKept} added from ${dm.domain.nA} MFE pairs; MFE ${spNum(dm.domain.energyA)} kcal/mol` : ''})` : '')) +
+            timeRow + truncRow + prov;
+    } else if (r.method === 'msrna' || r.method === 'ms2' || r.method === 'ms3') {
         const ms = r as any;
-        h += row('method', r.method === 'ms2' ? 'MS2 multi-strand RNA / DNA predictor (strands separated by &)' : 'MS-RNA v4 (multi-strand: ViennaRNA co-fold of strand subsets and orderings, partition into complexes at 100 uM, deterministic kissing layer)') +
+        h += row('method', r.method === 'ms3' ? 'MS-3 (EXPERIMENTAL): single-strand design gate + stem filter + assembly summary on MS-2 (strands separated by &)' : r.method === 'ms2' ? 'MS2 multi-strand RNA / DNA predictor (strands separated by &)' : 'MS-RNA v4 (multi-strand: ViennaRNA co-fold of strand subsets and orderings, partition into complexes at 100 uM, deterministic kissing layer)') +
             row('strands', (r.lengths || []).map((n, k) => `${k + 1}: ${n} nt`).join(', ')) +
             row('molecule', esc(ms.molecule || (r.method === 'msrna' ? 'RNA' : '?')) + (ms.temp !== undefined ? `, ${ms.temp} deg C` : '')) +
             (ms.route ? row('route', esc(ms.route)) : '') +
             row('primary state', `${esc(r.primary || ms.route || '')}${r.primary === 'kiss' ? ' (every strand has at least 50 nt: monomer folds are kept and linked by kissing helices)' : ''}, free energy ${r.energy.freeEnergy !== undefined ? r.energy.freeEnergy.toFixed(2) : '-'} kcal/mol`) +
             row('base pairs', `${r.pairs.length}, of which ${r.layers.filter(l => l > 0).length} cross the nested structure (kissing / pseudoknot layer)`);
+        if (ms.signature) h += row('design signature', `${(100 * ms.signature.cover).toFixed(0)} % of the nucleotides in ${ms.signature.nstem} unique complementary domains of >= 8 bp (gate: >= 34 %, >= 10 domains, >= 150 nt): ${ms.design ? '<b>design route</b> (domain pairing + MFE: a DESIGN DECODER, not a blind folding model)' : 'not a designed strand: MFE with the stem filter'}`);
+        if (ms.assembly) {
+            const as = ms.assembly;
+            h += row('assembly', `complexes: ${as.complexes.map((c: number[]) => '{' + c.map((x) => x + 1).join(',') + '}').join(' ')}` + (as.unpartneredStrands.length ? `; strands without a partner: ${as.unpartneredStrands.map((x: number) => x + 1).join(', ')}` : '') +
+                (as.contacts.length ? `<br>contacts: ${as.contacts.map((c: any) => `${c.strands[0] + 1}-${c.strands[1] + 1} (${c.interPairs} pairs)`).join(', ')}` : '') +
+                (as.dimers ? `<br>dimers (report, not a gate): ${as.dimers.map((d: any) => `${d.i + 1}+${d.j + 1}: dG ${d.dGAssoc.toFixed(2)} kcal/mol, ${(100 * d.boundFraction).toFixed(1)} % bound`).join('; ')}` : ''));
+        }
         if (ms.g4 && ms.g4.tracts && ms.g4.tracts.length)
             h += row('G-quadruplex tracts', `${ms.g4.tracts.length} protected tract(s)`);
         if (ms.kissPrior && ms.kissPrior.fired !== undefined)
@@ -877,6 +949,8 @@ function spSummaryHtml(r: SeqpredResult): string {
             (r.energy.score !== undefined ? row('predictor score', spNum(r.energy.score) + ((r as any).selection && (r as any).selection.scoreName ? ` (${esc((r as any).selection.scoreName)})` : '')) : '') +
             row('margin to the nested decoy', mg === null ? 'not reported by this build' : `${spNum(mg)} (positive: the returned structure with extra helices won by this much)`) +
             row('gate', esc(spGateText(r))) +
+            (r.nat ? row('price model', `status ${esc(r.nat.status)}, gate p ${spNum(r.nat.gateProbability, 3)} (threshold ${spNum(r.nat.threshold, 3)}), price margin ${spNum(r.nat.margin)}, ${r.nat.nCandidates} crossing candidates${r.nat.prefilterK ? ' (pre-filter K = ' + r.nat.prefilterK + ')' : ''}, shuffle z of the nested MFE ${spNum(r.nat.zmfe)}${r.nat.topology.length ? ', topology ' + r.nat.topology.join('+') : ''}${r.nat.tieAtTop ? ', TIE at the top (ranked by index)' : ''}`) : '') +
+            (r.ml4 ? row('HG-Net ensemble', `status ${esc(r.ml4.status)}, gate p ${spNum(r.ml4.gateProbability, 3)} (threshold ${spNum(r.ml4.threshold, 3)}), margin ${spNum(r.ml4.margin)} +- ${spNum(r.ml4.marginSd)} over ${r.ml4.nSeeds} seeds, ${r.ml4.nCandidates} crossing candidates`) : '') +
             row('confidence', spConfidenceHtml(r)) +
             row('kissing / pseudoknot helices', (r.helices.length ? r.helices.map(x => `${x.i}-${x.j} (${x.k} bp)`).join(', ') : 'none: the nested MFE is the answer') + ` (${spCrossingHelices(r)} crossing ${spCrossingHelices(r) === 1 ? 'helix' : 'helices'})`) +
             timeRow + truncRow + prov;
@@ -885,6 +959,10 @@ function spSummaryHtml(r: SeqpredResult): string {
     if (r.notes.length) h += row('notes', r.notes.map(esc).join('<br>'));
     h += '</table><p class="rr-note">' + (r.method === 'dna' || r.method === 'ssdna'
         ? 'A prediction, not a measurement (docs/71 and docs/73 of rigidDNA2): short stems and hairpins are mostly right, junctions, ligand-bound aptamers and kissing complexes are not; the G-quadruplex rule predicts the motif, not its topology. This module has no NUPACK (proprietary) and no scaffold-alignment / species-collapse step.'
+        : r.method === 'domainB' || r.method === 'hybridB' || r.method === 'ms3'
+        ? 'A prediction, not a measurement. Domain pairing / the MS-3 design route DECODE designed sequences (unique complementary domains); they are not blind folding models and say nothing about natural RNA or DNA. MS-3 is EXPERIMENTAL until validated on held-out data (docs/93, docs/94 of rigidDNA2).'
+        : r.method === 'nat1' || r.method === 'e1' || r.method === 'ml4'
+        ? 'A prediction, not a measurement: a natural-RNA pseudoknot model fitted on 12-250 nt single chains at 0.25 M; the gate stays closed for most RNAs and then the answer is the nested MFE. ML3 (native, needs pKiss) found more natural pseudoknots in the blind look; for designed RNA use v4 (V3D) or MS-3 (docs/86, 89, 90, 91 of rigidDNA2).'
         : r.method === 'msrna' || r.method === 'ms2'
         ? 'A prediction, not a measurement: the answer to a kissing-complex versus extended-duplex question is a set of states, so the alternative states are listed (docs/73_multistrand.md of rigidDNA2). On blind entries MS-RNA is only marginally better than plain ViennaRNA co-folding.'
         : r.method === 'v3'
@@ -1085,31 +1163,52 @@ function spUseCandidate(k: number) {
 }
 
 /** Checks a reference dot-bracket and recolours the arcs (orange = predicted but not in reference). */
-function spApplyRef() {
+/** Reference format of a pasted text: dot-bracket, bpseq (3 columns), ct (>= 6 columns) or a pair list. */
+function spDetectRefFormat(text: string): 'dotbracket' | 'pairs' | 'bpseq' | 'ct' {
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('>') && !l.startsWith('#'));
+    const body = lines.join('');
+    if (body && !/[0-9]/.test(body) && /[().\[\]{}<>]/.test(body)) return 'dotbracket';
+    const cols = lines.filter((l) => /^\d/.test(l)).map((l) => l.split(/\s+/).length);
+    if (cols.length && cols.every((c) => c >= 6)) return 'ct';
+    if (cols.length && cols.every((c) => c === 3)) return 'bpseq';
+    return 'pairs';
+}
+
+/** "Apply reference": parses the reference (dot-bracket, pair list, bpseq or ct: C++ loaders of the module), recolours the arcs and scores the drawn candidate with the C++ metrics. */
+async function spApplyRef() {
     const msg = rrEl('spRefMsg');
-    const done = (t: string, bad: boolean) => { if (msg) { msg.textContent = t; msg.style.color = bad ? '#c62828' : ''; } };
+    const tab = rrEl('spRefScore');
+    const done = (t: string, bad: boolean) => { if (msg) { msg.textContent = t; msg.style.color = bad ? '#c62828' : ''; } if (tab && bad) tab.innerHTML = ''; };
     if (!spLast) { done('Predict a structure first.', true); return; }
     const a = spAdapt(spLast);
-    const ref = rrEl<HTMLTextAreaElement>('spRefDb').value.replace(/\s+/g, '');
-    if (!ref) { spRefPairs = null; done('', false); spRenderSel(); return; }
-    if (ref.length !== a.length) { done(`The reference is ${ref.length} nt but the sequence is ${a.length} nt.`, true); return; }
-    if (/[^().\[\]{}<>.\-:;_~]/.test(ref)) { done('Only the brackets ( ) [ ] { } < >, dots and - : ; _ ~ are supported.', true); return; }
-    const st: { [k: string]: number[] } = { '(': [], '[': [], '{': [], '<': [] };
-    const cl: { [k: string]: string } = { ')': '(', ']': '[', '}': '{', '>': '<' };
-    for (let i = 0; i < ref.length; i++) {
-        const c = ref[i];
-        if (st[c]) st[c].push(i + 1);
-        else if (cl[c]) { if (!st[cl[c]].length) { done(`Unbalanced bracket ${c} at position ${i + 1}.`, true); return; } st[cl[c]].pop(); }
+    const raw = rrEl<HTMLTextAreaElement>('spRefDb').value;
+    if (!raw.trim()) { spRefPairs = null; done('', false); if (tab) tab.innerHTML = ''; spRenderSel(); return; }
+    let fmt = (rrEl<HTMLSelectElement>('spRefFmt') || ({ value: 'auto' } as any)).value as string;
+    if (fmt === 'auto') fmt = spDetectRefFormat(raw);
+    let text = raw;
+    if (fmt === 'dotbracket') {
+        text = raw.replace(/[-:;_~]/g, '.');          // unpaired marks of other tools
+        const flat = raw.replace(/\s+/g, '');
+        if (/[^().\[\]{}<>.\-:;_~]/.test(flat)) { done('Only the brackets ( ) [ ] { } < >, dots and - : ; _ ~ are supported in a dot-bracket reference.', true); return; }
+        if (flat.length !== a.length) { done(`The reference is ${flat.length} nt but the sequence is ${a.length} nt.`, true); return; }
     }
-    for (const k of Object.keys(st)) if (st[k].length) { done(`Unbalanced bracket ${k} (${st[k].length} unclosed).`, true); return; }
-    spRefPairs = spDbPairs(ref);
-    const pred = new Set((spSelIdx < a.candidates.length ? a.candidates[spSelIdx].pairs : a.pairs).map(p => p[0] + ',' + p[1]));
-    const refS = new Set(spRefPairs.map(p => p[0] + ',' + p[1]));
-    let tp = 0;
-    pred.forEach(k => { if (refS.has(k)) tp++; });
-    const fp = pred.size - tp, fn = refS.size - tp;
-    const f1 = (2 * tp + fp + fn) ? 2 * tp / (2 * tp + fp + fn) : 1;
-    done(`Pair F1 ${f1.toFixed(3)} (${tp} shared, ${fp} only predicted, ${fn} only in reference).`, false);
+    const pred = (spSelIdx < a.candidates.length ? a.candidates[spSelIdx].pairs : a.pairs);
+    let res: any;
+    try {
+        res = await spEngine.score({ reference: { format: fmt, text }, prediction: { pairs: pred }, n: a.length, options: { nested: a.nestedPairs, minHelix: 3 } });
+    } catch (e) { done('Reference not accepted: ' + e.message, true); return; }
+    if (fmt !== 'pairs' && res.reference.n !== a.length) { done(`The reference has ${res.reference.n} nt but the sequence has ${a.length} nt.`, true); return; }
+    spRefPairs = res.reference.pairs as [number, number][];
+    const sc = res.score;
+    done(`${fmt} reference, ${res.reference.nPairs} pairs: pair F1 ${spNum(sc.f1, 3)} (${sc.tp} shared, ${sc.fp} only predicted, ${sc.fn} only in the reference).`, false);
+    const f = (x: any, d = 3) => (x === null || x === undefined) ? 'n/a' : (typeof x === 'number' ? x.toFixed(d) : String(x));
+    if (tab) tab.innerHTML = '<table class="table compact"><tr><th>metric</th><th>value</th><th>metric</th><th>value</th></tr>'
+        + `<tr><td>precision</td><td>${f(sc.precision)}</td><td>recall</td><td>${f(sc.recall)}</td></tr>`
+        + `<tr><td>F1</td><td>${f(sc.f1)}</td><td>MCC</td><td>${f(sc.mcc)}</td></tr>`
+        + `<tr><td>crossing-pair recall</td><td>${f(sc.cross_recall)}</td><td>crossing-pair precision</td><td>${f(sc.cross_precision)}</td></tr>`
+        + `<tr><td>helix recall (&gt;= 3 bp)</td><td>${f(sc.helix_recall)}</td><td>crossing-helix recall</td><td>${f(sc.helix_recall_cross)}</td></tr>`
+        + `<tr><td>pseudoknot found (F1 &gt;= 0.8 and crossing recall &gt;= 0.5)</td><td>${f(sc.pk_found, 0)}</td><td>false helix</td><td>${f(sc.false_helix, 0)}</td></tr></table>`
+        + `<div class="text-small text-muted">Scored with the C++ metrics of the module (port of scripts/seqpred/runall/metrics.py; pairs 1-based); the drawn candidate is scored, the nested MFE decoy is the \"nested\" input of the false-helix test.</div>`;
     spRenderSel();
 }
 
@@ -1118,5 +1217,6 @@ function spClearRef() {
     spRefPairs = null;
     const ref = rrEl<HTMLTextAreaElement>('spRefDb'); if (ref) ref.value = '';
     const msg = rrEl('spRefMsg'); if (msg) msg.textContent = '';
+    const tab = rrEl('spRefScore'); if (tab) tab.innerHTML = '';
     spRenderSel();
 }
