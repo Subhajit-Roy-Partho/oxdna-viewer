@@ -3,6 +3,8 @@
 //                                            `build` (optional): build id of build.json, appended as ?v=<build> to every file so that a browser cache cannot serve another build
 //   {type:'predict', id, sequence, options}  -> {type:'result', id, result}  |  {type:'error', id, message}
 //   {type:'score', id, request}             -> {type:'scored', id, result}  |  {type:'error', id, message}   (scoring of a predicted pair set against a reference structure, C++ port of runall.metrics)
+//   {type:'bld2lib', id, bytes (ArrayBuffer)}  -> {type:'bld2loaded', id, info}   (motif library of the bld2 3D builder, loaded once into the module)
+//   {type:'bld2', id, sequence, structure (pairs or dot-bracket), options}  -> {type:'bld2built', id, result, wallSeconds}
 //   {type:'ready', version}
 'use strict';
 if (self.name === 'em-pthread') {
@@ -23,6 +25,12 @@ self.onmessage = async (ev) => {
       const t0 = Date.now();
       const result = sp.predict(m.sequence, m.options);
       self.postMessage({ type: 'result', id: m.id, result, wallSeconds: (Date.now() - t0) / 1000 });
+    } else if (m.type === 'bld2lib') {
+      self.postMessage({ type: 'bld2loaded', id: m.id, info: sp.loadBld2Library(m.bytes) });
+    } else if (m.type === 'bld2') {
+      const t0 = Date.now();
+      const result = sp.buildBld2(m.sequence, m.structure, m.options);
+      self.postMessage({ type: 'bld2built', id: m.id, result, wallSeconds: (Date.now() - t0) / 1000 });
     } else if (m.type === 'score') {
       self.postMessage({ type: 'scored', id: m.id, result: sp.score(m.request) });
     }
