@@ -9,8 +9,8 @@
  */
 
 interface SeqpredOptions {
-    method?: 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3' | 'ms2' | 'msrna' | 'dna' | 'ssdna' | 'nested' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
-    model?: 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3';   // single-chain RNA predictor choice (GOAL 1); mapped to method for the builds that carry it
+    method?: 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3' | 'nat1' | 'e1' | 'e1k50' | 'ml4' | 'ms2' | 'ms3' | 'msrna' | 'dna' | 'ssdna' | 'domainB' | 'hybridB' | 'auto' | 'nested' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
+    model?: 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3' | 'nat1' | 'e1' | 'ml4';   // single-chain RNA predictor choice (GOAL 1); mapped to method for the builds that carry it
     salt?: number;            // mol/l (default 0.25)
     budgetSeconds?: number;   // bounds EVERY stage (new semantics): the result then has truncated: true, a note and timings.truncatedAt = the stage name
     maxLength?: number;       // longer sequences get the nested MFE only (default 1500)
@@ -24,6 +24,10 @@ interface SeqpredOptions {
     kissPrior?: boolean;      // ms2 only (default true, RNA)
     g4?: boolean;             // ms2 only (default true, DNA: G-quadruplex tracts are protected from pairing)
     msdna?: boolean;          // ms2 only (default true: MS-RNA with DNA energetics as a second DNA state)
+    k?: 30 | 50;              // e1 only: ENERGY-1 pre-filter size (default 30)
+    mg?: number;              // ms3 only: Mg2+ (mol/l) of the dimer table
+    concUM?: number;          // ms3 only: strand concentration (uM) of the dimer table
+    assembly?: boolean;       // ms3 only: assembly summary (default true)
 }
 
 interface SeqpredResult {
@@ -36,7 +40,13 @@ interface SeqpredResult {
     nCandidates?: number;                                         // how many candidates competed
     energy: { nestedMfe?: number; nestedDotbracket?: string; hostEnergy?: number; hostDotbracket?: string; hostSource?: string; score?: number; freeEnergy?: number; mfeA?: number; mfe?: number; mea?: number };   // dna: mfeA (ViennaRNA-DNA MFE of the best strand order); ssdna: mfe, mea   // msrna: freeEnergy (kcal/mol of the complex partition), no nested MFE
     confidence?: { model: string; status: string; marginNested?: number | null; marginOther?: number | null; nExtraHelices?: number; ruleFired?: string; helices?: { i: number; j: number; k: number; rules: string[]; lpc?: number | null }[]; reason?: string; pCross?: number };   // every single-chain model result (newer builds)
-    route?: string;           // ms2: which branch decided
+    route?: string;           // ms2 / ms3: which branch decided
+    nat?: { status: string; margin: number | null; gap2: number | null; gateProbability: number; threshold: number; confidence: number; topology: string[]; nCandidates: number; zmfe: number | null; priceNested?: number; tieAtTop: boolean; prefilterK?: number };   // nat1 / e1
+    ml4?: { status: string; margin: number | null; marginSd: number | null; gateProbability: number; threshold: number; confidence: number; topology: string[]; nCandidates: number; zmfe: number | null; nSeeds: number };   // ml4
+    signature?: { n: number; cover: number; nstem: number; excess: number }; design?: boolean;   // ms3 (one strand): design signature
+    assembly?: { contacts: { strands: number[]; interPairs: number }[]; complexes: number[][]; unpartneredStrands: number[]; dimers: { i: number; j: number; dGAssoc: number; boundFraction: number }[] | null };   // ms3
+    domain?: { nB: number; nA?: number; nAKept?: number; energyA?: number };   // domainB / hybridB
+    stub?: boolean;
     molecule?: string;        // ms2: RNA or DNA
     g4?: { tracts: number[][][]; L: number; loops: number[] };   // ms2 (DNA): protected G-quadruplex tracts
     kissPrior?: { fired: boolean; dF: number; Lk: number; Lintra: number };   // ms2 (RNA)
@@ -55,6 +65,8 @@ interface SeqpredResult {
 
 class SeqpredEngine {
     static baseUrl = 'wasm/seqpred/';
+    /** Every model id that is checked against version.models of the loaded build before a run (single-chain ranking / price models). */
+    static MODELS = ['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'nat1', 'e1', 'ml4'];
     private worker: Worker = null;
     private variant: 'mt' | 'st' = null;
     private readyVersion: any = null;   // seqpred_version of the loaded module (set by start())
@@ -125,6 +137,23 @@ class SeqpredEngine {
         return this.readyVersion;
     }
 
+    /** Scores a pair set against a reference structure with the C++ metrics of the module (precision / recall / F1 / MCC, crossing recall, helix recall, pk_found, false helices).
+     *  request = { reference: { format: 'dotbracket' | 'pairs' | 'bpseq' | 'ct', text }, prediction: { pairs: [i, j][] (1-based) } | { dotbracket }, n?, options? } */
+    async score(request: any): Promise<any> {
+        if (!this.worker) await this.start('st');
+        const worker = this.worker, id = this.nextId++;
+        return new Promise<any>((resolve, reject) => {
+            const prev = worker.onmessage;
+            worker.onmessage = (ev) => {
+                const m = ev.data;
+                if (m.id !== id) { if (prev) (prev as any).call(worker, ev); return; }
+                worker.onmessage = prev;
+                if (m.type === 'scored') resolve(m.result); else reject(new Error(m.message || 'score failed'));
+            };
+            worker.postMessage({ type: 'score', id, request });
+        });
+    }
+
     /** Predicts the structure of one sequence; rejects with Error('cancelled') after cancel(). */
     async predict(sequence: string, opts: SeqpredOptions): Promise<SeqpredResult> {
         const wantMt = (opts.threads || 1) > 1 && RnaEngine.capabilities().isolated;
@@ -137,12 +166,12 @@ class SeqpredEngine {
         // Any single-chain model missing from the loaded build is refused here (the tab disables it too).
         const o = Object.assign({}, opts);
         if (!o.method && !o.model) o.method = 'v2';
-        else if (o.model && (!o.method || ['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3'].indexOf(o.method) >= 0)) {
+        else if (o.model && (!o.method || SeqpredEngine.MODELS.indexOf(o.method) >= 0)) {
             if (!SeqpredEngine.modelSupported(this.readyVersion, o.model))
                 throw new Error('The ' + o.model.toUpperCase() + ' model is not in this seqpred build (' + (this.readyVersion && this.readyVersion.predictor ? this.readyVersion.predictor : 'no version') + '): v2 remains the validated predictor.');
             o.method = o.model as SeqpredOptions['method'];
         }
-        if (o.method && ['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3'].indexOf(o.method) >= 0 && !SeqpredEngine.modelSupported(this.readyVersion, o.method))
+        if (o.method && SeqpredEngine.MODELS.indexOf(o.method) >= 0 && !SeqpredEngine.modelSupported(this.readyVersion, o.method))
             throw new Error('The ' + String(o.method).toUpperCase() + ' model is not in this seqpred build: v2 remains the validated predictor.');
         const info = await SeqpredEngine.buildInfo();
         const loadSeconds = warm ? 0 : this.loadSeconds;

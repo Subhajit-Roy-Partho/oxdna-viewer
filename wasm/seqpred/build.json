@@ -1,4 +1,4 @@
 {
- "build": "c3b305a1f9c6",
- "engine": "seqpred 13e3ce97 (rigidDNA2 branch cpp-3; models v2 v3 v4 m2 h2d ml2 ms2 [ml3 native only]) + ViennaRNA 2.7.2, emscripten/emsdk:6.0.13"
+ "build": "734a40e80f05",
+ "engine": "seqpred 06ee5010 (rigidDNA2 branch cpp-5; models v2 v3 v4 m2 h2d ml2 ms2 ms3 nat1 e1 ml4 domainB hybridB nested auto + score [ml3 native only: pKiss is GPL-3]) + ViennaRNA 2.7.2, emscripten/emsdk:6.0.13, two Docker builds byte-identical"
 }

@@ -9,6 +9,8 @@
  */
 class SeqpredEngine {
     static baseUrl = 'wasm/seqpred/';
+    /** Every model id that is checked against version.models of the loaded build before a run (single-chain ranking / price models). */
+    static MODELS = ['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'nat1', 'e1', 'ml4'];
     worker = null;
     variant = null;
     readyVersion = null; // seqpred_version of the loaded module (set by start())
@@ -85,6 +87,30 @@ class SeqpredEngine {
             await this.start('st');
         return this.readyVersion;
     }
+    /** Scores a pair set against a reference structure with the C++ metrics of the module (precision / recall / F1 / MCC, crossing recall, helix recall, pk_found, false helices).
+     *  request = { reference: { format: 'dotbracket' | 'pairs' | 'bpseq' | 'ct', text }, prediction: { pairs: [i, j][] (1-based) } | { dotbracket }, n?, options? } */
+    async score(request) {
+        if (!this.worker)
+            await this.start('st');
+        const worker = this.worker, id = this.nextId++;
+        return new Promise((resolve, reject) => {
+            const prev = worker.onmessage;
+            worker.onmessage = (ev) => {
+                const m = ev.data;
+                if (m.id !== id) {
+                    if (prev)
+                        prev.call(worker, ev);
+                    return;
+                }
+                worker.onmessage = prev;
+                if (m.type === 'scored')
+                    resolve(m.result);
+                else
+                    reject(new Error(m.message || 'score failed'));
+            };
+            worker.postMessage({ type: 'score', id, request });
+        });
+    }
     /** Predicts the structure of one sequence; rejects with Error('cancelled') after cancel(). */
     async predict(sequence, opts) {
         const wantMt = (opts.threads || 1) > 1 && RnaEngine.capabilities().isolated;
@@ -100,12 +126,12 @@ class SeqpredEngine {
         const o = Object.assign({}, opts);
         if (!o.method && !o.model)
             o.method = 'v2';
-        else if (o.model && (!o.method || ['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3'].indexOf(o.method) >= 0)) {
+        else if (o.model && (!o.method || SeqpredEngine.MODELS.indexOf(o.method) >= 0)) {
             if (!SeqpredEngine.modelSupported(this.readyVersion, o.model))
                 throw new Error('The ' + o.model.toUpperCase() + ' model is not in this seqpred build (' + (this.readyVersion && this.readyVersion.predictor ? this.readyVersion.predictor : 'no version') + '): v2 remains the validated predictor.');
             o.method = o.model;
         }
-        if (o.method && ['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3'].indexOf(o.method) >= 0 && !SeqpredEngine.modelSupported(this.readyVersion, o.method))
+        if (o.method && SeqpredEngine.MODELS.indexOf(o.method) >= 0 && !SeqpredEngine.modelSupported(this.readyVersion, o.method))
             throw new Error('The ' + String(o.method).toUpperCase() + ' model is not in this seqpred build: v2 remains the validated predictor.');
         const info = await SeqpredEngine.buildInfo();
         const loadSeconds = warm ? 0 : this.loadSeconds;

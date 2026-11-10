@@ -426,22 +426,37 @@
         </div>
     </div>
     <div id="rrBlkSeqpred" style="display:none">
-        <p class="rr-note mb-1">seqpred (WebAssembly, in your browser): nested minimum-free-energy structure with the Turner 2004 parameters and the salt correction of ViennaRNA 2.7, plus the kissing-loop / pseudoknot layer of the chosen single-chain model (v2 default; v3, v4, M2, h2d, ml2, ml3 and the multi-strand MS2 predictor where the loaded build carries them — the rest is disabled and says so). The result fills the dot-bracket field above. Free energies by the ViennaRNA 2.7.2 library (Lorenz et al., Institute for Theoretical Chemistry, University of Vienna), compiled to WebAssembly; seqpred is a C++ re-implementation of the rigidDNA2 Python predictors. Sequences longer than 600 nt get the nested MFE only (the long-range search takes minutes at 400 nt in one thread). A time budget bounds every stage: a stopped run says truncated and names the stage. After a prediction the summary names the model, the gate decision, the confidence status and the engine and loading times, and offers the result as dot-bracket, pairs and FASTA downloads.</p>
+        <style>
+            /* phone width: the three-column rows (method / salt / budget, molecule / temperature, ...) stack instead of overflowing the window */
+            @media (max-width: 600px) {
+                #rrBlkSeqpred .row > [class*="cell-"] { flex: 0 0 100%; max-width: 100%; width: 100%; }
+                #rrBlkSeqpred select, #rrBlkSeqpred input[type=number], #rrBlkSeqpred textarea { max-width: 100%; }
+                #spSummary, #spRefScore { overflow-x: auto; }
+            }
+        </style>
+        <p class="rr-note mb-1">seqpred (WebAssembly, in your browser): nested minimum-free-energy structure with the Turner 2004 parameters and the salt correction of ViennaRNA 2.7, plus the kissing-loop / pseudoknot layer of the chosen single-chain model (auto router default; v2, v3, v4 = V3D, M2, h2d, ml2, ml3, NAT-1, ENERGY-1, ML-4, the multi-strand MS2 and MS-3 predictors and the domain-pairing tools where the loaded build carries them — the rest is disabled and says so; ml3 needs the pKiss program and runs natively only). Recommended: ML3 (native) or NAT-1 for natural RNA, v4 (V3D) or MS-3 for designed RNA; MS-3, domain pairing B and hybrid B are design decoders, not blind folding models; the auto router (recommended, the default) picks one frozen model per input and says which one answered and why; in the browser ML3 is not available, so natural RNA is answered by NAT-1 or the nested MFE and the result says so. A pasted reference structure (dot-bracket, pair list, bpseq or ct) is scored with the C++ metrics of the module. The result fills the dot-bracket field above. Free energies by the ViennaRNA 2.7.2 library (Lorenz et al., Institute for Theoretical Chemistry, University of Vienna), compiled to WebAssembly; seqpred is a C++ re-implementation of the rigidDNA2 Python predictors. Sequences longer than 600 nt get the nested MFE only (the long-range search takes minutes at 400 nt in one thread). A time budget bounds every stage: a stopped run says truncated and names the stage. After a prediction the summary names the model, the gate decision, the confidence status and the engine and loading times, and offers the result as dot-bracket, pairs and FASTA downloads.</p>
         <div class="row">
             <div class="cell-4">
                 <label>Method</label>
-                <select id="spMethod" data-role="select" onchange="spMethodChanged()" title="v2: nested MFE + kissing / pseudoknot layer (predictor v2); v3: v2 plus closing-helix candidates; v4, M2, h2d, ml2, ml3: single-chain models (only what the loaded build carries is enabled); MS2 / MS-RNA v4: several strands separated by &amp;, with the primary and alternative states; nested: MFE only; rna_kl, kl_routes, longrange: earlier tools of the same family">
-                    <option value="v2" selected>v2 (nested + kissing layer)</option>
+                <select id="spMethod" data-role="select" onchange="spMethodChanged()" title="auto: the ROUTE-1 router (recommended): natural RNA goes to NAT-1 or the nested MFE here (ML3 needs the native pKiss program), designed RNA to V3D / MS-3, several strands to MS-2; v2: nested MFE + kissing / pseudoknot layer (predictor v2); v3: v2 plus closing-helix candidates; v4, M2, h2d, ml2, ml3: single-chain models (only what the loaded build carries is enabled); MS2 / MS-RNA v4: several strands separated by &amp;, with the primary and alternative states; nested: MFE only; rna_kl, kl_routes, longrange: earlier tools of the same family">
+                    <option value="auto" selected>auto router (recommended: one frozen model per input, says which one answered) &#8212; not in this build</option>
+                    <option value="v2">v2 (nested + kissing layer)</option>
                     <option value="v3">v3 (v2 + closing-helix candidates; frozen, no held-out result)</option>
                     <option value="v4" disabled>v4 (v3 + short-helix rule + confidence) &#8212; not in this build</option>
                     <option value="m2" disabled>m2 (experimental re-ranker) &#8212; not in this build</option>
                     <option value="h2d" disabled>h2d (2D refit, experimental) &#8212; not in this build</option>
                     <option value="ml2" disabled>ml2 (re-ranker) &#8212; not in this build</option>
                     <option value="ml3" disabled>ml3 (re-ranker, needs pKiss) &#8212; not in this build</option>
+                    <option value="nat1" disabled>NAT-1 (natural RNA pseudoknots, gated) &#8212; not in this build</option>
+                    <option value="e1" disabled>ENERGY-1 (NAT-1 price, K 30 / 50) &#8212; not in this build</option>
+                    <option value="ml4" disabled>ML-4 (HG-Net ensemble on the NAT-1 price) &#8212; not in this build</option>
                     <option value="ms2" disabled>MS2 (multi-strand RNA / DNA, strands separated by &amp;) &#8212; not in this build</option>
+                    <option value="ms3" disabled>MS-3 (EXPERIMENTAL: design gate + MS-2 + assembly summary) &#8212; not in this build</option>
                     <option value="msrna">MS-RNA v4 (several strands separated by &amp;)</option>
                     <option value="dna">DNA hybrid (strands A, C, G, T separated by &amp;; prediction only)</option>
                     <option value="ssdna">single-stranded DNA tools (G-quadruplex, i-motif; prediction only)</option>
+                    <option value="domainB" disabled>domain pairing B (design decoder, not blind) &#8212; not in this build</option>
+                    <option value="hybridB" disabled>hybrid B (domain pairing + MFE; design decoder, not blind) &#8212; not in this build</option>
                     <option value="nested">nested MFE only</option>
                     <option value="rna_kl">rna_kl (prototype)</option>
                     <option value="kl_routes">kl_routes</option>
@@ -470,6 +485,9 @@
                     <option value="h2d" disabled>h2d (2D refit, experimental) &#8212; not in this build</option>
                     <option value="ml2" disabled>ml2 (re-ranker) &#8212; not in this build</option>
                     <option value="ml3" disabled>ml3 (re-ranker, needs pKiss) &#8212; not in this build</option>
+                    <option value="nat1" disabled>NAT-1 (natural RNA pseudoknots, gated) &#8212; not in this build</option>
+                    <option value="e1" disabled>ENERGY-1 (NAT-1 price, K 30 / 50) &#8212; not in this build</option>
+                    <option value="ml4" disabled>ML-4 (HG-Net ensemble on the NAT-1 price) &#8212; not in this build</option>
                 </select>
                 <div id="spTradeoff" class="text-small text-muted mt-1"></div>
             </div>
@@ -484,6 +502,25 @@
             <div class="cell-12">
                 <label>Discriminator threshold p (0-1)</label>
                 <input type="number" id="spThr" min="0" max="1" step="0.05" placeholder="default 0.7" title="ml2, ml3: the crossing candidate is returned only if the discriminator probability p reaches this threshold">
+            </div>
+        </div>
+        <div class="row mt-1" id="spKRow" style="display:none">
+            <div class="cell-12">
+                <label>ENERGY-1 pre-filter K</label>
+                <select id="spK" data-role="select" title="ENERGY-1: only the K crossing candidates with the lowest cheap score are priced. K = 30 is the frozen primary form; K = 50 is a second weight file (reported, not claimed: not confirmed on validation)">
+                    <option value="30" selected>K = 30 (primary)</option>
+                    <option value="50">K = 50 (not confirmed on validation)</option>
+                </select>
+            </div>
+        </div>
+        <div id="spMs3Row" class="row mt-1" style="display:none">
+            <div class="cell-6">
+                <label>Mg2+ (mol/l, dimer table)</label>
+                <input type="number" id="spMg" step="any" min="0" placeholder="none" title="ms3 only: enters the dimer free energies of the assembly summary only, not the fold">
+            </div>
+            <div class="cell-6">
+                <label>Strand conc. (uM)</label>
+                <input type="number" id="spConc" step="any" min="0" placeholder="1" title="ms3 only: strand concentration for the bound fractions of the assembly summary (a report, not a gate)">
             </div>
         </div>
         <div id="spMsRow" style="display:none">
@@ -501,6 +538,7 @@
                     <input type="number" id="spTemp" step="any" placeholder="engine default" title="ms2 only: temperature of the free-energy model">
                 </div>
             </div>
+            <div id="spMs2Only">
             <div class="row mt-1">
                 <div class="cell-6">
                     <input type="checkbox" id="spDeclared" data-role="checkbox" data-caption="Declared assembly" checked title="ms2 only: every strand must touch another strand">
@@ -516,6 +554,7 @@
                 <div class="cell-6">
                     <input type="checkbox" id="spMsdna" data-role="checkbox" data-caption="Second DNA state (MS-DNA)" checked title="ms2 only: MS-RNA with DNA energetics as a second DNA state">
                 </div>
+            </div>
             </div>
         </div>
         <div id="spStage" class="text-small">Idle.</div>
@@ -548,13 +587,15 @@
             <div id="spArcWrap"><svg id="spArc" role="img" aria-label="Arc diagram of the selected candidate"></svg></div>
             <h5 class="mt-2">Ranked candidates (lower score is better; click a row to draw it)</h5>
             <div id="spCand"></div>
-            <h5 class="mt-2">Reference dot-bracket (optional)</h5>
-            <textarea id="spRefDb" rows="2" style="width: 100%; font-family: monospace; font-size: 11px;" placeholder="Dot-bracket of the same length, e.g. (((...[[[...)))...]]]" title="Paste a reference dot-bracket of the same length: predicted pairs also in the reference keep their colour, predicted pairs missing from it turn orange, and the pair F1 is shown"></textarea>
+            <h5 class="mt-2">Reference structure (optional)</h5>
+            <div class="mb-1"><select id="spRefFmt" data-role="select" title="Format of the pasted reference: auto-detected, or dot-bracket / pair list (1-based i j) / bpseq / ct"><option value="auto" selected>format: auto-detect</option><option value="dotbracket">dot-bracket</option><option value="pairs">pair list</option><option value="bpseq">bpseq</option><option value="ct">ct</option></select></div>
+            <textarea id="spRefDb" rows="2" style="width: 100%; font-family: monospace; font-size: 11px;" placeholder="Reference: dot-bracket of the same length, e.g. (((...[[[...)))...]]], or a pair list / bpseq / ct" title="Paste a reference dot-bracket of the same length: predicted pairs also in the reference keep their colour, predicted pairs missing from it turn orange, and the pair F1 is shown"></textarea>
             <div class="group">
                 <button type="button" class="button mini" onclick="spApplyRef()" title="Check the reference and recolour the arcs">Apply reference</button>
                 <button type="button" class="button mini" onclick="spClearRef()" title="Remove the reference overlay">Clear</button>
                 <span class="text-small" id="spRefMsg"></span>
             </div>
+            <div id="spRefScore" class="mt-1"></div>
             <p class="rr-note mb-1"><span class="sp-sw sp-n"></span>nested (layer 0) <span class="sp-sw sp-x"></span>kissing / pseudoknot (crossing) <span class="sp-sw sp-decoy"></span>nested-MFE decoy <span class="sp-sw sp-nonref"></span>predicted but not in reference</p>
         </div>
     </div>

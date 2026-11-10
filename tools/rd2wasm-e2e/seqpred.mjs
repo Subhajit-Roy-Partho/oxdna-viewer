@@ -58,6 +58,7 @@ try {
   const setMode = (m) => page.evaluate((m) => { const s = document.getElementById("rrMode"); s.value = m; try { Metro.getPlugin(s, "select").val(m); } catch (e) {} s.dispatchEvent(new Event("change", { bubbles: true })); rrModeChanged(); }, m);
   const nNt = () => page.evaluate(() => systems.reduce((a, s) => a + s.getMonomers().length, 0));
   await setMode("seqpred");
+  await page.evaluate(() => { const s = document.getElementById("spMethod"); s.value = "v2"; try { Metro.getPlugin(s, "select").val("v2"); } catch (e) {} s.dispatchEvent(new Event("change", { bubbles: true })); });   // since lane CPP-5 the method selector defaults to the auto router: these checks are about the single-chain predictor v2
   check("seqpred input: sequence, dot-bracket and seqpred controls", (await vis("rrBlkSeq")) && (await vis("rrBlkDb")) && (await vis("rrBlkSeqpred")) && !(await vis("rrBlkPredict")) && !(await vis("rrBlkFile")));
   await page.evaluate((s) => { document.getElementById("rrSeq").value = s; document.getElementById("rrDb").value = ""; }, SEQ);
   // building before predicting is refused with a hint

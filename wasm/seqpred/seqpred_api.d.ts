@@ -1,9 +1,14 @@
 // Typed contract of seqpred_api.js (the result is the JSON of seqpred::predictJson, include/seqpred/predict.h).
 export type RankModel = 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3';
-export type Method = RankModel | 'nested' | 'hint' | 'ms2' | 'msrna' | 'dna' | 'ssdna' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
+export type PriceModel = 'nat1' | 'e1' | 'e1k50' | 'ml4';   // NAT-1, ENERGY-1 (K 30 / 50), ML-4: nested MFE + gated crossing candidate of the v2 pool (docs/97)
+export type Method = RankModel | PriceModel | 'ms3' | 'domainB' | 'hybridB' | 'auto' | 'score' | 'nested' | 'hint' | 'ms2' | 'msrna' | 'dna' | 'ssdna' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
 export interface PredictOptions {
   method?: Method;                 // default 'v2': nested MFE + kissing / pseudoknot layer (predictor v2); 'nested': Turner 2004 MFE only; 'hint': designed helices given in `hints`; 'm2' etc. select the ranking model (same as model)
-  model?: RankModel;               // alias of method for the ranking models (m2 and h2d are EXPERIMENTAL; v2 is the default)
+  model?: RankModel | PriceModel;  // alias of method for the ranking / price models (m2 and h2d are EXPERIMENTAL; v2 is the default)
+  k?: 30 | 50;                     // e1 only: pre-filter size of ENERGY-1 (default 30; e1k50 = 50)
+  mg?: number; concUM?: number;    // ms3 only: Mg2+ (mol/L) and strand concentration (uM) of the dimer table
+  assembly?: boolean;              // ms3 only: assembly summary (default true)
+  chance?: number;                 // domainB / hybridB: chance parameter of the domain pairing (default 0.3)
   gateMargin?: number;             // m2 (default 2) / h2d (default 4) gate margin; 1e9 disables the gate; finite number >= 0
   thr?: number;                    // ml2/ml3 discriminator threshold (default 0.7); probability in [0, 1]
   salt?: number;                   // monovalent salt, mol/L (default 0.25; 1.021 = Turner standard)
@@ -26,8 +31,8 @@ export interface PredictOptions {
 }
 export interface Helix { i: number; j: number; k: number; pairs: Array<[number, number]> }   // 1-based
 export interface SelectionCandidate { rank: number; index: number; inTop: boolean; label: 'nested' | 'crossing'; score: number; nHelices: number; dotbracket: string; pairs: Array<[number, number]>; layers: number[]; helices: Array<{ i: number; j: number; k: number }>; hostSource: string; chosen: boolean; bestNested: boolean; bestCrossing: boolean; isNestedMfe: boolean }   // one ranked pool candidate (index: full list with detail:true; rank: 1-based by score, lower is better)
-export type GateKind = 'margin' | 'discriminator' | 'none';
-export interface SelectionGate { enabled: boolean; fired: boolean; kind?: GateKind; margin: number | null; marginValue: number | null; reason: string; bestNested: number | null; bestCrossing: number | null; thr?: number | null; pCross?: number | null; stage1Nested?: number | null; stage1Crossing?: number | null }   // marginValue = best nested score minus best crossing score; kind margin (m2/h2d), discriminator (ml2/ml3: thr/pCross/stage1*), none (v2/v3/v4/fallback)
+export type GateKind = 'margin' | 'discriminator' | 'logistic' | 'none';
+export interface SelectionGate { enabled: boolean; fired: boolean; kind?: GateKind; margin: number | null; marginValue: number | null; reason: string; bestNested: number | null; bestCrossing: number | null; thr?: number | null; pOpen?: number | null; pCross?: number | null; stage1Nested?: number | null; stage1Crossing?: number | null }   // marginValue = best nested score minus best crossing score; kind margin (m2/h2d), discriminator (ml2/ml3: thr/pCross/stage1*), none (v2/v3/v4/fallback)
 export interface NestedMfeDecoy { dotbracket: string; pairs: Array<[number, number]>; layers: number[]; energy: number; candidateIndex: number | null }   // salt-corrected Turner-2004 MFE decoy
 export interface Selection { model: string; experimental: boolean; scoreName: string; nCandidates: number; nNested: number; nCrossing: number; gate: SelectionGate; chosen: number; nestedMfe: NestedMfeDecoy; candidates: SelectionCandidate[]; margin?: number; poolOutKeep?: number; poolSize?: number; fullPool?: number; route?: string; sources?: string[]; v2PickExtra?: boolean; fallbackFrom?: string; pkissUsed?: boolean; budgetTruncated?: boolean }   // candidate selection graph (m2/h2d: margin/poolOutKeep, h2d also poolSize/fullPool; ml2/ml3: route/sources/v2PickExtra/pkissUsed/budgetTruncated/fallbackFrom)
 export type ConfidenceStatus = 'designed-kissing' | 'low-confidence' | 'nested' | 'extra-helices' | 'fallback-nested' | 'truncated' | 'single-state' | 'alternatives';
@@ -109,3 +114,12 @@ export interface Seqpred {
 }
 export class SeqpredError extends Error {}
 export function load(factory: unknown, config?: { locateFile?: (p: string) => string }): Promise<Seqpred>;
+
+// ---- models added by lane CPP-4 (docs/97) -------------------------------------------------------------------------------------------------------------------------------------------------
+export interface NatBlock { status: 'pseudoknot' | 'nested'; margin: number | null; gap2: number | null; gateProbability: number; threshold: number; confidence: number; topology: string[]; nCandidates: number; nPoolCrossing?: number; nPool: number; zmfe: number | null; priceNested?: number; tieAtTop: boolean; gateFeatures?: Record<string, number>; prefilterK?: number; natDotbracket: string }   // result.nat of nat1 / e1 / e1k50
+export interface Ml4Block { status: 'pseudoknot' | 'nested'; margin: number | null; gap2: number | null; marginSd: number | null; priceMargin: number | null; residualMargin: number | null; gateProbability: number; threshold: number; confidence: number; topology: string[]; nCandidates: number; nPool: number; zmfe: number | null; tieAtTop: boolean; nSeeds: number; gateFeatures?: Record<string, number>; natDotbracket: string }   // result.ml4
+export interface Ms3Assembly { contacts: Array<{ strands: [number, number]; interPairs: number }>; complexes: number[][]; unpartneredStrands: number[]; dimers: Array<{ i: number; j: number; dGAssoc: number; boundFraction: number }> | null }
+export interface Ms3Result { ok: true; method: 'ms3'; molecule: 'RNA' | 'DNA'; route: string; sequence: string; strands: string[]; lengths: number[]; length: number; mixedDnaRna: boolean; dotbracket: string; dotbracketLayers7: string; pairs: Array<[number, number]>; layers: number[]; pairsByStrand: number[][]; energy: { freeEnergy?: number }; signature?: { n: number; cover: number; nstem: number; excess: number }; design?: boolean; g4: Array<{ tracts: number[][]; L: number; loops: number[] }>; alternatives: Array<{ name: string; F: number; dotbracket: string; pairs: Array<[number, number]>; layers: number[] }>; assembly?: Ms3Assembly; notes: string[]; truncated: boolean; timings: { total: number }; version: Record<string, any>; confidence: Confidence }
+export interface DomainResult { ok: true; method: 'domainB' | 'hybridB'; molecule: 'RNA' | 'DNA'; sequence: string; strands: string[]; lengths: number[]; length: number; salt: number; dotbracket: string; pairs: Array<[number, number]>; layers: number[]; energy: { mfeA?: number }; domain: { nB: number; nA?: number; nAKept?: number; energyA?: number }; notes: string[]; truncated: boolean; timings: { total: number }; version: Record<string, any>; confidence: Confidence }
+export interface ScoreRequest { reference: { format: 'dotbracket' | 'pairs' | 'bpseq' | 'ct'; text: string }; prediction: { pairs?: Array<[number, number]>; dotbracket?: string }; n?: number; options?: { nested?: Array<[number, number]>; minHelix?: number; helixFrac?: number; regions?: Array<[string, number, number]> } }
+export interface ScoreResult { ok: true; reference: { n: number; nPairs: number; pairs: Array<[number, number]>; kind: string; source: string; notes: string[] }; score: Record<string, number | boolean | null | Array<Record<string, any>>> }   // keys of scripts/seqpred/runall/metrics.py score
