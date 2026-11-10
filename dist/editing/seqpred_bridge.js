@@ -75,11 +75,100 @@ class SeqpredEngine {
         if (this.worker) {
             this.worker.terminate();
             this.worker = null;
+            this.bld2Worker = null;
         }
         if (this.reject) {
             this.reject(new Error('cancelled'));
             this.reject = null;
         }
+    }
+    bld2Worker = null; // the worker that holds the bld2 motif library (a new worker starts without it)
+    static bld2Bytes = null;
+    /** The motif library of the bld2 3D builder (wasm/seqpred/bld2_lib.bin, about 7 MB, derived from public PDB entries): fetched on first use and kept in the Cache API (keyed by its version) so that it is downloaded once. */
+    static async fetchBld2Library(onStatus) {
+        if (!SeqpredEngine.bld2Bytes) {
+            SeqpredEngine.bld2Bytes = (async () => {
+                const info = await SeqpredEngine.buildInfo();
+                const ver = info && info.bld2lib ? String(info.bld2lib) : (info && info.build ? String(info.build) : '0');
+                const url = new URL(SeqpredEngine.baseUrl + 'bld2_lib.bin?v=' + encodeURIComponent(ver), document.baseURI).href;
+                let cache = null;
+                try {
+                    if (typeof caches !== 'undefined')
+                        cache = await caches.open('oxview-bld2-lib');
+                }
+                catch (e) {
+                    cache = null;
+                }
+                try {
+                    const hit = cache && await cache.match(url);
+                    if (hit) {
+                        if (onStatus)
+                            onStatus('3D builder library: from the browser cache');
+                        return new Uint8Array(await hit.arrayBuffer());
+                    }
+                }
+                catch (e) { /* fetch below */ }
+                if (onStatus)
+                    onStatus('Loading the 3D builder library (about 7 MB, once)...');
+                const r = await fetch(url);
+                if (!r.ok)
+                    throw new Error('The bld2 library (wasm/seqpred/bld2_lib.bin) is not deployed with this build (HTTP ' + r.status + ').');
+                const buf = await r.arrayBuffer();
+                try {
+                    if (cache)
+                        await cache.put(url, new Response(buf.slice(0)));
+                }
+                catch (e) { /* not cached: fetched again next time */ }
+                return new Uint8Array(buf);
+            })();
+            SeqpredEngine.bld2Bytes.catch(() => { SeqpredEngine.bld2Bytes = null; });
+        }
+        return SeqpredEngine.bld2Bytes;
+    }
+    /** True when the loaded module carries the bld2 builder (version.models.bld2). */
+    async bld2Supported() {
+        const v = await this.versionInfo();
+        return SeqpredEngine.modelSupported(v, 'bld2');
+    }
+    /** Builds a 3D model with bld2 from a sequence and a structure (dot-bracket string or 1-based pair list): loads the library into the worker on first use. Result: PDB text, oxRNA top / dat, the instance chosen for every loop. */
+    async buildBld2(sequence, structure, onStatus) {
+        if (!this.worker)
+            await this.start('st');
+        if (!(await this.bld2Supported()))
+            throw new Error('This seqpred build does not carry the bld2 3D builder.');
+        const worker = this.worker;
+        const call = (msg, want, transfer) => new Promise((resolve, reject) => {
+            const id = this.nextId++;
+            this.reject = reject;
+            const prev = worker.onmessage;
+            worker.onmessage = (ev) => {
+                const m = ev.data;
+                if (m.id !== id) {
+                    if (prev)
+                        prev.call(worker, ev);
+                    return;
+                }
+                worker.onmessage = prev;
+                this.reject = null;
+                if (m.type === want)
+                    resolve(m);
+                else
+                    reject(new Error(m.message || 'bld2 failed'));
+            };
+            worker.postMessage(Object.assign({ id }, msg), transfer || []);
+        });
+        if (this.bld2Worker !== worker) {
+            const bytes = await SeqpredEngine.fetchBld2Library(onStatus);
+            if (onStatus)
+                onStatus('Initialising the 3D builder...');
+            const copy = bytes.slice();
+            await call({ type: 'bld2lib', bytes: copy.buffer }, 'bld2loaded', [copy.buffer]);
+            this.bld2Worker = worker;
+        }
+        if (onStatus)
+            onStatus('Building the 3D model with bld2...');
+        const m = await call({ type: 'bld2', sequence, structure, options: { oxrna: true } }, 'bld2built');
+        return Object.assign({}, m.result, { wallSeconds: m.wallSeconds });
     }
     /** The version block of the loaded module (starts the worker when needed). */
     async versionInfo() {

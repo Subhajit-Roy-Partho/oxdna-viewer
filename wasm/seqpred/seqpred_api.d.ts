@@ -1,7 +1,7 @@
 // Typed contract of seqpred_api.js (the result is the JSON of seqpred::predictJson, include/seqpred/predict.h).
 export type RankModel = 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3';
 export type PriceModel = 'nat1' | 'e1' | 'e1k50' | 'ml4';   // NAT-1, ENERGY-1 (K 30 / 50), ML-4: nested MFE + gated crossing candidate of the v2 pool (docs/97)
-export type Method = RankModel | PriceModel | 'ms3' | 'domainB' | 'hybridB' | 'auto' | 'score' | 'nested' | 'hint' | 'ms2' | 'msrna' | 'dna' | 'ssdna' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
+export type Method = RankModel | PriceModel | 'ms3' | 'domainB' | 'hybridB' | 'auto' | 'score' | 'bld2' | 'nested' | 'hint' | 'ms2' | 'msrna' | 'dna' | 'ssdna' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
 export interface PredictOptions {
   method?: Method;                 // default 'v2': nested MFE + kissing / pseudoknot layer (predictor v2); 'nested': Turner 2004 MFE only; 'hint': designed helices given in `hints`; 'm2' etc. select the ranking model (same as model)
   model?: RankModel | PriceModel;  // alias of method for the ranking / price models (m2 and h2d are EXPERIMENTAL; v2 is the default)
@@ -111,7 +111,12 @@ export interface Seqpred {
   predictRaw(sequence: string, options?: PredictOptions): string;        // JSON text
   version(): RankPredictResult['version'];
   build3d(result: PredictResult, rd2Api: unknown, rd2Module: unknown, options?: Record<string, unknown>): Promise<{ rc: number; top: string | null; dat: string | null; report: unknown; log: string; seconds: number }>;
+  loadBld2Library(bytes: Uint8Array | ArrayBuffer): { ok: true; bytes: number; sha1: string; chains: number; loopInstances: Record<string, number>; extInstances: Record<string, number> };   // lane CPP-5: motif library of bld2
+  buildBld2(sequence: string, structure: Array<[number, number]> | string, options?: { oxrna?: boolean }): Bld2Result;   // throws SeqpredError (library not loaded, non-ACGU, bad dot-bracket)
+  bld2Loaded(): unknown;
 }
+export interface Bld2Loop { index: number; exterior: boolean; arms: number; segments: number[]; source: string | null; instanceSegments: number[] | null; store: string | null; instanceIndex: number | null; generic: boolean }
+export interface Bld2Result { ok: true; method: 'bld2'; sequence: string; length: number; pdb: string; oxrna?: { top?: string; dat?: string; n?: number; pieces?: number; nicksAfter5to3Index?: number[]; box?: number; error?: string }; loops: Bld2Loop[]; nStems: number; nPairsNested: number; nPkStemsUnplaced: number; nPairsGiven: number; secondsBuild: number; library: { bytes: number; sha1: string; chains: number }; notes: string[] }
 export class SeqpredError extends Error {}
 export function load(factory: unknown, config?: { locateFile?: (p: string) => string }): Promise<Seqpred>;
 

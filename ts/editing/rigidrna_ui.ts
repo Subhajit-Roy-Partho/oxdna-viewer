@@ -15,6 +15,8 @@ let rrRunning = false;
 let spEngine: SeqpredEngine = new SeqpredEngine();   // seqpred: sequence -> secondary structure (wasm/seqpred)
 let spRunning = false;
 let spLast: SeqpredResult = null;
+let spLastBld2: any = null;       // result of the last bld2 build (PDB text, oxRNA, instance choices)
+let spBld2Running = false;
 let spLastModel: string = null;   // the single-chain model the last prediction was asked for (v2/v3/m2)
 let spSelIdx = 0;                // which ranked candidate the selection panel draws
 let spPx = 0;                    // pixels per nucleotide of the arc diagram (0 = fit)
@@ -746,6 +748,7 @@ async function spPredict() {
             : `Done in ${r.wallSeconds.toFixed(1)} s: ${r.pairs.length} base pairs, ${xHel} kissing / pseudoknot helices${r.truncated ? ' (truncated: time budget)' : ''}.`;
         spShowSummary(r);
         spRenderDownloads(r);
+        spRenderBuild3d(r);
         spRenderSel();
         rrAdvChanged();
     } catch (e) {
@@ -850,6 +853,69 @@ function spDownloadContent(r: SeqpredResult, kind: 'dbn' | 'json' | 'fa'): { fil
     if (kind === 'fa')
         return { filename: base + '.fa', text: seqs.map((s, k) => `>strand${k + 1} ${base}\n${s}\n${dbs[k] || ''}`).join('\n') + '\n' };
     return { filename: base + '.dbn', text: `>${base}\n${seqs.join('&')}\n${dbs.join('&')}\n` };
+}
+
+/** 3D from the prediction: the fast layout (rigidRNA, the ordinary "Build and load") or bld2 (fragment assembly from a PDB-derived motif library: better loops and junctions). */
+const SP_BLD2_LABEL = 'bld2 (BUILD-1): coarse model from a motif library of public PDB RNA chains. On 61 clean experimental RNAs the mean TM-score is 0.31 from the true pairs and 0.28 from predicted pairs, against 0.19 for the fast layout; about 8 of 61 reach TM 0.45 (Boltz-2: 0.34). Pseudoknot and kissing-loop pairs are NOT built (set aside); family-novel 3-way / exterior junctions are mostly wrong; steric clashes are frequent (templated atoms). Not a refined structure.';
+function spRenderBuild3d(r: SeqpredResult) {
+    const host = rrEl('spBuild3d');
+    if (!host) return;
+    const single = r.method !== 'dna' && r.method !== 'ssdna' && !((r as any).nStrands > 1) && !((r.lengths || []).length > 1) && !((r as any).molecule === 'DNA');
+    host.innerHTML = `<div class="group"><b>3D from this prediction:</b> `
+        + `<button type="button" class="button mini" id="spBuildFastBtn" onclick="rrRun()" title="rigidRNA (rd2_rna): the ordinary Build and load of the dot-bracket field">fast layout (rigidRNA)</button> `
+        + `<button type="button" class="button mini" id="spBuildBld2Btn" onclick="spBuildBld2()" ${single ? '' : 'disabled'} title="${single ? 'bld2: better loops and junctions; loads a 7 MB library on first use' : 'bld2 builds one RNA chain: not for DNA or several strands'}">bld2 (better loops / junctions)</button> `
+        + `<span id="spBld2Msg" class="text-small"></span></div>`
+        + `<p class="rr-note" id="spBld2Note">${SP_BLD2_LABEL}</p><div id="spBld2Result"></div>`;
+    spLastBld2 = null;
+}
+
+/** "bld2" button: builds the structure in the dot-bracket field (a predicted or chosen candidate) with the bld2 builder and loads the oxRNA model into the scene. */
+async function spBuildBld2() {
+    if (spBld2Running || spRunning) return;
+    const msg = rrEl('spBld2Msg'), out = rrEl('spBld2Result');
+    const seq = (spLast && spLast.sequence ? String(spLast.sequence) : rrEl<HTMLTextAreaElement>('rrSeq').value).replace(/\s+/g, '').toUpperCase().replace(/T/g, 'U').replace(/&/g, '');
+    const db = rrEl<HTMLTextAreaElement>('rrDb').value.replace(/\s+/g, '').replace(/&/g, '');
+    if (!seq || /[^ACGU]/.test(seq)) { notify('bld2 builds A, C, G, U sequences only.', 'alert'); return; }
+    if (db.length !== seq.length) { notify('The dot-bracket field has ' + db.length + ' characters, the sequence ' + seq.length + ': predict first or fix the dot-bracket.', 'alert'); return; }
+    spBld2Running = true;
+    const btn = rrEl<HTMLButtonElement>('spBuildBld2Btn'); if (btn) btn.disabled = true;
+    const t0 = performance.now();
+    try {
+        const res = await spEngine.buildBld2(seq, db, (s) => { if (msg) msg.textContent = s; });
+        spLastBld2 = res;
+        const nGeneric = (res.loops || []).filter((l: any) => l.generic).length;
+        const ox = res.oxrna || {};
+        const esc = (s: any) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+        let h = '<table class="table compact row-hover">';
+        h += `<tr><td>bld2 model</td><td>${res.length} nt, ${res.nStems} stems, ${(res.loops || []).length} loops, ${res.nPairsNested} nested pairs built; ${res.secondsBuild.toFixed(2)} s build, ${((performance.now() - t0) / 1000).toFixed(1)} s with the library</td></tr>`;
+        h += `<tr><td>loop instances</td><td>one library instance per loop (medoid of the best matches); ${nGeneric} loop(s) with more arms than the library holds use a generic arrangement</td></tr>`;
+        if (res.nPkStemsUnplaced) h += `<tr><td>not built</td><td><b style="color:#b45309">${res.nPkStemsUnplaced} pseudoknot / kissing-loop stem(s)</b> were set aside: bld2 builds the nested structure only</td></tr>`;
+        if (ox.top) h += `<tr><td>oxRNA</td><td>${ox.n} nt in one strand (old topology order, 3' to 5'); ${(ox.nicksAfter5to3Index || []).length} backbone bond(s) are stretched (templated atoms): an oxRNA relaxation closes them</td></tr>`;
+        else h += `<tr><td>oxRNA</td><td>not available: ${esc(ox.error || 'no export')}</td></tr>`;
+        h += `<tr><td>library</td><td>${esc(res.library.chains)} PDB chains, sha1 ${esc(String(res.library.sha1).slice(0, 12))}; <button class="button mini" onclick="spDownloadBld2('pdb')">PDB</button> <button class="button mini" onclick="spDownloadBld2('json')">instances (.json)</button></td></tr>`;
+        h += '</table>';
+        if (out) out.innerHTML = h;
+        if (msg) msg.textContent = `bld2 done in ${((performance.now() - t0) / 1000).toFixed(1)} s.`;
+        if (ox.top && ox.dat) handleFiles([new File([ox.top], 'bld2_' + seq.length + 'nt.top'), new File([ox.dat], 'bld2_' + seq.length + 'nt.dat')]);
+        else notify('bld2 built the model but the oxRNA export failed: download the PDB.', 'warn');
+    } catch (e) {
+        if (msg) msg.textContent = e.message === 'cancelled' ? 'Cancelled.' : 'bld2 failed: ' + e.message;
+        if (e.message !== 'cancelled') notify('bld2 failed: ' + e.message, 'alert');
+    } finally {
+        spBld2Running = false;
+        if (btn) btn.disabled = false;
+    }
+}
+
+function spDownloadBld2(kind: 'pdb' | 'json') {
+    if (!spLastBld2) { notify('Build with bld2 first.', 'alert'); return; }
+    const text = kind === 'pdb' ? spLastBld2.pdb : JSON.stringify({ sequence: spLastBld2.sequence, loops: spLastBld2.loops, nStems: spLastBld2.nStems, nPkStemsUnplaced: spLastBld2.nPkStemsUnplaced, library: spLastBld2.library }, null, 1);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: kind === 'pdb' ? 'chemical/x-pdb' : 'application/json' }));
+    a.download = 'bld2_' + spLastBld2.length + 'nt.' + (kind === 'pdb' ? 'pdb' : 'json');
+    document.body.appendChild(a);
+    a.click();
+    window.setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 
 /** "Download" buttons of the seqpred result (filled by spRenderDownloads after a prediction). */

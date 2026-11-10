@@ -12,5 +12,8 @@ const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..
 const h = crypto.createHash("sha256");
 for (const f of ["seqpred_mt.wasm", "seqpred_st.wasm"]) h.update(fs.readFileSync(path.join(dir, f)));
 const out = { build: h.digest("hex").slice(0, 12), engine: process.argv[2] || "" };
+// the bld2 motif library (lane CPP-5), fetched lazily by the tab: its own version goes into the cache key
+const lib = path.join(dir, "bld2_lib.bin");
+if (fs.existsSync(lib)) out.bld2lib = crypto.createHash("sha256").update(fs.readFileSync(lib)).digest("hex").slice(0, 12);
 fs.writeFileSync(path.join(dir, "build.json"), JSON.stringify(out, null, 1) + "\n");
 console.log(out);

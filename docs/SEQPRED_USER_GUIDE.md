@@ -121,3 +121,11 @@ nested MFE (it targets designed kissing-loop RNAs). MS-RNA answers a kissing-com
 versus extended-duplex question with a set of states: read the alternatives. The
 module has no NUPACK (proprietary). Cancel stops the worker at once; the next run
 starts a fresh one.
+
+
+## 3D from a prediction: "fast layout" and bld2 (lane CPP-5)
+
+After a prediction of a single RNA strand the tab offers two 3D builds from the structure in the dot-bracket field (the predicted one, or a candidate / alternative state you chose):
+
+* **fast layout (rigidRNA)**: the ordinary "Build and load" (the rd2_rna engine). Fast, but loops and junctions are placed as ropes: on 61 clean experimental RNAs the mean TM-score is 0.19.
+* **bld2 (better loops / junctions)**: a fragment-assembly builder (lane BUILD-1): ideal helices joined through loop and junction instances copied from a library of 2,115 public PDB RNA chains (medoid of the best matches). Mean TM-score 0.31 from the true pairs and 0.28 from predicted pairs on the same 61 targets (Boltz-2: 0.34); about 8 of 61 reach 0.45. It does NOT build pseudoknot or kissing-loop pairs (they are set aside and reported), family-novel 3-way and exterior junctions are mostly wrong, and steric clashes are frequent: a coarse model, not a refined structure. The first click downloads the 7 MB library (once; the browser keeps it); a build takes milliseconds. The result is loaded as oxRNA (one strand, old 3'-to-5' topology order; the stretched backbone bonds are listed: an oxRNA relaxation closes them), and the PDB and the instance choices can be downloaded. bld2 refuses DNA and several strands (one RNA chain, A C G U).

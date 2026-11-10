@@ -16,7 +16,7 @@
   function checkOptions(o) {
     o = Object.assign({}, o || {});
     if (o.salt !== undefined && !(Number(o.salt) > 0)) throw new SeqpredError('salt must be a positive number (mol/L)');
-    if (o.method !== undefined && !['v2', 'nested', 'hint', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'ms2', 'msrna', 'dna', 'ssdna', 'rna_kl', 'kl_routes', 'longrange', 'cassette', 'nat1', 'e1', 'e1k50', 'ml4', 'ms3', 'domainB', 'hybridB', 'auto', 'score'].includes(o.method)) throw new SeqpredError('method must be one of v2, nested, hint, v3, v4, m2, h2d, ml2, ml3, ms2, msrna, dna, ssdna, rna_kl, kl_routes, longrange, cassette, nat1, e1, e1k50, ml4, ms3, domainB, hybridB, auto, score');
+    if (o.method !== undefined && !['v2', 'nested', 'hint', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'ms2', 'msrna', 'dna', 'ssdna', 'rna_kl', 'kl_routes', 'longrange', 'cassette', 'nat1', 'e1', 'e1k50', 'ml4', 'ms3', 'domainB', 'hybridB', 'auto', 'score', 'bld2'].includes(o.method)) throw new SeqpredError('method must be one of v2, nested, hint, v3, v4, m2, h2d, ml2, ml3, ms2, msrna, dna, ssdna, rna_kl, kl_routes, longrange, cassette, nat1, e1, e1k50, ml4, ms3, domainB, hybridB, auto, score, bld2');
     if (o.model !== undefined && !['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'nat1', 'e1', 'e1k50', 'ml4'].includes(o.model)) throw new SeqpredError('model must be one of v2, v3, v4, m2, h2d, ml2, ml3, nat1, e1, e1k50, ml4');
     if (o.k !== undefined && ![30, 50].includes(Number(o.k))) throw new SeqpredError('k (ENERGY-1 pre-filter) must be 30 or 50');
     if (o.gateMargin !== undefined && !(Number.isFinite(Number(o.gateMargin)) && Number(o.gateMargin) >= 0)) throw new SeqpredError('gateMargin must be a finite number >= 0');
@@ -65,7 +65,37 @@
       const res = rd2Api.run(rd2Module, { seq: result.sequence, db: result.dotbracket }, Object.assign({ threads: 1 }, options || {}));
       return Object.assign(res, { source: { method: result.method, salt: result.salt, seqpred: result.version } });
     }
-    return { predict, predictRaw, version, build3d, score, module: M, defaults: BROWSER_DEFAULTS };
+    // bld2 (lane CPP-5): the fragment-assembly RNA 3D builder of lane BUILD-1.  The motif library (bld2_lib.bin, ~7 MB, 5.5 MB gzip) is NOT inside the module: load it once with loadBld2Library(bytes).
+    //   const info = sp.loadBld2Library(new Uint8Array(await (await fetch('bld2_lib.bin')).arrayBuffer()));
+    //   const m = sp.buildBld2(sequence, pairs | dotbracket, {oxrna: true});     // -> {ok, pdb, oxrna: {top, dat, pieces, nicksAfter5to3Index}, loops: [...instance choices], notes, ...}
+    let bld2Info = null;
+    const loadBld2Library = (bytes) => {
+      const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+      const p = M._malloc(u8.length);
+      M.HEAPU8.set(u8, p);
+      let s;
+      try {
+        const rp = M.ccall('seqpred_bld2_load', 'number', ['number', 'number'], [p, u8.length]);
+        s = M.UTF8ToString(rp);
+        M.ccall('seqpred_free', null, ['number'], [rp]);
+      } finally { M._free(p); }
+      const r = JSON.parse(s);
+      if (!r.ok) throw new SeqpredError(r.error);
+      bld2Info = r;
+      return r;
+    };
+    const buildBld2 = (sequence, structure, options) => {
+      const o = Object.assign({ oxrna: true }, options || {}, { method: 'bld2' });
+      if (typeof structure === 'string') o.dotbracket = structure; else if (Array.isArray(structure)) o.pairs = structure;
+      else throw new SeqpredError('bld2 needs a dot-bracket string or a pair list');
+      const ptr = M.ccall('seqpred_predict', 'number', ['string', 'string'], [String(sequence).replace(/\s+/g, ''), JSON.stringify(o)]);
+      const s = M.UTF8ToString(ptr);
+      M.ccall('seqpred_free', null, ['number'], [ptr]);
+      const r = JSON.parse(s);
+      if (!r.ok) throw new SeqpredError(r.error);
+      return r;
+    };
+    return { predict, predictRaw, version, build3d, score, loadBld2Library, buildBld2, bld2Loaded: () => bld2Info, module: M, defaults: BROWSER_DEFAULTS };
   }
 
   const api = { load, SeqpredError, BROWSER_DEFAULTS, checkOptions };
