@@ -2,6 +2,7 @@
 //   {type:'init', base, variant, build}             load <base>/seqpred_api.js and <base>/seqpred_<variant>.js  (variant 'mt': threaded build, needs crossOriginIsolated; falls back to 'st');
 //                                            `build` (optional): build id of build.json, appended as ?v=<build> to every file so that a browser cache cannot serve another build
 //   {type:'predict', id, sequence, options}  -> {type:'result', id, result}  |  {type:'error', id, message}
+//   {type:'oxpairs', id, request}           -> {type:'oxpaired', id, result}  |  {type:'error', id, message}   (base pairs of an oxDNA / oxRNA configuration: request {top, dat, molecule?, minStack?})
 //   {type:'score', id, request}             -> {type:'scored', id, result}  |  {type:'error', id, message}   (scoring of a predicted pair set against a reference structure, C++ port of runall.metrics)
 //   {type:'bld2lib', id, bytes (ArrayBuffer)}  -> {type:'bld2loaded', id, info}   (motif library of the bld2 3D builder, loaded once into the module)
 //   {type:'bld2', id, sequence, structure (pairs or dot-bracket), options}  -> {type:'bld2built', id, result, wallSeconds}
@@ -31,6 +32,8 @@ self.onmessage = async (ev) => {
       const t0 = Date.now();
       const result = sp.buildBld2(m.sequence, m.structure, m.options);
       self.postMessage({ type: 'bld2built', id: m.id, result, wallSeconds: (Date.now() - t0) / 1000 });
+    } else if (m.type === 'oxpairs') {
+      self.postMessage({ type: 'oxpaired', id: m.id, result: sp.oxPairs(m.request) });
     } else if (m.type === 'score') {
       self.postMessage({ type: 'scored', id: m.id, result: sp.score(m.request) });
     }

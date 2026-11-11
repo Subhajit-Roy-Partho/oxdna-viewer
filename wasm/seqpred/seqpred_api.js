@@ -16,7 +16,7 @@
   function checkOptions(o) {
     o = Object.assign({}, o || {});
     if (o.salt !== undefined && !(Number(o.salt) > 0)) throw new SeqpredError('salt must be a positive number (mol/L)');
-    if (o.method !== undefined && !['v2', 'nested', 'hint', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'ms2', 'msrna', 'dna', 'ssdna', 'rna_kl', 'kl_routes', 'longrange', 'cassette', 'nat1', 'e1', 'e1k50', 'ml4', 'ms3', 'domainB', 'hybridB', 'auto', 'score', 'bld2'].includes(o.method)) throw new SeqpredError('method must be one of v2, nested, hint, v3, v4, m2, h2d, ml2, ml3, ms2, msrna, dna, ssdna, rna_kl, kl_routes, longrange, cassette, nat1, e1, e1k50, ml4, ms3, domainB, hybridB, auto, score, bld2');
+    if (o.method !== undefined && !['v2', 'nested', 'hint', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'ms2', 'msrna', 'dna', 'ssdna', 'rna_kl', 'kl_routes', 'longrange', 'cassette', 'nat1', 'e1', 'e1k50', 'ml4', 'ms3', 'domainB', 'hybridB', 'auto', 'score', 'bld2', 'centroid', 'mea', 'oxpairs'].includes(o.method)) throw new SeqpredError('method must be one of v2, nested, hint, v3, v4, m2, h2d, ml2, ml3, ms2, msrna, dna, ssdna, rna_kl, kl_routes, longrange, cassette, nat1, e1, e1k50, ml4, ms3, domainB, hybridB, auto, score, bld2, centroid, mea, oxpairs');
     if (o.model !== undefined && !['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'nat1', 'e1', 'e1k50', 'ml4'].includes(o.model)) throw new SeqpredError('model must be one of v2, v3, v4, m2, h2d, ml2, ml3, nat1, e1, e1k50, ml4');
     if (o.k !== undefined && ![30, 50].includes(Number(o.k))) throw new SeqpredError('k (ENERGY-1 pre-filter) must be 30 or 50');
     if (o.gateMargin !== undefined && !(Number.isFinite(Number(o.gateMargin)) && Number(o.gateMargin) >= 0)) throw new SeqpredError('gateMargin must be a finite number >= 0');
@@ -60,6 +60,24 @@
       if (!r.ok) throw new SeqpredError(r.error);
       return r;
     };
+    // Base pairs of an oxDNA / oxRNA configuration (C++ port of runall.refs.oxdna_pairs, geometric criterion): the reference of a loaded or pasted model.
+    //   request = {top: text, dat: text, molecule?: 'RNA' | 'DNA' (default RNA), minStack?: int, hbMax?: number}  -> {ok, pairs (1-based, 5'->3'), sequence, strands?, n, dotbracket, nGeo, compGeo, compGeoReversed, notes}
+    // The request text of a big configuration (a DNA origami: MB) does not fit the 4 MB stack that ccall's 'string' arguments use: the strings go to the heap.
+    const oxPairs = (request) => {
+      const txt = JSON.stringify(Object.assign({}, request, { method: 'oxpairs' }));
+      const nb = M.lengthBytesUTF8(txt) + 1, mp = M._malloc(nb), sp0 = M._malloc(1);
+      let ptr;
+      try {
+        M.stringToUTF8(txt, mp, nb);
+        M.HEAPU8[sp0] = 0;
+        ptr = M.ccall('seqpred_predict', 'number', ['number', 'number'], [sp0, mp]);
+      } finally { M._free(mp); M._free(sp0); }
+      const s = M.UTF8ToString(ptr);
+      M.ccall('seqpred_free', null, ['number'], [ptr]);
+      const r = JSON.parse(s);
+      if (!r.ok) throw new SeqpredError(r.error);
+      return r;
+    };
     // The 3D structure of a prediction with the existing rd2_rna engine (rd2rna_api.js, module createRd2RnaModule): the predicted dot-bracket (layers as [] {} <>) is the design.
     async function build3d(result, rd2Api, rd2Module, options) {
       const res = rd2Api.run(rd2Module, { seq: result.sequence, db: result.dotbracket }, Object.assign({ threads: 1 }, options || {}));
@@ -95,7 +113,7 @@
       if (!r.ok) throw new SeqpredError(r.error);
       return r;
     };
-    return { predict, predictRaw, version, build3d, score, loadBld2Library, buildBld2, bld2Loaded: () => bld2Info, module: M, defaults: BROWSER_DEFAULTS };
+    return { predict, predictRaw, version, build3d, score, oxPairs, loadBld2Library, buildBld2, bld2Loaded: () => bld2Info, module: M, defaults: BROWSER_DEFAULTS };
   }
 
   const api = { load, SeqpredError, BROWSER_DEFAULTS, checkOptions };

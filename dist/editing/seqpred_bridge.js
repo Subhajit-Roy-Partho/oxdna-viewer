@@ -200,6 +200,30 @@ class SeqpredEngine {
             worker.postMessage({ type: 'score', id, request });
         });
     }
+    /** Base pairs of an oxDNA / oxRNA configuration with the C++ reader of the module (port of runall.refs.oxdna_pairs, geometric criterion), the reference of a model of this project or of any
+     *  oxDNA-format file. request = { top: text, dat: text, molecule?: 'RNA' | 'DNA', minStack?: number }; result: pairs (1-based, 5'->3'), sequence, strands, n, nGeo, compGeo, notes. */
+    async oxPairs(request) {
+        if (!this.worker)
+            await this.start('st');
+        const worker = this.worker, id = this.nextId++;
+        return new Promise((resolve, reject) => {
+            const prev = worker.onmessage;
+            worker.onmessage = (ev) => {
+                const m = ev.data;
+                if (m.id !== id) {
+                    if (prev)
+                        prev.call(worker, ev);
+                    return;
+                }
+                worker.onmessage = prev;
+                if (m.type === 'oxpaired')
+                    resolve(m.result);
+                else
+                    reject(new Error(m.message || 'oxpairs failed'));
+            };
+            worker.postMessage({ type: 'oxpairs', id, request });
+        });
+    }
     /** Predicts the structure of one sequence; rejects with Error('cancelled') after cancel(). */
     async predict(sequence, opts) {
         const wantMt = (opts.threads || 1) > 1 && RnaEngine.capabilities().isolated;

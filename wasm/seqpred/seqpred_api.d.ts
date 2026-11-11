@@ -1,7 +1,7 @@
 // Typed contract of seqpred_api.js (the result is the JSON of seqpred::predictJson, include/seqpred/predict.h).
 export type RankModel = 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3';
 export type PriceModel = 'nat1' | 'e1' | 'e1k50' | 'ml4';   // NAT-1, ENERGY-1 (K 30 / 50), ML-4: nested MFE + gated crossing candidate of the v2 pool (docs/97)
-export type Method = RankModel | PriceModel | 'ms3' | 'domainB' | 'hybridB' | 'auto' | 'score' | 'bld2' | 'nested' | 'hint' | 'ms2' | 'msrna' | 'dna' | 'ssdna' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
+export type Method = RankModel | PriceModel | 'ms3' | 'domainB' | 'hybridB' | 'auto' | 'score' | 'bld2' | 'centroid' | 'mea' | 'oxpairs' | 'nested' | 'hint' | 'ms2' | 'msrna' | 'dna' | 'ssdna' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
 export interface PredictOptions {
   method?: Method;                 // default 'v2': nested MFE + kissing / pseudoknot layer (predictor v2); 'nested': Turner 2004 MFE only; 'hint': designed helices given in `hints`; 'm2' etc. select the ranking model (same as model)
   model?: RankModel | PriceModel;  // alias of method for the ranking / price models (m2 and h2d are EXPERIMENTAL; v2 is the default)
@@ -114,6 +114,8 @@ export interface Seqpred {
   loadBld2Library(bytes: Uint8Array | ArrayBuffer): { ok: true; bytes: number; sha1: string; chains: number; loopInstances: Record<string, number>; extInstances: Record<string, number> };   // lane CPP-5: motif library of bld2
   buildBld2(sequence: string, structure: Array<[number, number]> | string, options?: { oxrna?: boolean }): Bld2Result;   // throws SeqpredError (library not loaded, non-ACGU, bad dot-bracket)
   bld2Loaded(): unknown;
+  score(request: ScoreRequest): ScoreResult;                              // pair set against a reference structure (CPP-4)
+  oxPairs(request: OxPairsRequest): OxPairsResult;                        // base pairs of an oxDNA / oxRNA configuration (CPP-6); throws SeqpredError
 }
 export interface Bld2Loop { index: number; exterior: boolean; arms: number; segments: number[]; source: string | null; instanceSegments: number[] | null; store: string | null; instanceIndex: number | null; generic: boolean }
 export interface Bld2Result { ok: true; method: 'bld2'; sequence: string; length: number; pdb: string; oxrna?: { top?: string; dat?: string; n?: number; pieces?: number; nicksAfter5to3Index?: number[]; box?: number; error?: string }; loops: Bld2Loop[]; nStems: number; nPairsNested: number; nPkStemsUnplaced: number; nPairsGiven: number; secondsBuild: number; library: { bytes: number; sha1: string; chains: number }; notes: string[] }
@@ -128,3 +130,5 @@ export interface Ms3Result { ok: true; method: 'ms3'; molecule: 'RNA' | 'DNA'; r
 export interface DomainResult { ok: true; method: 'domainB' | 'hybridB'; molecule: 'RNA' | 'DNA'; sequence: string; strands: string[]; lengths: number[]; length: number; salt: number; dotbracket: string; pairs: Array<[number, number]>; layers: number[]; energy: { mfeA?: number }; domain: { nB: number; nA?: number; nAKept?: number; energyA?: number }; notes: string[]; truncated: boolean; timings: { total: number }; version: Record<string, any>; confidence: Confidence }
 export interface ScoreRequest { reference: { format: 'dotbracket' | 'pairs' | 'bpseq' | 'ct'; text: string }; prediction: { pairs?: Array<[number, number]>; dotbracket?: string }; n?: number; options?: { nested?: Array<[number, number]>; minHelix?: number; helixFrac?: number; regions?: Array<[string, number, number]> } }
 export interface ScoreResult { ok: true; reference: { n: number; nPairs: number; pairs: Array<[number, number]>; kind: string; source: string; notes: string[] }; score: Record<string, number | boolean | null | Array<Record<string, any>>> }   // keys of scripts/seqpred/runall/metrics.py score
+export interface OxPairsRequest { top: string; dat: string; molecule?: 'RNA' | 'DNA'; minStack?: number; hbMax?: number }   // oxDNA / oxRNA topology + configuration text (old or new topology format)
+export interface OxPairsResult { ok: true; method: 'oxpairs'; molecule: string; sequence: string; strands?: number[]; n: number; pairs: Array<[number, number]>; dotbracket: string; layers: number[]; nGeo: number; compGeo: number | null; compGeoReversed: number | null; notes: string[]; t?: number | null }   // pairs 1-based, 5'->3' on the concatenation of the rebuilt strands

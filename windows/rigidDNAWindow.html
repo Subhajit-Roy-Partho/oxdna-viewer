@@ -458,6 +458,8 @@
                     <option value="domainB" disabled>domain pairing B (design decoder, not blind) &#8212; not in this build</option>
                     <option value="hybridB" disabled>hybrid B (domain pairing + MFE; design decoder, not blind) &#8212; not in this build</option>
                     <option value="nested">nested MFE only</option>
+                    <option value="centroid" disabled>centroid of the partition function (baseline) &#8212; not in this build</option>
+                    <option value="mea" disabled>MEA structure, gamma 1 (baseline) &#8212; not in this build</option>
                     <option value="rna_kl">rna_kl (prototype)</option>
                     <option value="kl_routes">kl_routes</option>
                     <option value="longrange">longrange (shuffle null)</option>
@@ -594,6 +596,8 @@
             <div class="group">
                 <button type="button" class="button mini" onclick="spApplyRef()" title="Check the reference and recolour the arcs">Apply reference</button>
                 <button type="button" class="button mini" onclick="spClearRef()" title="Remove the reference overlay">Clear</button>
+                <input type="file" id="spRefOxFiles" multiple accept=".top,.dat,.conf,.oxdna" style="display:none" onchange="spRefFromOx(this.files); this.value=''">
+                <button type="button" class="button mini" onclick="document.getElementById('spRefOxFiles').click()" title="Choose an oxDNA / oxRNA topology (.top) and configuration (.dat / .conf) together: the base pairs of the model become the reference (lenient geometric rule)">From oxDNA / oxRNA files</button>
                 <span class="text-small" id="spRefMsg"></span>
             </div>
             <div id="spRefScore" class="mt-1"></div>
