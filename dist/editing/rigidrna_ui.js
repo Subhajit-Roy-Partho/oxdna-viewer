@@ -104,12 +104,14 @@ let spSyncing = false;
 /** Every single-chain RNA model the tab knows (version.models keys of newer builds). */
 const SP_SINGLE_MODELS = ['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'nat1', 'e1', 'ml4'];
 /** Multi-strand / tool methods of the spMethod select (kept working as before). */
-const SP_MULTI_METHODS = ['msrna', 'ms2', 'ms3', 'dna', 'ssdna', 'domainB', 'hybridB', 'auto'];
+const SP_MULTI_METHODS = ['msrna', 'ms2', 'ms3', 'dna', 'ssdna', 'domainB', 'hybridB', 'auto', 'centroid', 'mea'];
 /** Methods that take several strands separated by & (or one strand): the summary shows strands, molecule and route. */
 const SP_STRAND_METHODS = ['msrna', 'ms2', 'ms3'];
 /** Methods whose input keeps T (DNA) instead of reading it as U. */
-const SP_KEEP_T = ['ms3', 'domainB', 'hybridB', 'auto'];
-const SP_TOOL_METHODS = ['nested', 'rna_kl', 'kl_routes', 'longrange', 'domainB', 'hybridB'];
+const SP_KEEP_T = ['ms3', 'domainB', 'hybridB', 'auto', 'centroid', 'mea'];
+const SP_TOOL_METHODS = ['nested', 'centroid', 'mea', 'rna_kl', 'kl_routes', 'longrange', 'domainB', 'hybridB'];
+/** Entries of the method select that are listed as "not in this build" when the loaded module does not carry them. */
+const SP_GATED_METHODS = ['ms2', 'ms3', 'domainB', 'hybridB', 'auto', 'centroid', 'mea'];
 /** One honest line per model, shown under the selector. Taken from the pre-registered sealed test
  *  of the project (44 natural pseudoknot RNAs, 150+150 RNAs without pseudoknot, 46 designed RNAs,
  *  100 shuffled sequences); each quoted number is from that test. The module's own tradeoff wins
@@ -127,6 +129,8 @@ const SP_TRADEOFFS = {
     dna: 'DNA hybrid (domain pairing + ViennaRNA-DNA MFE): short stems are mostly right, junctions and kissing complexes are not; no NUPACK (proprietary).',
     ssdna: 'Single-stranded DNA tools (hybrid, MFE, G-quadruplex / i-motif rules): the G-quadruplex rule predicts the motif, not its topology.',
     nested: 'Nested Turner 2004 MFE only (salt corrected): no kissing / pseudoknot layer.',
+    centroid: 'Baseline: the centroid structure of the ViennaRNA partition function (Turner 2004 for RNA, Mathews 2004 for DNA, salt corrected); nested, no kissing / pseudoknot layer. Not a prediction model of this project.',
+    mea: 'Baseline: the maximum-expected-accuracy structure (gamma 1) of the ViennaRNA partition function (Turner 2004 for RNA, Mathews 2004 for DNA, salt corrected); nested, no kissing / pseudoknot layer. Not a prediction model of this project.',
     nat1: 'Natural-RNA pseudoknot model (12-250 nt, fitted at 0.25 M): one blind look, 24 of 228 natural pseudoknots found vs 0 for the nested MFE, false helices 0 / 287 and 1 / 98 shuffles. ML3 finds more (46 of 228) but needs pKiss (native only). Not a designed-RNA model: use v4 (V3D) or MS-3.',
     e1: 'NAT-1 price refitted on a pre-filtered pool (K = 30, or 50): the cheapest form that keeps NAT-1 accuracy, NOT a more accurate energy. Blind look: K = 30 finds 26 of 228 natural pseudoknots, 1 / 287 and 1 / 98 false helices. 12-250 nt.',
     ml4: 'HG-Net ensemble on the NAT-1 price: does not beat NAT-1 at equal false-helix cost (blind look: 29 of 228 natural pseudoknots, 1 / 287 and 1 / 98 false helices). 12-250 nt. Not a designed-RNA model.',
@@ -190,7 +194,7 @@ function spShowOptionsFor(sel) {
     const show = (id, on) => { const e = rrEl(id); if (e)
         e.style.display = on ? '' : 'none'; };
     const single = SP_SINGLE_MODELS.indexOf(sel) >= 0;
-    const multi = sel === 'ms2' || sel === 'msrna' || sel === 'ms3' || sel === 'auto';
+    const multi = sel === 'ms2' || sel === 'msrna' || sel === 'ms3' || sel === 'auto' || sel === 'centroid' || sel === 'mea';
     show('spGateRow', single && spModelOptions(sel).indexOf('gateMargin') >= 0);
     show('spThrRow', single && spModelOptions(sel).indexOf('thr') >= 0);
     show('spMsRow', multi);
@@ -241,13 +245,13 @@ async function spRefreshModel() {
     if (sm)
         for (const o of Array.from(sm.options)) {
             const id = o.value;
-            if (SP_SINGLE_MODELS.indexOf(id) < 0 && id !== 'ms2' && id !== 'ms3' && id !== 'domainB' && id !== 'hybridB' && id !== 'auto')
+            if (SP_SINGLE_MODELS.indexOf(id) < 0 && SP_GATED_METHODS.indexOf(id) < 0)
                 continue;
             const ok = SeqpredEngine.modelSupported(v, id);
             o.disabled = !ok;
             if (ok)
                 o.text = o.text.replace(/\s*\u2014\s*not in this build\s*$/, '');
-            if (!ok && (SP_SINGLE_MODELS.indexOf(id) >= 0 || id === 'ms2' || id === 'ms3' || id === 'domainB' || id === 'hybridB' || id === 'auto') && o.text.indexOf('not in this build') < 0)
+            if (!ok && (SP_SINGLE_MODELS.indexOf(id) >= 0 || SP_GATED_METHODS.indexOf(id) >= 0) && o.text.indexOf('not in this build') < 0)
                 o.text += ' \u2014 not in this build';
         }
     if (!SeqpredEngine.modelSupported(v, s.value))
@@ -267,7 +271,7 @@ async function spRefreshModel() {
     const meth = rrEl('spMethod').value;
     const descId = meth;
     const info = mm[descId];
-    const ok = (SP_SINGLE_MODELS.indexOf(descId) >= 0 || descId === 'ms2' || descId === 'ms3' || descId === 'domainB' || descId === 'hybridB' || descId === 'auto') ? SeqpredEngine.modelSupported(v, descId) : true;
+    const ok = (SP_SINGLE_MODELS.indexOf(descId) >= 0 || SP_GATED_METHODS.indexOf(descId) >= 0) ? SeqpredEngine.modelSupported(v, descId) : true;
     const trade = rrEl('spTradeoff');
     if (trade) {
         const exp = (info && /experimental/i.test(String(info.status || ''))) || SP_EXPERIMENTAL.indexOf(descId) >= 0;
@@ -786,7 +790,7 @@ function spOptions() {
         if (cc && isFinite(parseFloat(cc.value)) && parseFloat(cc.value) > 0)
             o.concUM = parseFloat(cc.value);
     }
-    if (method === 'auto') {
+    if (method === 'auto' || method === 'centroid' || method === 'mea') {
         const mola = rrEl('spMolecule');
         if (mola)
             o.molecule = mola.value;
@@ -978,7 +982,7 @@ function spDownloadContent(r, kind) {
                 version: r.version && { seqpred: r.version.seqpred, predictor: r.version.predictor, viennarna: r.version.viennarna, git: r.version.git },
             }, null, 1),
         };
-    const multi = r.method === 'msrna' || r.method === 'ms2' || r.method === 'dna' || r.method === 'ms3' || r.method === 'domainB' || r.method === 'hybridB' || (r.method === 'auto' && r.nStrands > 1);
+    const multi = r.method === 'msrna' || r.method === 'ms2' || r.method === 'dna' || r.method === 'ms3' || r.method === 'domainB' || r.method === 'hybridB' || r.method === 'centroid' || r.method === 'mea' || (r.method === 'auto' && r.nStrands > 1);
     const seqs = multi ? (r.strands && r.strands.length ? r.strands.slice() : String(r.sequence).split('&')) : [String(r.sequence).replace(/&/g, '')];
     const dbs = multi ? String(r.dotbracket).split('&') : [String(r.dotbracket).replace(/&/g, '')];
     if (kind === 'fa')
@@ -1167,6 +1171,14 @@ function spSummaryHtml(r) {
             h += row('alternative states', alts.map((a, k) => `<b>${esc(a.name)}</b> (${a.F.toFixed(2)} kcal/mol, ${a.pairs.length} pairs) <button class="button mini" onclick="spUseAlternative(${k})">use this structure</button>`).join('<br>'));
         }
         h += timeRow + truncRow + prov;
+    }
+    else if (r.method === 'centroid' || r.method === 'mea') {
+        const rr = r;
+        h += row('method', `${r.method === 'centroid' ? 'centroid of the partition function' : 'MEA structure (gamma 1) of the partition function'}: a BASELINE (nested, ${esc(rr.molecule || 'RNA')} parameters of ViennaRNA, salt ${r.salt} M); no kissing / pseudoknot layer, not a prediction model of this project`) +
+            row('strands', `${(rr.lengths || []).length} strand(s), ${r.pairs.length} base pairs`) +
+            (r.energy && typeof r.energy.mfe === 'number' ? row('MFE (reference)', `${r.energy.mfe.toFixed(2)} kcal/mol`) : '') +
+            row('confidence', 'none: a baseline for comparison with the models of this tab') +
+            timeRow + truncRow + prov;
     }
     else {
         const mg = spNestedMargin(r);
@@ -1471,6 +1483,48 @@ async function spApplyRef() {
             + `<tr><td>pseudoknot found (F1 &gt;= 0.8 and crossing recall &gt;= 0.5)</td><td>${f(sc.pk_found, 0)}</td><td>false helix</td><td>${f(sc.false_helix, 0)}</td></tr></table>`
             + `<div class="text-small text-muted">Scored with the C++ metrics of the module (port of scripts/seqpred/runall/metrics.py; pairs 1-based); the drawn candidate is scored, the nested MFE decoy is the \"nested\" input of the false-helix test.</div>`;
     spRenderSel();
+}
+/** "Reference from oxDNA / oxRNA files": reads a topology (.top) and a configuration (.dat / .conf / .oxdna) chosen together, extracts the base pairs with the C++ reader of the module
+ *  (lenient geometric rule, see the result notes), puts them into the reference box as a pair list and applies it. */
+async function spRefFromOx(files) {
+    const msg = rrEl('spRefMsg');
+    const bad = (t) => { if (msg) {
+        msg.textContent = t;
+        msg.style.color = '#c62828';
+    } };
+    if (!spLast) {
+        bad('Predict a structure first.');
+        return;
+    }
+    const list = Array.from(files || []);
+    const top = list.find(f => /\.top$/i.test(f.name));
+    const dat = list.find(f => /\.(dat|conf|oxdna)$/i.test(f.name));
+    if (!top || !dat) {
+        bad('Choose both files together: the topology (.top) and the configuration (.dat, .conf or .oxdna).');
+        return;
+    }
+    const a = spAdapt(spLast);
+    let r;
+    try {
+        const mol = spLast.molecule === 'DNA' || /DNA/.test(String(spLast.method || '')) ? 'DNA' : 'RNA';
+        r = await spEngine.oxPairs({ top: await top.text(), dat: await dat.text(), molecule: mol });
+    }
+    catch (e) {
+        bad('Reference not accepted: ' + e.message);
+        return;
+    }
+    if (r.n !== a.length) {
+        bad(`The configuration has ${r.n} nucleotides but the sequence has ${a.length} nt.`);
+        return;
+    }
+    const box = rrEl('spRefDb');
+    if (box)
+        box.value = r.pairs.map(p => p[0] + ' ' + p[1]).join('\n');
+    spSetSelect('spRefFmt', 'pairs');
+    await spApplyRef();
+    const norm = (x) => String(x).replace(/&/g, '').toUpperCase().replace(/T/g, 'U');
+    if (msg && msg.style.color !== 'rgb(198, 40, 40)' && msg.style.color !== '#c62828')
+        msg.textContent += ` Pairs from ${top.name} + ${dat.name} (geometric criterion; ${r.nGeo} geometric candidates; the file's sequence is ${norm(r.sequence) === norm(spLast.sequence) ? 'equal to' : 'DIFFERENT from'} the predicted one).`;
 }
 /** Removes the reference overlay. */
 function spClearRef() {

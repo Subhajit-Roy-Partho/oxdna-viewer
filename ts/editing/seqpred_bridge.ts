@@ -9,7 +9,7 @@
  */
 
 interface SeqpredOptions {
-    method?: 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3' | 'nat1' | 'e1' | 'e1k50' | 'ml4' | 'ms2' | 'ms3' | 'msrna' | 'dna' | 'ssdna' | 'domainB' | 'hybridB' | 'auto' | 'nested' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
+    method?: 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3' | 'nat1' | 'e1' | 'e1k50' | 'ml4' | 'ms2' | 'ms3' | 'msrna' | 'dna' | 'ssdna' | 'domainB' | 'hybridB' | 'auto' | 'nested' | 'centroid' | 'mea' | 'oxpairs' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
     model?: 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3' | 'nat1' | 'e1' | 'ml4';   // single-chain RNA predictor choice (GOAL 1); mapped to method for the builds that carry it
     salt?: number;            // mol/l (default 0.25)
     budgetSeconds?: number;   // bounds EVERY stage (new semantics): the result then has truncated: true, a note and timings.truncatedAt = the stage name
@@ -212,6 +212,23 @@ class SeqpredEngine {
                 if (m.type === 'scored') resolve(m.result); else reject(new Error(m.message || 'score failed'));
             };
             worker.postMessage({ type: 'score', id, request });
+        });
+    }
+
+    /** Base pairs of an oxDNA / oxRNA configuration with the C++ reader of the module (port of runall.refs.oxdna_pairs, geometric criterion), the reference of a model of this project or of any
+     *  oxDNA-format file. request = { top: text, dat: text, molecule?: 'RNA' | 'DNA', minStack?: number }; result: pairs (1-based, 5'->3'), sequence, strands, n, nGeo, compGeo, notes. */
+    async oxPairs(request: any): Promise<any> {
+        if (!this.worker) await this.start('st');
+        const worker = this.worker, id = this.nextId++;
+        return new Promise<any>((resolve, reject) => {
+            const prev = worker.onmessage;
+            worker.onmessage = (ev) => {
+                const m = ev.data;
+                if (m.id !== id) { if (prev) (prev as any).call(worker, ev); return; }
+                worker.onmessage = prev;
+                if (m.type === 'oxpaired') resolve(m.result); else reject(new Error(m.message || 'oxpairs failed'));
+            };
+            worker.postMessage({ type: 'oxpairs', id, request });
         });
     }
 

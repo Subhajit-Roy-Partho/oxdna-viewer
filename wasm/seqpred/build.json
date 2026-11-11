@@ -1,5 +1,5 @@
 {
- "build": "ced8de6af7b6",
- "engine": "seqpred c32d9c14 (rigidDNA2 branch cpp-5; models v2 v3 v4 m2 h2d ml2 ms2 ms3 nat1 e1 ml4 domainB hybridB nested auto + score + the bld2 3D builder with its motif library bld2_lib.bin [ml3 native only: pKiss is GPL-3]) + ViennaRNA 2.7.2, emscripten/emsdk:6.0.13, two Docker builds byte-identical",
+ "build": "b1df77e7ce1c",
+ "engine": "seqpred 21bebe9a (rigidDNA2 branch cpp-6; models v2 v3 v4 m2 h2d ml2 ms2 ms3 nat1 e1 ml4 domainB hybridB nested centroid mea auto + score + oxpairs + the bld2 3D builder with its motif library bld2_lib.bin [ml3 native only: pKiss is GPL-3]) + ViennaRNA 2.7.2, emscripten/emsdk:6.0.13, two Docker builds byte-identical",
  "bld2lib": "2ffe064fed91"
 }
