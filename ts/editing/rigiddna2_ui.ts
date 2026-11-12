@@ -177,6 +177,7 @@ interface Rd2Opt {
     flags?: { [choice: string]: string };
     field?: 'lattice' | 'seed' | 'nativeIters';   // first-class field of Rd2Options (same command line, set by the bridge)
     wide?: boolean;             // full row
+    defOn?: boolean;            // check: the box starts ticked (a UI default, passed like any ticked box; "Reset advanced" ticks it again)
 }
 
 const RD2_GROUPS: string[] = [
@@ -213,7 +214,7 @@ const RD2_OPTS: Rd2Opt[] = [
     // --- orientation search
     rd2Opt(2, 'orientSearch', '--orient-search', 'int', 'Random starts', 'off', 'free SO(3) orientation search of the rigid bundles (N random starts, 6 DOF per bundle) before the relaxation, for designs whose bundles must cross or tilt (docs/15); where the lattice cannot give the pose of a few bodies the front end switches it on by itself (docs/32)', { min: 0, max: 100000, step: 1 }),
     rd2Opt(2, 'orientSeed', '--orient-seed', 'int', 'Search seed', '1', 'random seed of the orientation search', { min: 0, max: 2147483647, step: 1 }),
-    rd2Opt(2, 'orientFast', '--orient-fast', 'check', 'v2 search', '', 'with a number of starts: v2 search (cell-list repulsion, screened starts), best minimum only (docs/17)'),
+    rd2Opt(2, 'orientFast', '--orient-fast', 'check', 'v2 search', 'on', 'with a number of starts: v2 search (cell-list repulsion, screened starts), best minimum only (docs/17). On by default; passed only when "Random starts" is set: the automatic body-pose search of the engine (docs/32) keeps its anchored start and slot candidates, which the v2 search does not have', { defOn: true }),
     rd2Opt(2, 'orientKeep', '--orient-keep', 'int', 'Keep K minima', '0', 'v2 search keeping K distinct body-level minima, ranked on the rigid-segment path (needs --from-poses, which the browser cannot give: then the ranking is skipped); implies --multilevel (docs/17)', { min: 0, max: 1000, step: 1 }),
     rd2Opt(2, 'orientScreen', '--orient-screen', 'pair', 'Screening: iterations, kept starts', '30, max(40, starts/6)', 'IT KEEP of the v2 search: iterations of the screening and number of screened starts kept (IT <= 0 / KEEP 0: the defaults)', { min: 0, max: 100000, step: 1 }),
     rd2Opt(2, 'orientRound', '--orient-round', 'check', 'Round candidates only', '', 'only round candidates compete in the ranking (docs/17)'),
@@ -348,7 +349,7 @@ function rd2AdvBuild() {
             if (o.kind === 'check') {
                 const l = mk('label', 'checkbox');
                 const inp = mk('input') as HTMLInputElement;
-                inp.type = 'checkbox'; inp.id = rd2AdvId(o);
+                inp.type = 'checkbox'; inp.id = rd2AdvId(o); if (o.defOn) inp.checked = true;
                 l.appendChild(inp); l.appendChild(mk('span', 'check')); l.appendChild(mk('span', 'caption', `${o.label} (${o.flag})`));
                 cell.appendChild(l);
             } else if (o.kind === 'select' || o.kind === 'flagsel') {
@@ -469,11 +470,24 @@ function rd2AdvRead(): Rd2AdvState {
         el.classList.toggle('rd2-invalid', bad);
         if (!args) continue;
         active[o.id] = true;
-        st.set++;
+        if (!(o.kind === 'check' && o.defOn)) st.set++;   // a box that starts ticked is the default, not a setting
         if (o.field === 'lattice') st.fields.lattice = el.value as any;
         else if (o.field === 'seed') st.fields.seed = Number(args[1]);
         else if (o.field === 'nativeIters') st.fields.nativeIters = Number(args[1]);
         else st.extra.push(...args);
+    }
+    // v2 orientation search by default: --orient-fast is passed only together with explicit random starts (--orient-search N > 0). Without them the engine may
+    // start the search by itself (bodies whose pose the lattice cannot give, docs/32), anchored and with slot candidates, which the v2 search does not have.
+    {
+        const fastOpt = RD2_OPTS.filter(x => x.id === 'orientFast')[0];
+        const fastHint = document.getElementById(rd2AdvId(fastOpt, 'hint'));
+        const k = st.extra.indexOf('--orient-search');
+        const starts = k >= 0 ? Number(st.extra[k + 1]) : 0;
+        const fi = st.extra.indexOf('--orient-fast');
+        if (fi >= 0 && !(starts > 0)) {
+            st.extra.splice(fi, 1);
+            if (fastHint && !fastHint.textContent) { fastHint.textContent = 'Not passed: set "Random starts" to use the v2 search; the automatic search keeps its anchored start.'; fastHint.classList.remove('rd2-bad'); }
+        }
     }
     // clear the interaction notes, then set those that apply
     for (const [a, b, what] of RD2_CONFLICTS) {
@@ -547,7 +561,7 @@ function rd2AdvReset() {
         for (const part of o.kind === 'pair' ? ['a', 'b'] : ['']) {
             const el = rd2AdvInput(rd2AdvId(o, part));
             if (!el) continue;
-            if (o.kind === 'check') (el as HTMLInputElement).checked = false; else el.value = '';
+            if (o.kind === 'check') (el as HTMLInputElement).checked = !!o.defOn; else el.value = '';
             if (o.kind === 'select' || o.kind === 'flagsel') { try { (window as any).Metro.getPlugin(el, 'select').val(''); } catch (e) { /* plain select */ } }
         }
     }
