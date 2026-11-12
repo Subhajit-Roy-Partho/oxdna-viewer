@@ -3,6 +3,7 @@
 //                                            `build` (optional): build id of build.json, appended as ?v=<build> to every file so that a browser cache cannot serve another build
 //   {type:'predict', id, sequence, options}  -> {type:'result', id, result}  |  {type:'error', id, message}
 //   {type:'oxpairs', id, request}           -> {type:'oxpaired', id, result}  |  {type:'error', id, message}   (base pairs of an oxDNA / oxRNA configuration: request {top, dat, molecule?, minStack?})
+//   {type:'call', id, method, request}      -> {type:'called', id, result}  |  {type:'error', id, message}   (CPP-7: method 'oriLayout' | 'annotate3d' | 'evalPairs' | 'fail1Lib'; request as of sp.<method>)
 //   {type:'score', id, request}             -> {type:'scored', id, result}  |  {type:'error', id, message}   (scoring of a predicted pair set against a reference structure, C++ port of runall.metrics)
 //   {type:'bld2lib', id, bytes (ArrayBuffer)}  -> {type:'bld2loaded', id, info}   (motif library of the bld2 3D builder, loaded once into the module)
 //   {type:'bld2', id, sequence, structure (pairs or dot-bracket), options}  -> {type:'bld2built', id, result, wallSeconds}
@@ -34,6 +35,10 @@ self.onmessage = async (ev) => {
       self.postMessage({ type: 'bld2built', id: m.id, result, wallSeconds: (Date.now() - t0) / 1000 });
     } else if (m.type === 'oxpairs') {
       self.postMessage({ type: 'oxpaired', id: m.id, result: sp.oxPairs(m.request) });
+    } else if (m.type === 'call') {
+      if (!['oriLayout', 'annotate3d', 'evalPairs', 'fail1Lib'].includes(m.method)) throw new Error('unknown method ' + m.method);
+      const t0 = Date.now();
+      self.postMessage({ type: 'called', id: m.id, result: sp[m.method](m.request), wallSeconds: (Date.now() - t0) / 1000 });
     } else if (m.type === 'score') {
       self.postMessage({ type: 'scored', id: m.id, result: sp.score(m.request) });
     }
