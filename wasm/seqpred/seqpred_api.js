@@ -16,7 +16,7 @@
   function checkOptions(o) {
     o = Object.assign({}, o || {});
     if (o.salt !== undefined && !(Number(o.salt) > 0)) throw new SeqpredError('salt must be a positive number (mol/L)');
-    if (o.method !== undefined && !['v2', 'nested', 'hint', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'ms2', 'msrna', 'dna', 'ssdna', 'rna_kl', 'kl_routes', 'longrange', 'cassette', 'nat1', 'e1', 'e1k50', 'ml4', 'ms3', 'domainB', 'hybridB', 'auto', 'score', 'bld2', 'centroid', 'mea', 'oxpairs'].includes(o.method)) throw new SeqpredError('method must be one of v2, nested, hint, v3, v4, m2, h2d, ml2, ml3, ms2, msrna, dna, ssdna, rna_kl, kl_routes, longrange, cassette, nat1, e1, e1k50, ml4, ms3, domainB, hybridB, auto, score, bld2, centroid, mea, oxpairs');
+    if (o.method !== undefined && !['v2', 'nested', 'hint', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'ms2', 'msrna', 'dna', 'ssdna', 'rna_kl', 'kl_routes', 'longrange', 'cassette', 'nat1', 'e1', 'e1k50', 'ml4', 'ms3', 'domainB', 'hybridB', 'auto', 'score', 'bld2', 'centroid', 'mea', 'oxpairs', 'oriLayout', 'annotate3d', 'evalPairs', 'fail1Lib'].includes(o.method)) throw new SeqpredError('method must be one of v2, nested, hint, v3, v4, m2, h2d, ml2, ml3, ms2, msrna, dna, ssdna, rna_kl, kl_routes, longrange, cassette, nat1, e1, e1k50, ml4, ms3, domainB, hybridB, auto, score, bld2, centroid, mea, oxpairs');
     if (o.model !== undefined && !['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'nat1', 'e1', 'e1k50', 'ml4'].includes(o.model)) throw new SeqpredError('model must be one of v2, v3, v4, m2, h2d, ml2, ml3, nat1, e1, e1k50, ml4');
     if (o.k !== undefined && ![30, 50].includes(Number(o.k))) throw new SeqpredError('k (ENERGY-1 pre-filter) must be 30 or 50');
     if (o.gateMargin !== undefined && !(Number.isFinite(Number(o.gateMargin)) && Number(o.gateMargin) >= 0)) throw new SeqpredError('gateMargin must be a finite number >= 0');
@@ -63,8 +63,9 @@
     // Base pairs of an oxDNA / oxRNA configuration (C++ port of runall.refs.oxdna_pairs, geometric criterion): the reference of a loaded or pasted model.
     //   request = {top: text, dat: text, molecule?: 'RNA' | 'DNA' (default RNA), minStack?: int, hbMax?: number}  -> {ok, pairs (1-based, 5'->3'), sequence, strands?, n, dotbracket, nGeo, compGeo, compGeoReversed, notes}
     // The request text of a big configuration (a DNA origami: MB) does not fit the 4 MB stack that ccall's 'string' arguments use: the strings go to the heap.
-    const oxPairs = (request) => {
-      const txt = JSON.stringify(Object.assign({}, request, { method: 'oxpairs' }));
+    // CPP-7: the request of a method that takes no sequence goes to the heap (a PDB / mmCIF text or a pair list of a DNA origami is MB-sized), result = the JSON object
+    const callMethod = (method, request) => {
+      const txt = JSON.stringify(Object.assign({}, request, { method }));
       const nb = M.lengthBytesUTF8(txt) + 1, mp = M._malloc(nb), sp0 = M._malloc(1);
       let ptr;
       try {
@@ -78,6 +79,15 @@
       if (!r.ok) throw new SeqpredError(r.error);
       return r;
     };
+    const oxPairs = (request) => callMethod('oxpairs', request);
+    // Layout stages of the DNA-origami route (ORI-1 / ORI-2; C++ port, CPP-7): request = {lens: [scaffold, staple1, ...], pairs: [[i, j], ...] (1-based, global), mode?: 'ori1' | 'ori2', params?, detail?, doc?}
+    const oriLayout = (request) => callMethod('oriLayout', request);
+    // Base pairs of a PDB / mmCIF structure text (rd2rna annotator, C++ port, CPP-7): request = {text, format?: 'pdb' | 'cif', model?: 1, chains?: [ids]}
+    const annotate3d = (request) => callMethod('annotate3d', request);
+    // Pair-list evaluation (scripts/seqpred/eval.py): request = {native, pred, n?, lengths?, minLong?}
+    const evalPairs = (request) => callMethod('evalPairs', request);
+    // Rfam-transfer / ring helpers that need no Infernal (CPP-7): request = {op, ...arguments}
+    const fail1Lib = (request) => callMethod('fail1Lib', request);
     // The 3D structure of a prediction with the existing rd2_rna engine (rd2rna_api.js, module createRd2RnaModule): the predicted dot-bracket (layers as [] {} <>) is the design.
     async function build3d(result, rd2Api, rd2Module, options) {
       const res = rd2Api.run(rd2Module, { seq: result.sequence, db: result.dotbracket }, Object.assign({ threads: 1 }, options || {}));
@@ -113,7 +123,7 @@
       if (!r.ok) throw new SeqpredError(r.error);
       return r;
     };
-    return { predict, predictRaw, version, build3d, score, oxPairs, loadBld2Library, buildBld2, bld2Loaded: () => bld2Info, module: M, defaults: BROWSER_DEFAULTS };
+    return { predict, predictRaw, version, build3d, score, oxPairs, oriLayout, annotate3d, evalPairs, fail1Lib, callMethod, loadBld2Library, buildBld2, bld2Loaded: () => bld2Info, module: M, defaults: BROWSER_DEFAULTS };
   }
 
   const api = { load, SeqpredError, BROWSER_DEFAULTS, checkOptions };

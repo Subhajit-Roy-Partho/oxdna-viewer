@@ -1,7 +1,7 @@
 // Typed contract of seqpred_api.js (the result is the JSON of seqpred::predictJson, include/seqpred/predict.h).
 export type RankModel = 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3';
 export type PriceModel = 'nat1' | 'e1' | 'e1k50' | 'ml4';   // NAT-1, ENERGY-1 (K 30 / 50), ML-4: nested MFE + gated crossing candidate of the v2 pool (docs/97)
-export type Method = RankModel | PriceModel | 'ms3' | 'domainB' | 'hybridB' | 'auto' | 'score' | 'bld2' | 'centroid' | 'mea' | 'oxpairs' | 'nested' | 'hint' | 'ms2' | 'msrna' | 'dna' | 'ssdna' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
+export type Method = RankModel | PriceModel | 'ms3' | 'domainB' | 'hybridB' | 'auto' | 'score' | 'bld2' | 'centroid' | 'mea' | 'oxpairs' | 'oriLayout' | 'annotate3d' | 'evalPairs' | 'fail1Lib' | 'nested' | 'hint' | 'ms2' | 'msrna' | 'dna' | 'ssdna' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
 export interface PredictOptions {
   method?: Method;                 // default 'v2': nested MFE + kissing / pseudoknot layer (predictor v2); 'nested': Turner 2004 MFE only; 'hint': designed helices given in `hints`; 'm2' etc. select the ranking model (same as model)
   model?: RankModel | PriceModel;  // alias of method for the ranking / price models (m2 and h2d are EXPERIMENTAL; v2 is the default)
@@ -115,6 +115,11 @@ export interface Seqpred {
   buildBld2(sequence: string, structure: Array<[number, number]> | string, options?: { oxrna?: boolean }): Bld2Result;   // throws SeqpredError (library not loaded, non-ACGU, bad dot-bracket)
   bld2Loaded(): unknown;
   score(request: ScoreRequest): ScoreResult;                              // pair set against a reference structure (CPP-4)
+  oriLayout(request: OriLayoutRequest): OriLayoutResult;                   // layout stages of the DNA-origami route, ORI-1 / ORI-2 (CPP-7)
+  annotate3d(request: Annotate3dRequest): Record<string, unknown>;         // base pairs of a PDB / mmCIF structure text (CPP-7)
+  evalPairs(request: EvalPairsRequest): Record<string, unknown>;           // pair-list evaluation (eval.py, CPP-7)
+  fail1Lib(request: { op: string; [k: string]: unknown }): Record<string, unknown>;   // Rfam-transfer / ring helpers without Infernal (CPP-7)
+  callMethod(method: string, request: Record<string, unknown>): Record<string, unknown>;
   oxPairs(request: OxPairsRequest): OxPairsResult;                        // base pairs of an oxDNA / oxRNA configuration (CPP-6); throws SeqpredError
 }
 export interface Bld2Loop { index: number; exterior: boolean; arms: number; segments: number[]; source: string | null; instanceSegments: number[] | null; store: string | null; instanceIndex: number | null; generic: boolean }
@@ -132,3 +137,8 @@ export interface ScoreRequest { reference: { format: 'dotbracket' | 'pairs' | 'b
 export interface ScoreResult { ok: true; reference: { n: number; nPairs: number; pairs: Array<[number, number]>; kind: string; source: string; notes: string[] }; score: Record<string, number | boolean | null | Array<Record<string, any>>> }   // keys of scripts/seqpred/runall/metrics.py score
 export interface OxPairsRequest { top: string; dat: string; molecule?: 'RNA' | 'DNA'; minStack?: number; hbMax?: number }   // oxDNA / oxRNA topology + configuration text (old or new topology format)
 export interface OxPairsResult { ok: true; method: 'oxpairs'; molecule: string; sequence: string; strands?: number[]; n: number; pairs: Array<[number, number]>; dotbracket: string; layers: number[]; nGeo: number; compGeo: number | null; compGeoReversed: number | null; notes: string[]; t?: number | null }   // pairs 1-based, 5'->3' on the concatenation of the rebuilt strands
+
+export interface OriLayoutRequest { lens: number[]; pairs: [number, number][]; mode?: 'ori1' | 'ori2'; params?: Record<string, unknown>; detail?: boolean; doc?: boolean }
+export interface OriLayoutResult { ok: boolean; method: 'oriLayout'; mode: string; info: Record<string, unknown>; reason?: string; breaks?: number[]; z?: number[]; d?: number[]; satisfied?: [boolean, boolean][]; fragOfPos?: number[]; edges?: [number, number, number][]; sites?: [number, number, number][]; doc?: Record<string, unknown>; toInput?: number[]; nStrands?: number; nCuts?: number; length?: number }
+export interface Annotate3dRequest { text: string; format?: 'pdb' | 'cif'; model?: number; chains?: string[] }
+export interface EvalPairsRequest { native: string; pred: string; n?: number; lengths?: number[]; minLong?: number }
