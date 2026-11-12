@@ -210,7 +210,7 @@ try {
   const r1 = await runOnce("orient-search 30 seed 7, dmin 3.0, subho 8", async () => {
     await typeInto("rd2a_orientSearch", "30"); await typeInto("rd2a_orientSeed", "7"); await typeInto("rd2a_dmin", "3.0"); await typeInto("rd2a_subho", "8");
   });
-  check("[orient] the engine log reports the orientation search with 30 starts", r1.logLines.some((l) => /^orientation search: \d+ bodies, 30 starts/.test(l)), r1.logLines.filter((l) => /^orientation search/.test(l)));
+  check("[orient] the engine log reports the v2 orientation search with 30 starts (the \"v2 search\" box is ticked by default and --orient-fast is passed with explicit starts)", r1.logLines.some((l) => /^orientation search v2: 30 starts/.test(l)), r1.logLines.filter((l) => /^orientation search/.test(l)));
   const en = (r) => { const m = /E \/ nt \(oxDNA2\)(-?[\d.]+)/.exec(r.summary); return m ? Number(m[1]) : null; };
   check("[orient] the options change the result (E/nt differs from the default run)", en(r0) !== null && en(r1) !== null && en(r0) !== en(r1), [en(r0), en(r1)]);
   const r2 = await runOnce("route lattice via real click, no-exc, stop-early off", async () => {
