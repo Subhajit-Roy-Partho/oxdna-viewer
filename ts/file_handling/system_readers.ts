@@ -384,6 +384,7 @@ function parseOxViewString(s: string) {
             let sys = new System(sysStartId+sysData.id, elements.getNextId());
             createdSystems.push(sys);
             sys.label = sysData.label;
+            if (sysData.molecule === 'DNA' || sysData.molecule === 'RNA') sys.molecule = sysData.molecule;
             let sidCounter = 0;
 
             // Go through and add each strand
