@@ -389,7 +389,7 @@ function makeSequenceFile() {
     ];
     const handle_strand = (strand: Strand)=>{
         let label = strand.label ? strand.label : `strand_${strand.id}`;
-        let line = `${label},${strand.getSequence()}`;
+        let line = `${label},${strand.getDisplaySequence()}`;
         // add the length info
         line += `,${strand.getLength()}` 
         // assume that the strand color is the same from top to bottom. 

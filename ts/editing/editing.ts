@@ -287,6 +287,29 @@ function replaceSelectionByDuplexWrapper() {
 }
 
 
+/**
+ * Called when the Molecule select (DNA / RNA, next to the sequence box) is changed.
+ * The choice is the default for newly created strands and is stored in the systems it applies to:
+ * the systems of the selected monomers if there is a selection, otherwise all loaded systems.
+ * In an RNA system, Get sequence shows U instead of T; Set sequence accepts both.
+ */
+function moleculeToggleChanged() {
+    const molecule = view.getInputValue("NA_toggle") === 'RNA' ? 'RNA' : 'DNA';
+    let target = new Set<System>();
+    if (selectedBases.size > 0) {
+        selectedBases.forEach(b => {if (b.strand && b.strand.system) target.add(b.strand.system)});
+    } else {
+        systems.forEach(s => target.add(s));
+    }
+    edit.setMolecule(Array.from(target), molecule);
+}
+
+/** Shows a system's molecule type in the Molecule select, e.g. after loading a file. */
+function showMolecule(molecule: 'DNA' | 'RNA') {
+    const sel = <HTMLSelectElement>document.getElementById("NA_toggle");
+    if (sel) sel.value = molecule;
+}
+
 function getSelectedSeqWrapper(){
     let seqInp = view.getInputElement("sequence");
     let seqLen = view.getInputElement("seqLen");
@@ -298,8 +321,9 @@ function getSelectedSeqWrapper(){
     });
     if(strands.size==1){
         //now that we know we have 1 strand we can enumerate the elements 5->3
+        const cache = new Map<System, string>();
         Array.from(strands)[0].forEach(
-            b=> {if (selectedBases.has(b)) seq+=b.type;});
+            b=> {if (selectedBases.has(b)) seq+=edit.displayType(b, cache);});
         seqInp.value=seq;
         seqLen.innerHTML=seq.length.toString();
     }
@@ -311,7 +335,7 @@ function getSelectedSeqWrapper(){
 
 
 let complement_dict = {
-    "A":"T", "T":"A",
+    "A":"T", "T":"A", "U":"A",
     "C":"G", "G":"C",
     "R":"Y", "Y":"R",
     "S":"S",
@@ -319,15 +343,17 @@ let complement_dict = {
     "N":"N"
     // What to do about H, B, V and D? Also U?
 };
-function rc(seq:string){
+function rc(seq:string, rna?:boolean){
     let ret = [];
-    for(let i=seq.length-1;i>=0;i--)
-        ret.push(complement_dict[seq[i]]);
+    for(let i=seq.length-1;i>=0;i--) {
+        let c = complement_dict[seq[i]];
+        ret.push(rna && c === 'T' ? 'U' : c); // RNA has U where DNA has T
+    }
     return ret.join("");
 }
 function reverseComplementWrapper(){
     let seqInp = view.getInputElement("sequence");
-    let seq = rc(seqInp.value.toUpperCase());
+    let seq = rc(seqInp.value.toUpperCase(), view.getInputValue("NA_toggle") === 'RNA');
     seqInp.value = seq;
 }
 

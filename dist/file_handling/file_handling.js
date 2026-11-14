@@ -243,6 +243,13 @@ async function handleFiles(files) {
 }
 // Create Three geometries and meshes that get drawn in the scene.
 async function addSystemToScene(system) {
+    // Decide if a freshly loaded structure is DNA or RNA (from the file's strand types or from
+    // U vs T in its sequence, unless the file said so) and show that in the Molecule select.
+    if (!system.isPatchySystem() && systems.includes(system) && system.strands.length > 0) {
+        if (system.molecule === undefined)
+            system.molecule = system.detectMolecule();
+        showMolecule(system.molecule);
+    }
     if (system.isPatchySystem()) {
         let s = system;
         await s.ready;

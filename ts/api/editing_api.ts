@@ -797,8 +797,42 @@ module edit{
             orderedElems.push(...strand.filter(e=>elems.has(e)));
         });
 
-        return orderedElems.map(e=>{return e.type}).join('');
+        const cache = new Map<System, string>(); // so that a system is only checked once
+        return orderedElems.map(e=>displayType(e, cache)).join('');
     };
+
+    /**
+     * The letter shown for an element when sequences are read out (Get sequence, sequence download).
+     * Elements keep the letter of their own chemistry internally (T for DNA nucleotides, U for RNA
+     * nucleotides); in a system that is set to RNA, T is shown as U. DNA systems are not changed.
+     * @param e The element
+     * @param cache (optional) Remembers the molecule of each system, to avoid asking again for every element
+     */
+    export function displayType(e: BasicElement, cache?: Map<System, string>): string {
+        const t = e.type;
+        if (t !== 'T' || !e.strand || !e.strand.system) return t;
+        const sys = e.strand.system;
+        let mol = cache ? cache.get(sys) : undefined;
+        if (mol === undefined) {
+            mol = sys.getMolecule();
+            if (cache) cache.set(sys, mol);
+        }
+        return mol === 'RNA' ? 'U' : t;
+    }
+
+    /**
+     * Sets whether a system is DNA or RNA. This is stored per system and decides if sequences
+     * read out from it use T or U.
+     * @param sys The system, or a list of systems
+     * @param molecule 'DNA' or 'RNA'
+     */
+    export function setMolecule(sys: System | System[], molecule: 'DNA' | 'RNA') {
+        if (molecule !== 'DNA' && molecule !== 'RNA') {
+            notify(`Molecule has to be DNA or RNA, not ${molecule}`, "alert");
+            return;
+        }
+        (Array.isArray(sys) ? sys : [sys]).forEach(s => {s.molecule = molecule});
+    }
 
     /**
      * Sets the sequence for a set of elements.
@@ -879,6 +913,7 @@ module edit{
             blank = true;
             realSys = new System(systems.length, elements.getNextId())
             realSys.initInstances(0);
+            realSys.molecule = isRNA ? 'RNA' : 'DNA'; // the first strand decides what this system is
             systems.push(realSys);
             addSystemToScene(realSys);
             // This is ugly, but if we don't have a box, everything will be

@@ -42,6 +42,11 @@ Please provide feedback if you encounter any bugs or have suggestions for how to
 
 Edited strands can also be exported for ordering purposes in CSV format by clicking the "Download Sequences" button.
 
+### Molecule: DNA or RNA
+The select next to the sequence box in the Edit tab (`DNA` / `RNA`) says what the structure is. When a file is loaded the viewer sets it from the file (RNA strands in the topology, or U and no T in the sequence); you can change it afterwards. The choice is stored per system (and written to .oxview files) and is also the default for newly created strands. Changing it applies to the systems of the selected monomers, or to all loaded systems if nothing is selected.
+
+For an RNA system, **Get** (and "Download Sequences" and `edit.getSequence`) shows U wherever the model stores T; **Set** accepts both T and U and stores the letter that fits the nucleotide, so a Get followed by a Set returns the same structure. For a DNA system nothing changes. Topology and oxDNA files are written as before. From the console: `edit.setMolecule(systems[0], 'RNA')`, `systems[0].getMolecule()`. A tiny RNA example is in `examples/rna_option_example`; the browser test is `node tests/rna_option.e2e.mjs`.
+
 ### DNA Nanostructure Factory
 oxView now includes a built-in factory for creating specialized DNA nanotechnology motifs directly in the browser:
 

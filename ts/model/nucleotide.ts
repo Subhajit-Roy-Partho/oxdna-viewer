@@ -269,12 +269,19 @@ abstract class Nucleotide extends BasicElement {
     }
 
     setType(type: string) {
-        this.type = randomChoice(this.typeOptions(type));
+        let t = randomChoice(this.typeOptions(type));
+        // Nucleotides keep T in DNA and U in RNA, so the other letter is accepted as input
+        // (U typed for a DNA nucleotide is stored as T, T typed for an RNA nucleotide as U).
+        if (t === 'U' && this.isDNA()) t = 'T';
+        else if (t === 'T' && this.isRNA()) t = 'U';
+        this.type = t;
     }
 
     isType(type: string) {
         if (type === this.type) {
             return true;
+        } else if ((type === 'U' && this.type === 'T') || (type === 'T' && this.type === 'U')) {
+            return true; // T and U are the same base, one is DNA and the other RNA
         } else {
             // We could skip the previous check and run this directly,
             // but it is quicker to first check for equality since that
