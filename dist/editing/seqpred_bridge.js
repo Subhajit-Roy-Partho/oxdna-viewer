@@ -224,6 +224,36 @@ class SeqpredEngine {
             worker.postMessage({ type: 'oxpairs', id, request });
         });
     }
+    /** The rd2 server modules in C++ (lane CPP-10, docs/124 of the rigidDNA2 repository): the checks and conversions that the structure server runs on a request, now in the browser.
+     *  method = 'seqInput' (parse / validate pasted sequence input, model catalogue), 'pairScore' (score pairs against a reference, read dot-bracket / pair lists / oxDNA files),
+     *  'dotBracket' (pairs -> layered dot-bracket, oxDNA / PDB / mmCIF -> sequence + dot-bracket, topology conversion), 'seqPipe' (explanation text, backbone check, build choice, result texts);
+     *  op = the Python function (see wasm/seqpred/seqpred_api.d.ts). Pairs are 0-based as in the Python. A refusal rejects with an Error that has .errorType and .status. */
+    async server(method, op, request) {
+        if (!this.worker)
+            await this.start('st');
+        const worker = this.worker, id = this.nextId++;
+        return new Promise((resolve, reject) => {
+            const prev = worker.onmessage;
+            worker.onmessage = (ev) => {
+                const m = ev.data;
+                if (m.id !== id) {
+                    if (prev)
+                        prev.call(worker, ev);
+                    return;
+                }
+                worker.onmessage = prev;
+                if (m.type === 'srved')
+                    resolve(m.result);
+                else {
+                    const e = new Error(m.message || 'server module call failed');
+                    e.errorType = m.errorType;
+                    e.status = m.status;
+                    reject(e);
+                }
+            };
+            worker.postMessage({ type: 'srv', id, method, op, request: request || {} });
+        });
+    }
     /** Predicts the structure of one sequence; rejects with Error('cancelled') after cancel(). */
     async predict(sequence, opts) {
         const wantMt = (opts.threads || 1) > 1 && RnaEngine.capabilities().isolated;

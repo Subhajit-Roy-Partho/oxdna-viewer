@@ -16,7 +16,7 @@
   function checkOptions(o) {
     o = Object.assign({}, o || {});
     if (o.salt !== undefined && !(Number(o.salt) > 0)) throw new SeqpredError('salt must be a positive number (mol/L)');
-    if (o.method !== undefined && !['v2', 'nested', 'hint', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'ms2', 'msrna', 'dna', 'ssdna', 'rna_kl', 'kl_routes', 'longrange', 'cassette', 'nat1', 'e1', 'e1k50', 'ml4', 'ms3', 'domainB', 'hybridB', 'auto', 'score', 'bld2', 'centroid', 'mea', 'oxpairs', 'oriLayout', 'annotate3d', 'evalPairs', 'fail1Lib'].includes(o.method)) throw new SeqpredError('method must be one of v2, nested, hint, v3, v4, m2, h2d, ml2, ml3, ms2, msrna, dna, ssdna, rna_kl, kl_routes, longrange, cassette, nat1, e1, e1k50, ml4, ms3, domainB, hybridB, auto, score, bld2, centroid, mea, oxpairs');
+    if (o.method !== undefined && !['v2', 'nested', 'hint', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'ms2', 'msrna', 'dna', 'ssdna', 'rna_kl', 'kl_routes', 'longrange', 'cassette', 'nat1', 'e1', 'e1k50', 'ml4', 'ms3', 'domainB', 'hybridB', 'auto', 'score', 'bld2', 'centroid', 'mea', 'oxpairs', 'oriLayout', 'annotate3d', 'evalPairs', 'fail1Lib', 'rf'].includes(o.method)) throw new SeqpredError('method must be one of v2, nested, hint, v3, v4, m2, h2d, ml2, ml3, ms2, msrna, dna, ssdna, rna_kl, kl_routes, longrange, cassette, nat1, e1, e1k50, ml4, ms3, domainB, hybridB, auto, score, bld2, centroid, mea, oxpairs');
     if (o.model !== undefined && !['v2', 'v3', 'v4', 'm2', 'h2d', 'ml2', 'ml3', 'nat1', 'e1', 'e1k50', 'ml4'].includes(o.model)) throw new SeqpredError('model must be one of v2, v3, v4, m2, h2d, ml2, ml3, nat1, e1, e1k50, ml4');
     if (o.k !== undefined && ![30, 50].includes(Number(o.k))) throw new SeqpredError('k (ENERGY-1 pre-filter) must be 30 or 50');
     if (o.gateMargin !== undefined && !(Number.isFinite(Number(o.gateMargin)) && Number(o.gateMargin) >= 0)) throw new SeqpredError('gateMargin must be a finite number >= 0');
@@ -64,7 +64,7 @@
     //   request = {top: text, dat: text, molecule?: 'RNA' | 'DNA' (default RNA), minStack?: int, hbMax?: number}  -> {ok, pairs (1-based, 5'->3'), sequence, strands?, n, dotbracket, nGeo, compGeo, compGeoReversed, notes}
     // The request text of a big configuration (a DNA origami: MB) does not fit the 4 MB stack that ccall's 'string' arguments use: the strings go to the heap.
     // CPP-7: the request of a method that takes no sequence goes to the heap (a PDB / mmCIF text or a pair list of a DNA origami is MB-sized), result = the JSON object
-    const callMethod = (method, request) => {
+    const callRaw = (method, request) => {
       const txt = JSON.stringify(Object.assign({}, request, { method }));
       const nb = M.lengthBytesUTF8(txt) + 1, mp = M._malloc(nb), sp0 = M._malloc(1);
       let ptr;
@@ -75,10 +75,24 @@
       } finally { M._free(mp); M._free(sp0); }
       const s = M.UTF8ToString(ptr);
       M.ccall('seqpred_free', null, ['number'], [ptr]);
-      const r = JSON.parse(s);
+      return JSON.parse(s);
+    };
+    const callMethod = (method, request) => {
+      const r = callRaw(method, request);
       if (!r.ok) throw new SeqpredError(r.error);
       return r;
     };
+    // CPP-10: the C++ ports of the rd2 server modules.  Each is a stateless function of an operation name and its arguments (see src/seqpred/srv.h, docs/124_cpp10.md): returns the result of the
+    // Python function of the same name; a refusal of the Python (InputError, RefError, DbnError, StageFail) is thrown as SeqpredError with .errorType and .status (400 for InputError).
+    const srvCall = (method) => (op, request) => {
+      const r = callRaw(method, Object.assign({}, request, { op }));
+      if (!r.ok) { const e = new SeqpredError(r.error); e.errorType = r.errorType; if (r.status !== undefined) e.status = r.status; throw e; }
+      return r.result;
+    };
+    const seqInput = srvCall('seqInput');       // scripts/rd2_server/seqinput.py: parse | checkStructure | hasCrossing | validate | resolveModels | describe | catalog | checkSize | checkModelRange
+    const pairScore = srvCall('pairScore');     // scripts/rd2_server/pairscore.py: normalize | crossing | score | classify | tsv | dotbracketPairs | pairlistPairs | topSequence | oxdnaPairs
+    const dotBracket = srvCall('dotBracket');   // scripts/rd2_server/dotbracket.py: pairsToDotbracket | dropUnstacked | topHeader | resolveMolecule | checkConfSize | fromOxdna | sniff | fromStructure | parseChains | convert | newToOld | isNewTopology
+    const seqPipe = srvCall('seqPipe');         // pure parts of scripts/rd2_server/seqpipe.py: pairsToDb | explain | backbone | resolveBuild | isDesignedOrigami | leftOutPairs | sheetSentence | v3dBudget | layoutDesign | bld2Design | reportTexts
     const oxPairs = (request) => callMethod('oxpairs', request);
     // Layout stages of the DNA-origami route (ORI-1 / ORI-2; C++ port, CPP-7): request = {lens: [scaffold, staple1, ...], pairs: [[i, j], ...] (1-based, global), mode?: 'ori1' | 'ori2', params?, detail?, doc?}
     const oriLayout = (request) => callMethod('oriLayout', request);
@@ -123,7 +137,7 @@
       if (!r.ok) throw new SeqpredError(r.error);
       return r;
     };
-    return { predict, predictRaw, version, build3d, score, oxPairs, oriLayout, annotate3d, evalPairs, fail1Lib, callMethod, loadBld2Library, buildBld2, bld2Loaded: () => bld2Info, module: M, defaults: BROWSER_DEFAULTS };
+    return { predict, predictRaw, version, build3d, score, oxPairs, oriLayout, annotate3d, evalPairs, fail1Lib, seqInput, pairScore, dotBracket, seqPipe, callMethod, loadBld2Library, buildBld2, bld2Loaded: () => bld2Info, module: M, defaults: BROWSER_DEFAULTS };
   }
 
   const api = { load, SeqpredError, BROWSER_DEFAULTS, checkOptions };

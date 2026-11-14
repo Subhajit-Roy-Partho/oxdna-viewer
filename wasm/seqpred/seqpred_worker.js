@@ -4,6 +4,7 @@
 //   {type:'predict', id, sequence, options}  -> {type:'result', id, result}  |  {type:'error', id, message}
 //   {type:'oxpairs', id, request}           -> {type:'oxpaired', id, result}  |  {type:'error', id, message}   (base pairs of an oxDNA / oxRNA configuration: request {top, dat, molecule?, minStack?})
 //   {type:'call', id, method, request}      -> {type:'called', id, result}  |  {type:'error', id, message}   (CPP-7: method 'oriLayout' | 'annotate3d' | 'evalPairs' | 'fail1Lib'; request as of sp.<method>)
+//   {type:'srv', id, method, op, request}   -> {type:'srved', id, result}  |  {type:'error', id, message, errorType?, status?}   (CPP-10: method 'seqInput' | 'pairScore' | 'dotBracket' | 'seqPipe', the rd2 server modules; request as of sp.<method>(op, request))
 //   {type:'score', id, request}             -> {type:'scored', id, result}  |  {type:'error', id, message}   (scoring of a predicted pair set against a reference structure, C++ port of runall.metrics)
 //   {type:'bld2lib', id, bytes (ArrayBuffer)}  -> {type:'bld2loaded', id, info}   (motif library of the bld2 3D builder, loaded once into the module)
 //   {type:'bld2', id, sequence, structure (pairs or dot-bracket), options}  -> {type:'bld2built', id, result, wallSeconds}
@@ -39,11 +40,14 @@ self.onmessage = async (ev) => {
       if (!['oriLayout', 'annotate3d', 'evalPairs', 'fail1Lib'].includes(m.method)) throw new Error('unknown method ' + m.method);
       const t0 = Date.now();
       self.postMessage({ type: 'called', id: m.id, result: sp[m.method](m.request), wallSeconds: (Date.now() - t0) / 1000 });
+    } else if (m.type === 'srv') {
+      if (!['seqInput', 'pairScore', 'dotBracket', 'seqPipe'].includes(m.method)) throw new Error('unknown method ' + m.method);
+      self.postMessage({ type: 'srved', id: m.id, result: sp[m.method](m.op, m.request) });
     } else if (m.type === 'score') {
       self.postMessage({ type: 'scored', id: m.id, result: sp.score(m.request) });
     }
   } catch (e) {
-    self.postMessage({ type: 'error', id: m.id, message: String((e && e.message) || e) });
+    self.postMessage({ type: 'error', id: m.id, message: String((e && e.message) || e), errorType: e && e.errorType, status: e && e.status });
   }
 };
 }
