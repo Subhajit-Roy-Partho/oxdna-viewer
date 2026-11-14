@@ -1,7 +1,7 @@
 // Typed contract of seqpred_api.js (the result is the JSON of seqpred::predictJson, include/seqpred/predict.h).
 export type RankModel = 'v2' | 'v3' | 'v4' | 'm2' | 'h2d' | 'ml2' | 'ml3';
 export type PriceModel = 'nat1' | 'e1' | 'e1k50' | 'ml4';   // NAT-1, ENERGY-1 (K 30 / 50), ML-4: nested MFE + gated crossing candidate of the v2 pool (docs/97)
-export type Method = RankModel | PriceModel | 'ms3' | 'domainB' | 'hybridB' | 'auto' | 'score' | 'bld2' | 'centroid' | 'mea' | 'oxpairs' | 'oriLayout' | 'annotate3d' | 'evalPairs' | 'fail1Lib' | 'nested' | 'hint' | 'ms2' | 'msrna' | 'dna' | 'ssdna' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
+export type Method = RankModel | PriceModel | 'ms3' | 'domainB' | 'hybridB' | 'auto' | 'score' | 'bld2' | 'centroid' | 'mea' | 'oxpairs' | 'oriLayout' | 'annotate3d' | 'evalPairs' | 'fail1Lib' | 'rf' | 'nested' | 'hint' | 'ms2' | 'msrna' | 'dna' | 'ssdna' | 'rna_kl' | 'kl_routes' | 'longrange' | 'cassette';
 export interface PredictOptions {
   method?: Method;                 // default 'v2': nested MFE + kissing / pseudoknot layer (predictor v2); 'nested': Turner 2004 MFE only; 'hint': designed helices given in `hints`; 'm2' etc. select the ranking model (same as model)
   model?: RankModel | PriceModel;  // alias of method for the ranking / price models (m2 and h2d are EXPERIMENTAL; v2 is the default)
@@ -119,12 +119,20 @@ export interface Seqpred {
   annotate3d(request: Annotate3dRequest): Record<string, unknown>;         // base pairs of a PDB / mmCIF structure text (CPP-7)
   evalPairs(request: EvalPairsRequest): Record<string, unknown>;           // pair-list evaluation (eval.py, CPP-7)
   fail1Lib(request: { op: string; [k: string]: unknown }): Record<string, unknown>;   // Rfam-transfer / ring helpers without Infernal (CPP-7)
+  seqInput(op: SeqInputOp, request?: Record<string, unknown>): any;       // scripts/rd2_server/seqinput.py (CPP-10); throws SeqpredError with errorType / status
+  pairScore(op: PairScoreOp, request?: Record<string, unknown>): any;      // scripts/rd2_server/pairscore.py (CPP-10); pairs are 0-based like the Python
+  dotBracket(op: DotBracketOp, request?: Record<string, unknown>): any;    // scripts/rd2_server/dotbracket.py (CPP-10); the oxpy criterion is not available (DbnError)
+  seqPipe(op: SeqPipeOp, request?: Record<string, unknown>): any;          // pure parts of scripts/rd2_server/seqpipe.py (CPP-10)
   callMethod(method: string, request: Record<string, unknown>): Record<string, unknown>;
   oxPairs(request: OxPairsRequest): OxPairsResult;                        // base pairs of an oxDNA / oxRNA configuration (CPP-6); throws SeqpredError
 }
 export interface Bld2Loop { index: number; exterior: boolean; arms: number; segments: number[]; source: string | null; instanceSegments: number[] | null; store: string | null; instanceIndex: number | null; generic: boolean }
 export interface Bld2Result { ok: true; method: 'bld2'; sequence: string; length: number; pdb: string; oxrna?: { top?: string; dat?: string; n?: number; pieces?: number; nicksAfter5to3Index?: number[]; box?: number; error?: string }; loops: Bld2Loop[]; nStems: number; nPairsNested: number; nPkStemsUnplaced: number; nPairsGiven: number; secondsBuild: number; library: { bytes: number; sha1: string; chains: number }; notes: string[] }
-export class SeqpredError extends Error {}
+export class SeqpredError extends Error { errorType?: 'InputError' | 'RefError' | 'DbnError' | 'StageFail' | 'ValueError'; status?: number }
+export type SeqInputOp = 'parse' | 'checkStructure' | 'hasCrossing' | 'validate' | 'resolveModels' | 'describe' | 'catalog' | 'checkSize' | 'checkModelRange';
+export type PairScoreOp = 'normalize' | 'crossing' | 'score' | 'classify' | 'tsv' | 'dotbracketPairs' | 'pairlistPairs' | 'topSequence' | 'oxdnaPairs';
+export type DotBracketOp = 'pairsToDotbracket' | 'dropUnstacked' | 'topHeader' | 'resolveMolecule' | 'checkConfSize' | 'fromOxdna' | 'sniff' | 'fromStructure' | 'parseChains' | 'convert' | 'newToOld' | 'isNewTopology';
+export type SeqPipeOp = 'pairsToDb' | 'explain' | 'backbone' | 'resolveBuild' | 'isDesignedOrigami' | 'leftOutPairs' | 'sheetSentence' | 'v3dBudget' | 'layoutDesign' | 'bld2Design' | 'reportTexts';
 export function load(factory: unknown, config?: { locateFile?: (p: string) => string }): Promise<Seqpred>;
 
 // ---- models added by lane CPP-4 (docs/97) -------------------------------------------------------------------------------------------------------------------------------------------------
