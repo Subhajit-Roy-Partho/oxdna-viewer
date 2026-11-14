@@ -12,6 +12,12 @@ class System {
     lutCols;
     strands = [];
     label;
+    /**
+     * Which molecule this structure is: 'DNA' or 'RNA'. Only affects how sequences are
+     * written out (Get sequence, sequence download): in an 'RNA' system T is shown as U.
+     * undefined means "not decided yet", see getMolecule().
+     */
+    molecule = undefined;
     lines2ele;
     instanceParams = new Map([
         ['cmOffsets', 3], ['bbOffsets', 3], ['nsOffsets', 3],
@@ -284,6 +290,37 @@ class System {
     isPatchySystem() {
         return false;
     }
+    /**
+     * Guess the molecule type from the content: RNA if every nucleic acid strand is an
+     * RNA strand, or if the sequence contains U and no T. Everything else is DNA.
+     */
+    detectMolecule() {
+        let nStrands = 0, nRNA = 0, hasU = false, hasT = false;
+        this.strands.forEach(s => {
+            if (!(s instanceof NucleicAcidStrand))
+                return;
+            nStrands++;
+            if (s.isRNA())
+                nRNA++;
+            if (hasT && hasU)
+                return;
+            s.forEach(e => {
+                if (e.type === 'U')
+                    hasU = true;
+                else if (e.type === 'T')
+                    hasT = true;
+            });
+        });
+        if (nStrands > 0 && nRNA === nStrands)
+            return 'RNA';
+        if (hasU && !hasT)
+            return 'RNA';
+        return 'DNA';
+    }
+    /** The molecule type of this system: the user's choice if there is one, otherwise detected from content. */
+    getMolecule() {
+        return this.molecule !== undefined ? this.molecule : this.detectMolecule();
+    }
     toJSON() {
         // Specify required attributes
         let json = {
@@ -292,6 +329,9 @@ class System {
         // Specify optional attributes
         if (this.label)
             json['label'] = this.label;
+        // Only written when it was set (loaded from a file that has it, or chosen by the user)
+        if (this.molecule !== undefined)
+            json['molecule'] = this.molecule;
         // Add strands last
         json['strands'] = this.strands;
         return json;

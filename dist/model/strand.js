@@ -39,6 +39,11 @@ class Strand {
     getSequence() {
         return this.map(e => e.type).join('');
     }
+    /** The sequence as it should be read out: like getSequence(), but T is shown as U if the system is RNA. */
+    getDisplaySequence() {
+        const cache = new Map();
+        return this.map(e => edit.displayType(e, cache)).join('');
+    }
     getLength() {
         let e = this.end3;
         let i = 0;

@@ -828,7 +828,7 @@
                             <img src="img/ico/set.svg">
                             <span class="caption"> Set</span>
                         </button>
-                        <button class="ribbon-icon-button" onclick="getSelectedSeqWrapper()" title="Gets sequence from selection.(5'->3')">
+                        <button class="ribbon-icon-button" onclick="getSelectedSeqWrapper()" title="Gets sequence from selection.(5'->3'). Shows U instead of T when the molecule is set to RNA.">
                             <span class="mif-file-upload mif-2x"></span>
                             <span class="caption"> Get</span>
                         </button>
@@ -851,7 +851,7 @@
                     <input type="text" data-role="input" id="sequence" class="mb-1"
                         data-prepend="<span>Seq</span>"
                         data-append="
-                            <select id='NA_toggle'>
+                            <select id='NA_toggle' title='Molecule: is the structure DNA or RNA? Sets the default for new strands, and for the selected structure (or all structures if nothing is selected). In RNA, Get sequence shows U instead of T.' onchange='moleculeToggleChanged()'>
                                 <option value='DNA' selected='selected'>DNA</option>
                                 <option value='RNA'>RNA</option>
                             </select>
