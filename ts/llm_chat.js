@@ -27,18 +27,16 @@ const LLM_CONFIG = {
     }
 };
 
-// Send-to-maintainer (Telegram) bot-token default. Intentional public
-// default per maintainer decision (bot @SubhoGilaBot, name Gila) so
-// contact works out of the box; the exposure tradeoff was explicitly
-// accepted. Precedence (user-set values keep winning):
+// Send-to-maintainer (Telegram) bot token. There is NO built-in token (a
+// previous default was removed because a token in a public repository is
+// exposed): sending stays disabled until the user supplies one.
+// Precedence:
 //   ts/config.js gitignored override (OXVIEW_CONFIG.telegramBotToken)
 //   → localStorage user value ('oxview_telegram_bot_token', then
 //     NanoCanvas-shared 'nc_telegram_bot_token')
-//   → built-in default below.
-// The target chat ID intentionally has NO default — it stays empty
-// until the user pastes one.
-const TELEGRAM_BOT_TOKEN_DEFAULT =
-    "8794105541:AAGcw_74574BVbvAexrqhfHUJZVM1DtHlmw";
+//   → empty (disabled).
+// The target chat ID likewise has no default.
+const TELEGRAM_BOT_TOKEN_DEFAULT = "";
 function resolveTelegramBotToken() {
     return (window.OXVIEW_CONFIG || {}).telegramBotToken
         || localStorage.getItem('oxview_telegram_bot_token')
