@@ -24,7 +24,7 @@
 
     const VERSION = 1;
     const METHODS = ['capabilities', 'inspect', 'validate', 'execute', 'task'];
-    const LIMITS = { maxCodeChars: 30000, maxLogs: 100, maxText: 2000, maxList: 100, maxValidationErrors: 25, maxDepth: 8, maxNodes: 5000, defaultTimeoutMs: 60000, maxTimeoutMs: 600000 };
+    const LIMITS = { maxCodeChars: 30000, maxLogs: 100, maxText: 2000, maxList: 100, maxValidationErrors: 25, maxDepth: 8, maxNodes: 5000, defaultTimeoutMs: 60000, defaultLlmTimeoutMs: 120000, maxTimeoutMs: 600000 };
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
     // Top-level `const`/`let` of classic scripts (elements, systems, selectedBases, AGENT_CONFIG) are global lexical
@@ -184,8 +184,8 @@
     }
 
     /** Run code in its own async function scope. Never throws: a failure is the result. */
-    function runCode(code, { timeoutMs = LIMITS.defaultTimeoutMs, validateAfter = true } = {}) {
-        return enqueue(async () => {
+    function runCodeNow(code, { timeoutMs = LIMITS.defaultTimeoutMs, validateAfter = true } = {}) {
+        return (async () => {
             if (typeof code !== 'string' || !code.trim()) return { ok: false, executed: false, error: { name: 'NoCode', message: 'code must be a nonempty string', hint: 'Pass the viewer JavaScript to run.' } };
             if (code.length > LIMITS.maxCodeChars) return { ok: false, executed: false, error: { name: 'CodeTooLong', message: `code is ${code.length} chars; the limit is ${LIMITS.maxCodeChars}`, hint: 'Split the work into several smaller steps.' } };
             const duration = Number.isFinite(timeoutMs) ? Math.min(LIMITS.maxTimeoutMs, Math.max(100, timeoutMs)) : LIMITS.defaultTimeoutMs;
@@ -209,8 +209,10 @@
                 ...(error ? { error: { ...error }, diagnostics: [{ code: error.name, message: error.message, hint: error.hint }] } : {}),
                 warnings,
             };
-        });
+        })();
     }
+    /** Queued: one run at a time. */
+    const runCode = (code, opts) => enqueue(() => runCodeNow(code, opts));
 
     /** One compact text block for an LLM observer: error with line and hint, scene change, console output, warnings. */
     function describeRun(run) {
@@ -233,25 +235,27 @@
         return { available: typeof window.agentPlanner === 'function' && typeof window.agentExecutor === 'function' && typeof window.agentObserver === 'function', configured: !!cfg?.apiKey, model: cfg?.model ?? null };
     }
 
-    async function task(text, { maxRetries = 3, maxSteps = 8, timeoutMs = LIMITS.defaultTimeoutMs } = {}) {
+    async function taskNow(text, { maxRetries = 3, maxSteps = 8, timeoutMs = LIMITS.defaultTimeoutMs, llmTimeoutMs = LIMITS.defaultLlmTimeoutMs } = {}) {
+        // Every model call is time-bounded so a provider that never answers cannot hold the queue forever.
+        const llm = (promise) => withTimeout(Promise.resolve(promise), Number.isFinite(llmTimeoutMs) ? Math.min(LIMITS.maxTimeoutMs, Math.max(1000, llmTimeoutMs)) : LIMITS.defaultLlmTimeoutMs);
         const state = llmReady();
         if (!state.available) return { ok: false, error: 'The viewer LLM agent is not loaded in this build', diagnostics: [{ code: 'ViewerLLMUnavailable', message: 'agent_chat.js is not loaded', hint: 'Use execute with explicit viewer code instead.' }] };
         if (!state.configured) return { ok: false, error: 'No LLM API key is configured in the viewer', diagnostics: [{ code: 'ViewerLLMNotConfigured', message: 'no API key', hint: 'Set the key in the viewer Model & settings, or use execute with explicit code.' }] };
         if (typeof text !== 'string' || !text.trim()) return { ok: false, error: 'task must be a nonempty string' };
         const steps = [];
         let plan;
-        try { plan = (await window.agentPlanner(text)).slice(0, maxSteps); } catch (e) { return { ok: false, error: `planning failed: ${e.message}`, steps, diagnostics: [{ code: 'ViewerPlanFailed', message: e.message, hint: 'Rephrase the task as one concrete scene operation.' }] }; }
+        try { plan = (await llm(window.agentPlanner(text))).slice(0, maxSteps); } catch (e) { return { ok: false, error: `planning failed: ${e.message}`, steps, diagnostics: [{ code: 'ViewerPlanFailed', message: e.message, hint: 'Rephrase the task as one concrete scene operation.' }] }; }
         for (const step of plan) {
             const record = { step: String(step), attempts: [], success: false };
             steps.push(record);
             let retryContext = '';
             for (let attempt = 0; attempt < maxRetries && !record.success; attempt++) {
                 let code;
-                try { code = await window.agentExecutor(record.step, retryContext); } catch (e) { record.attempts.push({ attempt, error: `code generation failed: ${e.message}` }); break; }
-                const run = await runCode(code, { timeoutMs });
+                try { code = await llm(window.agentExecutor(record.step, retryContext)); } catch (e) { record.attempts.push({ attempt, error: `code generation failed: ${e.message}` }); break; }
+                const run = await runCodeNow(code, { timeoutMs });
                 const text2 = describeRun(run);
                 let observation;
-                try { observation = await window.agentObserver(record.step, code, text2); } catch (_) { observation = { success: run.ok, feedback: 'Verification unavailable' }; }
+                try { observation = await llm(window.agentObserver(record.step, code, text2)); } catch (_) { observation = { success: run.ok, feedback: 'Verification unavailable' }; }
                 const success = run.ok && observation?.success !== false;
                 record.attempts.push({ attempt, code, run: { ok: run.ok, error: run.error ?? null, scene: run.scene, logs: run.logs.slice(0, 10), warnings: run.warnings }, observation: safe(() => plain(observation), null) });
                 record.success = success;
@@ -261,9 +265,12 @@
         }
         const ok = steps.length > 0 && steps.length === plan.length && steps.every((s) => s.success);
         let summary = null;
-        try { summary = await window.agentSummarizer(text, steps.map((s) => ({ step: s.step, success: s.success }))); } catch (_) { /* summary is optional */ }
+        try { summary = await llm(window.agentSummarizer(text, steps.map((s) => ({ step: s.step, success: s.success })))); } catch (_) { /* summary is optional */ }
         return { ok, summary, steps, scene: inspect(), ...(ok ? {} : { error: 'the viewer agent did not complete every step', diagnostics: steps.filter((s) => !s.success).map((s) => ({ code: 'ViewerStepFailed', message: s.step, hint: 'Read the failed attempt code and run.error, then retry with execute.' })) }) };
     }
+
+    /** Queued as ONE unit: a task's steps are not interleaved with other requests or other tasks. */
+    const task = (text, opts) => enqueue(() => taskNow(text, opts));
 
     // ── public object and host protocol ─────────────────────────────────────────────────────────────────────────────
     function capabilities() {

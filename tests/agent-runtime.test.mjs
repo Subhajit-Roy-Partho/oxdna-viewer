@@ -123,6 +123,37 @@ await check('task runs plan -> code -> structured run -> observer and retries wi
   assert.match(seen[1], /ERROR: ReferenceError/); assert.equal(r.summary, 'all good'); assert.equal(r.scene.nucleotideCount, 12);
 });
 
+await check('two concurrent tasks and an execute are serialised: their steps never interleave', async () => {
+  const c = makeContext();
+  vm.runInContext("const AGENT_CONFIG = { apiKey: 'k', model: 'm' };", c.ctx);
+  const order = [];
+  const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+  Object.assign(c.win, {
+    agentPlanner: async (t) => { order.push('plan ' + t); await delay(30); return ['s1', 's2']; },
+    agentExecutor: async (step) => { order.push('exec ' + step); await delay(10); return 'return 1;'; },
+    agentObserver: async () => ({ success: true, feedback: 'ok' }),
+    agentSummarizer: async (t) => { order.push('done ' + t); return 'ok'; },
+  });
+  const rt = c.win.oxAgentRuntime;
+  const [a, b, e] = await Promise.all([rt.task('A'), rt.task('B'), rt.execute('return 1;')]);
+  assert.equal(a.ok, true); assert.equal(b.ok, true); assert.equal(e.ok, true);
+  // all of A (plan, both execs, done) happens before anything of B
+  assert.deepEqual(order, ['plan A', 'exec s1', 'exec s2', 'done A', 'plan B', 'exec s1', 'exec s2', 'done B']);
+});
+
+await check('a model call that never answers times out instead of holding the queue', async () => {
+  const c = makeContext();
+  vm.runInContext("const AGENT_CONFIG = { apiKey: 'k', model: 'm' };", c.ctx);
+  Object.assign(c.win, { agentPlanner: () => new Promise(() => {}), agentExecutor: async () => 'return 1;', agentObserver: async () => ({ success: true }), agentSummarizer: async () => '' });
+  const rt = c.win.oxAgentRuntime;
+  const t0 = Date.now();
+  const r = await rt.task('hang', { llmTimeoutMs: 1000 });
+  assert.equal(r.ok, false); assert.equal(r.diagnostics[0].code, 'ViewerPlanFailed'); assert.match(r.error, /timed out after 1000 ms/);
+  assert.ok(Date.now() - t0 < 4000);
+  const after = await rt.execute('return 2;');           // the queue is free again
+  assert.equal(after.ok, true); assert.equal(after.value, 2);
+});
+
 function request(c, data, { source, origin = 'http://host', port = true } = {}) {
   return new Promise((resolve) => {
     const replies = [];
