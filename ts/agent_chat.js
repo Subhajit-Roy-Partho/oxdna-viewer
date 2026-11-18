@@ -45,13 +45,13 @@ const AGENT_CONFIG = {
 // one threw "SyntaxError: Identifier 'TELEGRAM_BOT_TOKEN_DEFAULT' has already
 // been declared" and agent_chat.js never ran. Only define the resolver here as
 // a fallback for when this file is loaded on its own (precedence is the same:
-// OXVIEW_CONFIG.telegramBotToken -> localStorage -> built-in default).
+// OXVIEW_CONFIG.telegramBotToken -> localStorage -> empty; there is no built-in token).
 if (typeof resolveTelegramBotToken !== 'function') {
     var resolveTelegramBotToken = function () {
         return (window.OXVIEW_CONFIG || {}).telegramBotToken
             || localStorage.getItem('oxview_telegram_bot_token')
             || localStorage.getItem('nc_telegram_bot_token')
-            || "8794105541:AAGcw_74574BVbvAexrqhfHUJZVM1DtHlmw";
+            || "";
     };
 }
 
