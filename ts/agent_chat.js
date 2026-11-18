@@ -1424,7 +1424,15 @@ const agentChat = {
 
                     // Run the code
                     let execResult = 'SUCCESS';
-                    try {
+                    if (window.oxAgentRuntime) {
+                        // Structured run: the observer and the retry see line, source, hint, scene change and warnings.
+                        const run = await window.oxAgentRuntime.runCode(lastCode);
+                        execResult = window.oxAgentRuntime.describeRun(run);
+                        if (!run.ok) {
+                            this._log('error', `⚠ Exec error: ${run.error.name}: ${run.error.message}${run.error.line ? ` (line ${run.error.line})` : ''}`);
+                            console.error('Agent exec error:', run.error, '\nCode:', lastCode);
+                        }
+                    } else try {
                         (new Function(lastCode))();
                         if (typeof render === 'function') render();
                     } catch (execErr) {
@@ -1442,10 +1450,10 @@ const agentChat = {
                         observation = await agentObserver(step, lastCode, execResult);
                     } catch (_) {
                         // If observer itself fails, fall back to exec result
-                        observation = { success: execResult === 'SUCCESS', feedback: 'Verification unavailable' };
+                        observation = { success: execResult.startsWith('SUCCESS'), feedback: 'Verification unavailable' };
                     }
 
-                    if (observation.success) {
+                    if (observation.success && !execResult.startsWith('ERROR')) {
                         obsEl.textContent = '✅ Step verified';
                         obsEl.className = 'agent-msg agent-msg-success';
                         success = true;
@@ -1453,7 +1461,7 @@ const agentChat = {
                     } else {
                         obsEl.textContent = `⚠ ${observation.feedback}`;
                         obsEl.className = 'agent-msg agent-msg-warning';
-                        retryContext = observation.feedback;
+                        retryContext = execResult.startsWith('ERROR') ? `${execResult}\nObserver: ${observation.feedback}` : observation.feedback;
                         if (attempt === AGENT_MAX_RETRIES - 1) {
                             this._log('error', `✗ Step ${i + 1} failed after ${AGENT_MAX_RETRIES} attempts.`);
                         }

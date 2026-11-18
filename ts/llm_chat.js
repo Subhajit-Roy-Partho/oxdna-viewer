@@ -1223,6 +1223,7 @@ const llmChat = {
         const messages = [
             { role: 'system', content: SYSTEM_PROMPT },
             ...(sceneBlock ? [{ role: 'system', content: 'CURRENT SCENE (live):\n' + sceneBlock }] : []),
+            ...(this._pendingExecFeedback ? [{ role: 'system', content: 'YOUR PREVIOUS CODE FAILED WHEN EXECUTED. Fix that error if the new request relates to it:\n' + this._pendingExecFeedback }] : []),
             ...this.history
         ];
 
@@ -1291,7 +1292,18 @@ const llmChat = {
             } else {
                 this.renderCode(code);
                 // Execute in global scope, then force a render pass
-                try {
+                if (window.oxAgentRuntime) {
+                    // Structured run: async code works, errors carry line/source/hint and reach the next request.
+                    const run = await window.oxAgentRuntime.runCode(code);
+                    this._pendingExecFeedback = null;
+                    if (!run.ok) {
+                        const e = run.error;
+                        this.renderMessage('error', `Execution error: ${e.name}: ${e.message}` + (e.line ? ` (line ${e.line}${e.source ? ': ' + e.source : ''})` : '') + `\nHint: ${e.hint}`);
+                        this._pendingExecFeedback = window.oxAgentRuntime.describeRun(run) + '\nCode that failed:\n' + String(code).slice(0, 2000);
+                        console.error('LLM eval error:', e, '\nCode:', code);
+                    }
+                    for (const w of run.warnings || []) this.renderMessage('system', '⚠ ' + w.message);
+                } else try {
                     (new Function(code))();
                     if (typeof render === 'function') render();
                 } catch (execErr) {
