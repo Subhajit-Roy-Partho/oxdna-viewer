@@ -1062,6 +1062,7 @@ const llmChat = {
             this.threads = llmPruneThreads(this.threads.concat([t]));
             this.activeThreadId = t.id;
             this.history = [];
+            this._pendingExecFeedback = null;
             this.persistThreads();
             this.renderThreadList();
             var log = document.getElementById('llm-chat-log');
@@ -1079,6 +1080,7 @@ const llmChat = {
             this.threads.forEach(function (t) { if (t.id === id) found = t; });
             if (!found) return;
             this.persistThreads();
+            this._pendingExecFeedback = null;
             this.activeThreadId = id;
             this.history = found.messages.map(function (m) { return { role: m.role, content: m.content }; });
             this.persistThreads();
