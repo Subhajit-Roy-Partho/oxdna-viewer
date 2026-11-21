@@ -1,5 +1,5 @@
 {
- "build": "862ae7128573",
- "engine": "seqpred 60d6c3fa (rigidDNA2 branch cpp-10; models v2 v3 v4 m2 h2d ml2 ms2 ms3 nat1 e1 ml4 domainB hybridB nested centroid mea rf auto + score + oxpairs + the bld2 3D builder with its motif library bld2_lib.bin + the origami layout stages oriLayout, the PDB / mmCIF annotator annotate3d, evalPairs, fail1Lib and the CPP-10 ports of the rd2 server modules seqInput pairScore dotBracket seqPipe [ml3 native only: pKiss is GPL-3]) + ViennaRNA 2.7.2, emscripten/emsdk:6.0.13",
+ "build": "7b928ef7d687",
+ "engine": "seqpred 84e6362a (rigidDNA2 branch cpp-12, with the viewer API of 0ed1c670; models v2 v3 v4 m2 h2d ml2 ms2 ms3 nat1 e1 ml4 domainB hybridB nested centroid mea rf auto + score + oxpairs + the bld2 3D builder with its motif library bld2_lib.bin + origami layout stages, PDB / mmCIF annotator, evalPairs, fail1Lib, the rd2 server module ports (CPP-10, CPP-11) + ours-v2 (CPP-12, data in ours2_pack.json) [ml3 native only: pKiss is GPL-3]; ViennaRNA 2.7.2, emscripten/emsdk:6.0.13)",
  "bld2lib": "2ffe064fed91"
 }

@@ -112,6 +112,9 @@ export interface Seqpred {
   version(): RankPredictResult['version'];
   build3d(result: PredictResult, rd2Api: unknown, rd2Module: unknown, options?: Record<string, unknown>): Promise<{ rc: number; top: string | null; dat: string | null; report: unknown; log: string; seconds: number }>;
   loadBld2Library(bytes: Uint8Array | ArrayBuffer): { ok: true; bytes: number; sha1: string; chains: number; loopInstances: Record<string, number>; extInstances: Record<string, number> };   // lane CPP-5: motif library of bld2
+  ours2Load(pack: string | object): { ok: true };   // CPP-12: loads the ours-v2 pack (scripts/seqpred/make_ours2_pack.py); throws SeqpredError when the build has no ours-v2
+  ours2Predict(sequence: string, others?: Array<[string, string]>): { db: string; pairs: Array<[number, number]>; component: string; group: string; pick: number | string; fallback: boolean };   // ours-v2, sequence only (A, C, G, U); 0-based pairs; throws SeqpredError (ACGU, not loaded)
+  ours2Loaded(): boolean;
   buildBld2(sequence: string, structure: Array<[number, number]> | string, options?: { oxrna?: boolean }): Bld2Result;   // throws SeqpredError (library not loaded, non-ACGU, bad dot-bracket)
   bld2Loaded(): unknown;
   score(request: ScoreRequest): ScoreResult;                              // pair set against a reference structure (CPP-4)

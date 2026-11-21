@@ -127,7 +127,7 @@ class SeqpredEngine {
 
     /** Terminates the worker: a running computation stops at once, the next run starts a fresh worker. */
     cancel() {
-        if (this.worker) { this.worker.terminate(); this.worker = null; this.bld2Worker = null; }
+        if (this.worker) { this.worker.terminate(); this.worker = null; this.bld2Worker = null; this.ours2Worker = null; }
         if (this.reject) { this.reject(new Error('cancelled')); this.reject = null; }
     }
 
@@ -189,6 +189,54 @@ class SeqpredEngine {
         }
         if (onStatus) onStatus('Building the 3D model with bld2...');
         const m = await call({ type: 'bld2', sequence, structure, options: { oxrna: true } }, 'bld2built');
+        return Object.assign({}, m.result, { wallSeconds: m.wallSeconds });
+    }
+
+    private ours2Worker: Worker = null;   // the worker that holds the ours-v2 pack (a new worker starts without it)
+    private static ours2Pack: Promise<string> = null;
+
+    /** The runtime data of ours-v2 (wasm/seqpred/ours2_pack.json, about 2 MB: six lane-P parameter files and nine boosters, built by scripts/seqpred/make_ours2_pack.py of rigidDNA2): fetched on first use. */
+    static async fetchOurs2Pack(onStatus?: (s: string) => void): Promise<string> {
+        if (!SeqpredEngine.ours2Pack) {
+            SeqpredEngine.ours2Pack = (async () => {
+                const info: any = await SeqpredEngine.buildInfo();
+                const ver = info && info.build ? String(info.build) : '0';
+                if (onStatus) onStatus('Loading the ours-v2 data (about 2 MB, once)...');
+                const r = await fetch(new URL(SeqpredEngine.baseUrl + 'ours2_pack.json?v=' + encodeURIComponent(ver), document.baseURI).href);
+                if (!r.ok) throw new Error('The ours-v2 data (wasm/seqpred/ours2_pack.json) is not deployed with this build (HTTP ' + r.status + ').');
+                return await r.text();
+            })();
+            SeqpredEngine.ours2Pack.catch(() => { SeqpredEngine.ours2Pack = null; });
+        }
+        return SeqpredEngine.ours2Pack;
+    }
+
+    /** ours-v2 (lane GAP-3 R, C++ port CPP-12, docs/202 of rigidDNA2), sequence only, A / C / G / U: a re-ranker over a pool of folds under eight energy-parameter sets. Loads the data into the worker on first use. Result: {db, pairs (0-based), component, group, pick, fallback, wallSeconds}.
+     *  Experimental: it is a development-validated model (+0.04 F1 over auto on clean strata), not part of auto; the call blocks the worker for seconds (100 nt) to minutes (>= 1000 nt). */
+    async predictOurs2(sequence: string, onStatus?: (s: string) => void): Promise<any> {
+        if (!this.worker) await this.start('st');
+        const worker = this.worker;
+        const call = (msg: any) => new Promise<any>((resolve, reject) => {
+            const id = this.nextId++;
+            this.reject = reject;
+            const prev = worker.onmessage;
+            worker.onmessage = (ev) => {
+                const m = ev.data;
+                if (m.id !== id) { if (prev) (prev as any).call(worker, ev); return; }
+                worker.onmessage = prev;
+                this.reject = null;
+                if (m.type === 'error') reject(new Error(m.message || 'ours-v2 failed')); else resolve(m);
+            };
+            worker.postMessage(Object.assign({ id }, msg));
+        });
+        if (this.ours2Worker !== worker) {
+            const pack = await SeqpredEngine.fetchOurs2Pack(onStatus);
+            if (onStatus) onStatus('Initialising ours-v2...');
+            await call({ type: 'ours2load', pack });
+            this.ours2Worker = worker;
+        }
+        if (onStatus) onStatus('Running ours-v2...');
+        const m = await call({ type: 'ours2', sequence });
         return Object.assign({}, m.result, { wallSeconds: m.wallSeconds });
     }
 
