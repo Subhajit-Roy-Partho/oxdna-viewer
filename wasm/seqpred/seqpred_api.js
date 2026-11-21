@@ -137,7 +137,30 @@
       if (!r.ok) throw new SeqpredError(r.error);
       return r;
     };
-    return { predict, predictRaw, version, build3d, score, oxPairs, oriLayout, annotate3d, evalPairs, fail1Lib, seqInput, pairScore, dotBracket, seqPipe, callMethod, loadBld2Library, buildBld2, bld2Loaded: () => bld2Info, module: M, defaults: BROWSER_DEFAULTS };
+    // CPP-12 (docs/202): `ours-v2`, the reranker of lane GAP-3 R, in C++ (sequence only).  The runtime data (six lane-P parameter files and nine boosters, ~2 MB of JSON) is NOT inside the module:
+    //   build it with scripts/seqpred/make_ours2_pack.py, then  sp.ours2Load(packJsonText);  const r = sp.ours2Predict(sequence);   // -> {db, pairs (0-based [i, j]), component, group, pick, fallback}
+    // A, C, G, U only; the pick of a sequence-only call can differ from the stored-pool Python on a few percent of the rows below 250 nt (docs/202 section 3).  The call blocks (up to minutes at >= 1000 nt).
+    let ours2Loaded = false;
+    const ccallJson = (name, arg) => {
+      const rp = M.ccall(name, 'number', ['string'], [arg]);
+      const s = M.UTF8ToString(rp);
+      M.ccall('seqpred_free', null, ['number'], [rp]);
+      return JSON.parse(s);
+    };
+    const ours2Load = (packJson) => {
+      if (typeof M._seqpred_ours2_load !== 'function') throw new SeqpredError('this seqpred build does not carry ours-v2 (rebuild from rigidDNA2 cpp-12 or later)');
+      const r = ccallJson('seqpred_ours2_load', typeof packJson === 'string' ? packJson : JSON.stringify(packJson));
+      if (!r.ok) throw new SeqpredError(r.error);
+      ours2Loaded = true;
+      return r;
+    };
+    const ours2Predict = (sequence, others) => {
+      if (!ours2Loaded) throw new SeqpredError('call ours2Load(pack) first');
+      const r = ccallJson('seqpred_ours2_predict', JSON.stringify({ seq: String(sequence).replace(/\s+/g, '').toUpperCase().replace(/T/g, 'U'), others: others || [], fold: -1 }));
+      if (r.error) throw new SeqpredError(r.error);
+      return r;
+    };
+    return { predict, predictRaw, version, build3d, score, ours2Load, ours2Predict, ours2Loaded: () => ours2Loaded, oxPairs, oriLayout, annotate3d, evalPairs, fail1Lib, seqInput, pairScore, dotBracket, seqPipe, callMethod, loadBld2Library, buildBld2, bld2Loaded: () => bld2Info, module: M, defaults: BROWSER_DEFAULTS };
   }
 
   const api = { load, SeqpredError, BROWSER_DEFAULTS, checkOptions };

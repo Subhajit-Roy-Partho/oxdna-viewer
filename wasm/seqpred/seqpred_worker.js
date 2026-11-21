@@ -8,6 +8,8 @@
 //   {type:'score', id, request}             -> {type:'scored', id, result}  |  {type:'error', id, message}   (scoring of a predicted pair set against a reference structure, C++ port of runall.metrics)
 //   {type:'bld2lib', id, bytes (ArrayBuffer)}  -> {type:'bld2loaded', id, info}   (motif library of the bld2 3D builder, loaded once into the module)
 //   {type:'bld2', id, sequence, structure (pairs or dot-bracket), options}  -> {type:'bld2built', id, result, wallSeconds}
+//   {type:'ours2load', id, pack (JSON text of scripts/seqpred/make_ours2_pack.py)}  -> {type:'ours2loaded', id}   (CPP-12: ours-v2 data, loaded once)
+//   {type:'ours2', id, sequence}            -> {type:'ours2ed', id, result, wallSeconds}   (CPP-12: ours-v2 prediction, sequence only)
 //   {type:'ready', version}
 'use strict';
 if (self.name === 'em-pthread') {
@@ -28,6 +30,13 @@ self.onmessage = async (ev) => {
       const t0 = Date.now();
       const result = sp.predict(m.sequence, m.options);
       self.postMessage({ type: 'result', id: m.id, result, wallSeconds: (Date.now() - t0) / 1000 });
+    } else if (m.type === 'ours2load') {
+      sp.ours2Load(m.pack);
+      self.postMessage({ type: 'ours2loaded', id: m.id });
+    } else if (m.type === 'ours2') {
+      const t0 = Date.now();
+      const result = sp.ours2Predict(m.sequence, m.others);
+      self.postMessage({ type: 'ours2ed', id: m.id, result, wallSeconds: (Date.now() - t0) / 1000 });
     } else if (m.type === 'bld2lib') {
       self.postMessage({ type: 'bld2loaded', id: m.id, info: sp.loadBld2Library(m.bytes) });
     } else if (m.type === 'bld2') {
