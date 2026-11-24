@@ -1,0 +1,4 @@
+{
+ "build": "7d3158f375e7",
+ "engine": "rigidRNA rd2_rna: rigidDNA2 main 57610426 + wasm/rd2_rna_wasm.cpp of branch wasm-rna-1 580d208c (--sheet, --embed-dim 2|3, --dna ssDNA mode, CPP-11/12, per-run reset of the oxDNA2 site model; emscripten/emsdk:6.0.13, threads: OpenMP on pthreads, SIMD)"
+}
