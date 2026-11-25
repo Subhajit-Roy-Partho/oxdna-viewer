@@ -175,7 +175,7 @@ interface Rd2Opt {
     min?: number; max?: number; step?: number;
     choices?: string[];         // select: values passed verbatim; flagsel: keys of `flags`
     flags?: { [choice: string]: string };
-    field?: 'lattice' | 'seed' | 'nativeIters';   // first-class field of Rd2Options (same command line, set by the bridge)
+    field?: 'lattice' | 'seed' | 'nativeIters' | 'ringRelocate';   // first-class field of Rd2Options (same command line, set by the bridge)
     wide?: boolean;             // full row
     defOn?: boolean;            // check: the box starts ticked (a UI default, passed like any ticked box; "Reset advanced" ticks it again)
 }
@@ -193,6 +193,7 @@ const ONOFF = ['auto', 'on', 'off'];
 const RD2_OPTS: Rd2Opt[] = [
     // --- route and layout
     rd2Opt(0, 'lattice', '--lattice', 'select', 'Lattice type', 'auto', 'square or honeycomb helix packing; auto: the file\'s own grid/tag, else detected from the crossovers', { choices: ['square', 'honeycomb'], field: 'lattice' }),
+    rd2Opt(0, 'ringRelocate', '--ring-relocate', 'select', 'Ring of bundles layout', 'on', 'a cycle of 4 to 7 bundles (route ring) is laid out as a regular polygon by the ring relocation instead of the ideal lattice start, which leaves the bundles in a parallel row with links of up to 80 nm and a tangled structure; the tab passes it by default (it changes no other design), off = the previous start', { choices: ['on', 'off'], field: 'ringRelocate' }),
     rd2Opt(0, 'wireframe', '--wireframe', 'select', 'Wireframe designs', 'auto', 'free-form wireframe designs (no lattice-neighbour crossovers, crossovers at helix ends): layout from the junction graph, no gap linkers', { choices: ONOFF.slice(1) }),
     rd2Opt(0, 'phaseEmbed', '--phase-embed', 'select', 'Phase embedding', 'auto', 'helix axes from the phase of the crossovers when the lattice cells of a caDNAno design contradict them (flat sheet drawn as a compact serpentine, docs/35)', { choices: ONOFF.slice(1) }),
     rd2Opt(0, 'bundleLayout', '--bundle-layout', 'select', 'Bundle graph layout', 'auto', 'bundles as the edges of a polyhedron or mesh (icosahedron, 4-helix-bundle meshes): the articulated route starts from a graph embedding of the bundles (docs/27)', { choices: ONOFF.slice(1) }),
@@ -414,7 +415,7 @@ function rd2AdvBuild() {
 
 interface Rd2AdvState {
     extra: string[];
-    fields: { lattice?: 'square' | 'honeycomb'; seed?: number; nativeIters?: number };
+    fields: { lattice?: 'square' | 'honeycomb'; seed?: number; nativeIters?: number; ringRelocate?: boolean };
     problems: { id: string; msg: string }[];     // invalid entries: ignored
     notes: { id: string; msg: string }[];        // valid entries that interact
     set: number;                                 // options that are passed
@@ -474,6 +475,7 @@ function rd2AdvRead(): Rd2AdvState {
         if (o.field === 'lattice') st.fields.lattice = el.value as any;
         else if (o.field === 'seed') st.fields.seed = Number(args[1]);
         else if (o.field === 'nativeIters') st.fields.nativeIters = Number(args[1]);
+        else if (o.field === 'ringRelocate') st.fields.ringRelocate = el.value === 'on';
         else st.extra.push(...args);
     }
     // v2 orientation search by default: --orient-fast is passed only together with explicit random starts (--orient-search N > 0). Without them the engine may
@@ -511,6 +513,7 @@ function rd2Options(): Rd2Options {
         ...(adv.fields.lattice ? { lattice: adv.fields.lattice } : {}),
         ...(adv.fields.seed !== undefined ? { seed: adv.fields.seed } : {}),
         ...(adv.fields.nativeIters !== undefined ? { nativeIters: adv.fields.nativeIters } : {}),
+        ...(adv.fields.ringRelocate !== undefined ? { ringRelocate: adv.fields.ringRelocate } : {}),
         ...(adv.extra.length ? { extra: adv.extra } : {}),
     };
 }
