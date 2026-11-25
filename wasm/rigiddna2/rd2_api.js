@@ -10,6 +10,7 @@
     const a = [];
     const oneOf = (v, set, what) => { if (v !== undefined && set.indexOf(v) < 0) throw new Error(what + ' must be one of ' + set.join(', ')); return v; };
     if (o.route && oneOf(o.route, ['auto', 'lattice', 'wireframe', 'articulated', 'ring'], 'route') !== 'auto') a.push('--route', o.route);
+    if (o.ringRelocate !== false) a.push('--ring-relocate');   // DIR-1: a cycle of 4 to 7 bundles is laid out as a polygon; on unless ringRelocate === false (the flag changes no other design)
     if (o.inferStaples !== undefined) a.push('--infer-staples', oneOf(String(o.inferStaples === true ? 'on' : o.inferStaples === false ? 'off' : o.inferStaples), ['auto', 'on', 'off'], 'inferStaples'));
     if (o.lattice && o.lattice !== 'auto') a.push('--lattice', oneOf(o.lattice, ['square', 'honeycomb'], 'lattice'));
     if (o.linkers !== undefined && o.linkers !== 'auto') oneOf(String(o.linkers), ['on', 'off'], 'linkers');

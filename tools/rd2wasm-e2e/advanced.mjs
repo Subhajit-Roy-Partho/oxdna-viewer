@@ -105,7 +105,7 @@ try {
   const countText = await page.textContent("#rd2AdvCount");
   check("no count shown while nothing is set", countText.trim() === "", countText);
   const basic = await page.evaluate(() => document.getElementById("rd2Cmd").getAttribute("data-args"));
-  check("blank advanced fields: the command line holds the basic options only", basic.split("\n").every((x) => ["--infer-staples", "auto", "--threads", "--no-linkers"].includes(x) || /^\d+$/.test(x)), basic);
+  check("blank advanced fields: the command line holds the basic options only", basic.split("\n").every((x) => ["--infer-staples", "auto", "--threads", "--no-linkers", "--ring-relocate"].includes(x) || /^\d+$/.test(x)), basic);
 
   // ---- 2. open it, every control of the table is there
   await page.click("#rd2AdvAcc > .frame > .heading");
@@ -198,7 +198,7 @@ try {
     const got = await page.evaluate((n) => window.__argvs.slice(n), nBefore);
     const argvReceived = got.length ? got[got.length - 1].argv : null;
     const summary = (await page.textContent("#rd2Summary")).replace(/\s+/g, " ").trim();
-    const r = { label, preview: c.text, previewArgs: c.args, argvReceived, stage, summary, logLines: log.split("\n").filter((l) => /^\$ |route|orient|input layout|ox-|oxDNA|start:|prepare:|coarse:|native relax|result:|ERROR|WARNING/.test(l)).slice(0, 40) };
+    const r = { label, preview: c.text, previewArgs: c.args, argvReceived, stage, summary, logLines: log.split("\n").filter((l) => /^\$ |route|orient|input layout|ox-|oxDNA|start:|prepare:|coarse:|native relax|result:|ERROR|WARNING/.test(l)).slice(0, 40), ringLayoutLine: log.split("\n").find((l) => /^ring layout:/.test(l)) || null };
     r.match = argvReceived !== null && argvReceived === c.args;
     rec.runs.push(r);
     check(`[${label}] arguments received by the engine = command line preview`, r.match, { preview: c.args.replace(/\n/g, " "), received: argvReceived && argvReceived.replace(/\n/g, " ") });
@@ -207,6 +207,12 @@ try {
   };
   const r0 = await runOnce("default", async () => {});
   check("[default] run finished", /^Done in/.test(r0.stage), r0.stage);
+  check("[default] the ring-of-bundles flag is passed by default (DIR-1)", r0.previewArgs.split("\n").includes("--ring-relocate"), r0.previewArgs.replace(/\n/g, " "));
+  const rOff = await runOnce("ring of bundles layout off", async () => { await clickSelect("rd2a_ringRelocate", "off"); });
+  check("[ring off] the select drops --ring-relocate from the command line", !rOff.previewArgs.split("\n").includes("--ring-relocate") && !rOff.previewArgs.includes("off"), rOff.previewArgs.replace(/\n/g, " "));
+  if (r0.ringLayoutLine) {
+    check("[ring off] the design is a ring of bundles: the polygon layout runs by default and not with the option off", rOff.ringLayoutLine === null && /ring layout: \d bodies as a regular \d-gon/.test(r0.ringLayoutLine), [r0.ringLayoutLine, rOff.ringLayoutLine]);
+  }
   const r1 = await runOnce("orient-search 30 seed 7, dmin 3.0, subho 8", async () => {
     await typeInto("rd2a_orientSearch", "30"); await typeInto("rd2a_orientSeed", "7"); await typeInto("rd2a_dmin", "3.0"); await typeInto("rd2a_subho", "8");
   });

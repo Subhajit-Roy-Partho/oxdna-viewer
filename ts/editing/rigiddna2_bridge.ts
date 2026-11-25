@@ -17,6 +17,7 @@ interface Rd2Options {
     inferStaples?: 'auto' | 'on' | 'off';
     linkers?: 'auto' | 'on' | 'off';   // poly-T gap linkers of the lattice route; auto: none for a scadnano design
     lattice?: 'auto' | 'square' | 'honeycomb';
+    ringRelocate?: boolean;    // polygon layout of a cycle of 4 to 7 bundles (--ring-relocate); on unless false
     native?: boolean;          // native oxDNA2 relaxation (false: stop after the export)
     nativeIters?: number;
     threads?: number;          // 1 = single-thread build
