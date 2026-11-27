@@ -105,7 +105,7 @@ try {
   const countText = await page.textContent("#rd2AdvCount");
   check("no count shown while nothing is set", countText.trim() === "", countText);
   const basic = await page.evaluate(() => document.getElementById("rd2Cmd").getAttribute("data-args"));
-  check("blank advanced fields: the command line holds the basic options only", basic.split("\n").every((x) => ["--infer-staples", "auto", "--threads", "--no-linkers", "--ring-relocate"].includes(x) || /^\d+$/.test(x)), basic);
+  check("blank advanced fields: the command line holds the basic options only", basic.split("\n").every((x) => ["--infer-staples", "auto", "--threads", "--no-linkers", "--ring-relocate", "--plate-wall"].includes(x) || /^\d+$/.test(x)), basic);
 
   // ---- 2. open it, every control of the table is there
   await page.click("#rd2AdvAcc > .frame > .heading");
@@ -210,6 +210,11 @@ try {
   check("[default] the ring-of-bundles flag is passed by default (DIR-1)", r0.previewArgs.split("\n").includes("--ring-relocate"), r0.previewArgs.replace(/\n/g, " "));
   const rOff = await runOnce("ring of bundles layout off", async () => { await clickSelect("rd2a_ringRelocate", "off"); });
   check("[ring off] the select drops --ring-relocate from the command line", !rOff.previewArgs.split("\n").includes("--ring-relocate") && !rOff.previewArgs.includes("off"), rOff.previewArgs.replace(/\n/g, " "));
+  check("[default] the flat plate wall rule is passed by default (DIR-2): --plate-wall auto", (() => { const t = r0.previewArgs.split("\n"); const i = t.indexOf("--plate-wall"); return i >= 0 && t[i + 1] === "auto"; })(), r0.previewArgs.replace(/\n/g, " "));
+  const pwOff = await runOnce("flat plate wall off", async () => { await clickSelect("rd2a_plateWall", "off"); });
+  check("[plate wall off] the select drops --plate-wall from the command line", !pwOff.previewArgs.split("\n").includes("--plate-wall"), pwOff.previewArgs.replace(/\n/g, " "));
+  const pwOn = await runOnce("flat plate wall on", async () => { await clickSelect("rd2a_plateWall", "on"); });
+  check("[plate wall on] the select passes --plate-wall on", (() => { const t = pwOn.previewArgs.split("\n"); const i = t.indexOf("--plate-wall"); return i >= 0 && t[i + 1] === "on"; })(), pwOn.previewArgs.replace(/\n/g, " "));
   if (r0.ringLayoutLine) {
     check("[ring off] the design is a ring of bundles: the polygon layout runs by default and not with the option off", rOff.ringLayoutLine === null && /ring layout: \d bodies as a regular \d-gon/.test(r0.ringLayoutLine), [r0.ringLayoutLine, rOff.ringLayoutLine]);
   }

@@ -1,4 +1,4 @@
 {
- "build": "bda09915b74a",
- "engine": "rigidDNA2 engine v2.7.0-paper (58fe291c; adds fda65a65 slotted-cross orientation ranking to the 2ecfe74a sources) + DIR-1 flag --ring-relocate, branch dir-1 a34b55fd (C++ sources as 631aa4bd)"
+ "build": "823cd0398653",
+ "engine": "rigidDNA2 engine v2.7.0-paper (58fe291c) + DIR-1 flag --ring-relocate + DIR-2 rule --plate-wall auto|on|off|facts, branch dir-2 d87b4bce"
 }
